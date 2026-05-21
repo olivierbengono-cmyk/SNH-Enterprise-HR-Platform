@@ -634,7 +634,8 @@ function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCanc
     const validExps = experiences.filter(e => e.job_title && e.company && e.start_date);
     if (validExps.length) {
       const { error: insExpErr } = await supabase.from('candidate_experiences').insert(
-        validExps.map(e => ({ ...e, id: undefined, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        validExps.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
       );
       if (insExpErr) { setSaveError('Erreur insertion expériences : ' + insExpErr.message); setSaving(false); return; }
     }
@@ -645,7 +646,8 @@ function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCanc
     const validEdus = educations.filter(e => e.degree && e.institution);
     if (validEdus.length) {
       const { error: insEduErr } = await supabase.from('candidate_educations').insert(
-        validEdus.map(e => ({ ...e, id: undefined, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        validEdus.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
       );
       if (insEduErr) { setSaveError('Erreur insertion formations : ' + insEduErr.message); setSaving(false); return; }
     }
@@ -656,7 +658,8 @@ function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCanc
     const validSk = skills.filter(s => s.name);
     if (validSk.length) {
       const { error: insSkErr } = await supabase.from('candidate_candidate_skills').insert(
-        validSk.map(s => ({ ...s, id: undefined, candidate_id: candidateId }))
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        validSk.map(({ id: _id, ...s }) => ({ ...s, candidate_id: candidateId }))
       );
       if (insSkErr) { setSaveError('Erreur insertion compétences : ' + insSkErr.message); setSaving(false); return; }
     }

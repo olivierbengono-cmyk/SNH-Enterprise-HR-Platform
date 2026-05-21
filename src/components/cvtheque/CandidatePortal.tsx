@@ -590,6 +590,7 @@ function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCanc
   const [educations, setEducations] = useState<Education[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -608,40 +609,60 @@ function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCanc
 
   const saveAll = async () => {
     setSaving(true);
-    // Update profile
-    await supabase.from('candidates').update({
+    setSaveError(null);
+
+    // Update candidate profile using user_id for RLS compatibility
+    const { error: profileErr } = await supabase.from('candidates').update({
       first_name: profile.first_name, last_name: profile.last_name,
-      phone: profile.phone, location: profile.location,
-      linkedin_url: profile.linkedin_url, portfolio_url: profile.portfolio_url,
-      summary: profile.summary, desired_position: profile.desired_position,
-      desired_salary_min: profile.desired_salary_min, desired_salary_max: profile.desired_salary_max,
-      availability_date: profile.availability_date, mobility: profile.mobility,
+      phone: profile.phone || null, location: profile.location || null,
+      linkedin_url: profile.linkedin_url || null, portfolio_url: profile.portfolio_url || null,
+      summary: profile.summary || null, desired_position: profile.desired_position || null,
+      desired_salary_min: profile.desired_salary_min || null, desired_salary_max: profile.desired_salary_max || null,
+      availability_date: profile.availability_date || null, mobility: profile.mobility || null,
       profile_completed: true,
-    }).eq('id', candidateId);
+    }).eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '');
+
+    if (profileErr) {
+      setSaveError('Erreur lors de la mise à jour du profil : ' + profileErr.message);
+      setSaving(false);
+      return;
+    }
 
     // Replace experiences
-    await supabase.from('candidate_experiences').delete().eq('candidate_id', candidateId);
+    const { error: delExpErr } = await supabase.from('candidate_experiences').delete().eq('candidate_id', candidateId);
+    if (delExpErr) { setSaveError('Erreur expériences : ' + delExpErr.message); setSaving(false); return; }
     const validExps = experiences.filter(e => e.job_title && e.company && e.start_date);
     if (validExps.length) {
-      await supabase.from('candidate_experiences').insert(validExps.map(e => ({ ...e, id: undefined, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) })));
+      const { error: insExpErr } = await supabase.from('candidate_experiences').insert(
+        validExps.map(e => ({ ...e, id: undefined, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+      );
+      if (insExpErr) { setSaveError('Erreur insertion expériences : ' + insExpErr.message); setSaving(false); return; }
     }
 
     // Replace educations
-    await supabase.from('candidate_educations').delete().eq('candidate_id', candidateId);
+    const { error: delEduErr } = await supabase.from('candidate_educations').delete().eq('candidate_id', candidateId);
+    if (delEduErr) { setSaveError('Erreur formations : ' + delEduErr.message); setSaving(false); return; }
     const validEdus = educations.filter(e => e.degree && e.institution);
     if (validEdus.length) {
-      await supabase.from('candidate_educations').insert(validEdus.map(e => ({ ...e, id: undefined, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) })));
+      const { error: insEduErr } = await supabase.from('candidate_educations').insert(
+        validEdus.map(e => ({ ...e, id: undefined, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+      );
+      if (insEduErr) { setSaveError('Erreur insertion formations : ' + insEduErr.message); setSaving(false); return; }
     }
 
     // Replace skills
-    await supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId);
+    const { error: delSkErr } = await supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId);
+    if (delSkErr) { setSaveError('Erreur compétences : ' + delSkErr.message); setSaving(false); return; }
     const validSk = skills.filter(s => s.name);
     if (validSk.length) {
-      await supabase.from('candidate_candidate_skills').insert(validSk.map(s => ({ ...s, id: undefined, candidate_id: candidateId })));
+      const { error: insSkErr } = await supabase.from('candidate_candidate_skills').insert(
+        validSk.map(s => ({ ...s, id: undefined, candidate_id: candidateId }))
+      );
+      if (insSkErr) { setSaveError('Erreur insertion compétences : ' + insSkErr.message); setSaving(false); return; }
     }
 
     setSaving(false);
-    const { data } = await supabase.from('candidates').select('*').eq('id', candidateId).single();
+    const { data } = await supabase.from('candidates').select('*').eq('id', candidateId).maybeSingle();
     if (data) onSaved(data as CandidateProfile);
   };
 
@@ -673,20 +694,25 @@ function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCanc
           {step === 2 && <EducationsStep items={educations} setItems={setEducations} />}
           {step === 3 && <SkillsStep items={skills} setItems={setSkills} />}
         </div>
+        {saveError && (
+          <div className="mx-8 mb-0 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm flex items-start gap-2">
+            <AlertCircle size={15} className="mt-0.5 flex-shrink-0" />
+            <span>{saveError}</span>
+          </div>
+        )}
         <div className="border-t border-slate-100 px-8 py-5 flex items-center justify-between">
           <div className="flex gap-2">
             <button onClick={onCancel} className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 text-sm transition">Annuler</button>
             {step > 0 && <button onClick={() => setStep(s => s - 1)} className="flex items-center gap-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 text-sm transition"><ChevronLeft size={15} />Précédent</button>}
           </div>
           <div className="flex gap-2">
-            {step < STEPS.length - 1 ? (
+            <button onClick={saveAll} disabled={saving}
+              className="flex items-center gap-2 px-5 py-2 bg-slate-600 text-white rounded-xl hover:bg-slate-700 disabled:opacity-60 text-sm font-medium transition">
+              {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={15} />}
+              Enregistrer
+            </button>
+            {step < STEPS.length - 1 && (
               <button onClick={() => setStep(s => s + 1)} className="flex items-center gap-1 px-5 py-2 bg-teal-700 text-white rounded-xl hover:bg-teal-800 text-sm font-medium transition">Suivant <ChevronRight size={15} /></button>
-            ) : (
-              <button onClick={saveAll} disabled={saving}
-                className="flex items-center gap-2 px-6 py-2 bg-teal-700 text-white rounded-xl hover:bg-teal-800 disabled:opacity-60 text-sm font-medium transition">
-                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={15} />}
-                Enregistrer
-              </button>
             )}
           </div>
         </div>

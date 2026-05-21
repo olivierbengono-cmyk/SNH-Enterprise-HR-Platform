@@ -38,6 +38,15 @@ interface Skill {
   category: 'technical' | 'soft' | 'language' | 'certification' | 'other';
   level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
 }
+interface CandidateDoc {
+  id: string;
+  candidate_id: string;
+  type: 'cv' | 'cover_letter' | 'diploma' | 'reference' | 'other';
+  file_name: string;
+  file_url: string;
+  file_size: number | null;
+  uploaded_at: string;
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SKILL_LEVELS = [
@@ -307,9 +316,27 @@ function DashboardView({ profile, matches, openJobs, onEditProfile, candidateId,
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [applying, setApplying] = useState<string | null>(null);
   const [applied, setApplied] = useState<Set<string>>(new Set());
+  const [profileCounts, setProfileCounts] = useState({ experiences: 0, educations: 0, skills: 0, documents: 0 });
+
+  useEffect(() => {
+    const loadCounts = async () => {
+      const [expRes, eduRes, skRes, docRes] = await Promise.all([
+        supabase.from('candidate_experiences').select('id', { count: 'exact', head: true }).eq('candidate_id', candidateId),
+        supabase.from('candidate_educations').select('id', { count: 'exact', head: true }).eq('candidate_id', candidateId),
+        supabase.from('candidate_candidate_skills').select('id', { count: 'exact', head: true }).eq('candidate_id', candidateId),
+        supabase.from('candidate_documents').select('id', { count: 'exact', head: true }).eq('candidate_id', candidateId),
+      ]);
+      setProfileCounts({
+        experiences: expRes.count ?? 0,
+        educations: eduRes.count ?? 0,
+        skills: skRes.count ?? 0,
+        documents: docRes.count ?? 0,
+      });
+    };
+    loadCounts();
+  }, [candidateId]);
 
   // jobs without a match score
-  const unmatchedJobs = openJobs.filter(j => !matches.find(m => m.job_opening_id === j.id));
   const topMatches = matches.filter(m => m.match_score >= 60).slice(0, 5);
 
   const handleApply = async (jobId: string, jobTitle: string) => {
@@ -340,7 +367,13 @@ function DashboardView({ profile, matches, openJobs, onEditProfile, candidateId,
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <ProfileCompletion profile={profile} />
+            <ProfileCompletion
+              profile={profile}
+              hasExperiences={profileCounts.experiences > 0}
+              hasEducations={profileCounts.educations > 0}
+              hasSkills={profileCounts.skills > 0}
+              hasDocuments={profileCounts.documents > 0}
+            />
             <button onClick={onEditProfile}
               className="flex items-center gap-2 px-4 py-2 bg-white text-slate-800 rounded-xl hover:bg-slate-50 transition text-sm font-medium">
               <Edit3 size={15} /> Modifier mon profil
@@ -562,12 +595,25 @@ function DashboardView({ profile, matches, openJobs, onEditProfile, candidateId,
 }
 
 // ── Profile completion indicator ───────────────────────────────────────────────
-function ProfileCompletion({ profile }: { profile: CandidateProfile }) {
+function ProfileCompletion({ profile, hasExperiences, hasEducations, hasSkills, hasDocuments }: {
+  profile: CandidateProfile;
+  hasExperiences: boolean;
+  hasEducations: boolean;
+  hasSkills: boolean;
+  hasDocuments: boolean;
+}) {
   const score = [
-    profile.phone, profile.location, profile.summary, profile.desired_position,
-    profile.availability_date, profile.linkedin_url,
+    profile.phone,
+    profile.location,
+    profile.summary,
+    profile.desired_position,
+    profile.availability_date,
+    hasExperiences ? 'ok' : null,
+    hasEducations ? 'ok' : null,
+    hasSkills ? 'ok' : null,
+    hasDocuments ? 'ok' : null,
   ].filter(Boolean).length;
-  const pct = Math.round((score / 6) * 100);
+  const pct = Math.round((score / 9) * 100);
   return (
     <div className="flex items-center gap-2 text-sm">
       <div className="w-20 h-1.5 bg-white/20 rounded-full overflow-hidden">
@@ -582,26 +628,29 @@ function ProfileCompletion({ profile }: { profile: CandidateProfile }) {
 function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCancel }: {
   candidateId: string; profile: CandidateProfile; onSaved: (p: CandidateProfile) => void; onCancel: () => void;
 }) {
-  const STEPS = ['Infos personnelles', 'Expériences', 'Formations', 'Compétences'];
+  const STEPS = ['Infos personnelles', 'Expériences', 'Formations', 'Compétences', 'Documents'];
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({ ...initialProfile });
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [educations, setEducations] = useState<Education[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [documents, setDocuments] = useState<CandidateDoc[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
-      const [expRes, eduRes, skRes] = await Promise.all([
+      const [expRes, eduRes, skRes, docRes] = await Promise.all([
         supabase.from('candidate_experiences').select('*').eq('candidate_id', candidateId).order('start_date', { ascending: false }),
         supabase.from('candidate_educations').select('*').eq('candidate_id', candidateId).order('end_date', { ascending: false }),
         supabase.from('candidate_candidate_skills').select('*').eq('candidate_id', candidateId),
+        supabase.from('candidate_documents').select('*').eq('candidate_id', candidateId).order('uploaded_at', { ascending: false }),
       ]);
       setExperiences((expRes.data || []) as Experience[]);
       setEducations((eduRes.data || []) as Education[]);
       setSkills((skRes.data || []) as Skill[]);
+      setDocuments((docRes.data || []) as CandidateDoc[]);
       setLoadingData(false);
     };
     load();
@@ -696,6 +745,7 @@ function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCanc
           {step === 1 && <ExperiencesStep items={experiences} setItems={setExperiences} />}
           {step === 2 && <EducationsStep items={educations} setItems={setEducations} />}
           {step === 3 && <SkillsStep items={skills} setItems={setSkills} />}
+          {step === 4 && <DocumentsStep candidateId={candidateId} documents={documents} setDocuments={setDocuments} />}
         </div>
         {saveError && (
           <div className="mx-8 mb-0 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm flex items-start gap-2">
@@ -861,6 +911,173 @@ function SkillsStep({ items, setItems }: { items: Skill[]; setItems: (v: Skill[]
       <button onClick={add} className="w-full border-2 border-dashed border-slate-200 rounded-xl py-3 text-slate-500 hover:border-teal-400 hover:text-teal-600 flex items-center justify-center gap-2 text-sm transition">
         <Plus size={16} /> Ajouter une compétence
       </button>
+    </div>
+  );
+}
+
+// ── Documents Step ─────────────────────────────────────────────────────────────
+const DOC_TYPES: { value: CandidateDoc['type']; label: string; accept: string }[] = [
+  { value: 'cv', label: 'CV', accept: '.pdf,.doc,.docx' },
+  { value: 'cover_letter', label: 'Lettre de motivation', accept: '.pdf,.doc,.docx' },
+  { value: 'diploma', label: 'Diplôme / Attestation', accept: '.pdf,.jpg,.jpeg,.png' },
+  { value: 'reference', label: 'Lettre de référence', accept: '.pdf,.doc,.docx' },
+  { value: 'other', label: 'Autre pièce administrative', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' },
+];
+
+function fmtSize(bytes: number | null) {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+function DocumentsStep({ candidateId, documents, setDocuments }: {
+  candidateId: string;
+  documents: CandidateDoc[];
+  setDocuments: (d: CandidateDoc[]) => void;
+}) {
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<CandidateDoc['type']>('cv');
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Fichier trop volumineux (max 10 Mo)');
+      e.target.value = '';
+      return;
+    }
+
+    setUploading(selectedType);
+    const ext = file.name.split('.').pop();
+    const path = `${candidateId}/${selectedType}-${Date.now()}.${ext}`;
+
+    const { error: upErr } = await supabase.storage
+      .from('candidates-documents')
+      .upload(path, file, { upsert: false });
+
+    if (upErr) {
+      setUploadError('Erreur upload : ' + upErr.message);
+      setUploading(null);
+      e.target.value = '';
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from('candidates-documents').getPublicUrl(path);
+
+    const { data: docData, error: dbErr } = await supabase.from('candidate_documents').insert({
+      candidate_id: candidateId,
+      type: selectedType,
+      file_name: file.name,
+      file_url: urlData.publicUrl,
+      file_size: file.size,
+    }).select().maybeSingle();
+
+    if (dbErr) {
+      setUploadError('Erreur enregistrement : ' + dbErr.message);
+    } else if (docData) {
+      setDocuments([docData as CandidateDoc, ...documents]);
+    }
+
+    setUploading(null);
+    e.target.value = '';
+  };
+
+  const handleDelete = async (doc: CandidateDoc) => {
+    setDeleting(doc.id);
+    // Extract storage path from URL
+    const urlParts = doc.file_url.split('/candidates-documents/');
+    if (urlParts[1]) {
+      await supabase.storage.from('candidates-documents').remove([decodeURIComponent(urlParts[1])]);
+    }
+    await supabase.from('candidate_documents').delete().eq('id', doc.id);
+    setDocuments(documents.filter(d => d.id !== doc.id));
+    setDeleting(null);
+  };
+
+  const typeLabel = (t: CandidateDoc['type']) => DOC_TYPES.find(d => d.value === t)?.label ?? t;
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-slate-500">Chargez vos pièces administratives (CNI, diplômes, CV, lettres de référence, etc.).</p>
+
+      {/* Upload zone */}
+      <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 space-y-4 hover:border-teal-400 transition-colors">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Type de document</label>
+            <select
+              value={selectedType}
+              onChange={e => setSelectedType(e.target.value as CandidateDoc['type'])}
+              className={inp()}
+            >
+              {DOC_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
+          </div>
+          <div className="flex-1 sm:pt-7">
+            <label className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${uploading ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-teal-700 text-white hover:bg-teal-800'}`}>
+              {uploading ? (
+                <><div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" /> Envoi en cours...</>
+              ) : (
+                <><Upload size={15} /> Choisir un fichier</>
+              )}
+              <input
+                type="file"
+                className="hidden"
+                disabled={!!uploading}
+                accept={DOC_TYPES.find(d => d.value === selectedType)?.accept}
+                onChange={handleFileChange}
+              />
+            </label>
+          </div>
+        </div>
+        <p className="text-xs text-slate-400">Formats acceptés : PDF, Word, JPG, PNG — Taille max : 10 Mo</p>
+        {uploadError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 text-red-700 text-sm flex items-center gap-2">
+            <AlertCircle size={14} /> {uploadError}
+          </div>
+        )}
+      </div>
+
+      {/* Document list */}
+      {documents.length === 0 ? (
+        <div className="text-center py-8 text-slate-400 text-sm">
+          <FileText size={36} className="mx-auto mb-2 opacity-30" />
+          Aucun document chargé
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {documents.map(doc => (
+            <div key={doc.id} className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+              <div className="w-9 h-9 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+                <FileText size={18} className="text-teal-700" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">{doc.file_name}</p>
+                <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                  <span className="px-1.5 py-0.5 bg-slate-200 rounded-full text-slate-600">{typeLabel(doc.type)}</span>
+                  {doc.file_size && <span>{fmtSize(doc.file_size)}</span>}
+                  <span>{fmtDate(doc.uploaded_at)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                  className="text-teal-600 hover:text-teal-800 p-1.5 rounded-lg hover:bg-teal-50 transition" title="Voir">
+                  <Eye size={15} />
+                </a>
+                <button onClick={() => handleDelete(doc)} disabled={deleting === doc.id}
+                  className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition disabled:opacity-50" title="Supprimer">
+                  {deleting === doc.id ? <div className="w-3.5 h-3.5 border border-red-300 border-t-red-500 rounded-full animate-spin" /> : <Trash2 size={15} />}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

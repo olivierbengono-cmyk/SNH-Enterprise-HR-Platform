@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { User, Briefcase, GraduationCap, Zap, FileText, CheckCircle, Plus, Trash2, ChevronRight, ChevronLeft, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, Award, ArrowRight, X, LogIn, UserPlus, LogOut, CreditCard as Edit3, Sparkles, TrendingUp, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Briefcase, GraduationCap, Zap, FileText, CheckCircle, Plus, Trash2, ChevronRight, ChevronLeft, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, Award, ArrowRight, X, LogIn, UserPlus, LogOut, CreditCard as Edit3, Sparkles, TrendingUp, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Users, ExternalLink } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface CandidateProfile {
@@ -46,6 +46,28 @@ interface CandidateDoc {
   file_url: string;
   file_size: number | null;
   uploaded_at: string;
+}
+interface QVCTThread {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: 'open' | 'closed' | 'archived';
+  created_at: string;
+  message_count?: number;
+}
+interface TrainingProgram {
+  id: string;
+  title: string;
+  code: string;
+  category: string | null;
+  provider: string | null;
+  duration_hours: number | null;
+  description: string | null;
+  is_mandatory: boolean;
+  status: string;
+  start_date: string | null;
+  end_date: string | null;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -317,6 +339,9 @@ function DashboardView({ profile, matches, openJobs, onEditProfile, candidateId,
   const [applying, setApplying] = useState<string | null>(null);
   const [applied, setApplied] = useState<Set<string>>(new Set());
   const [profileCounts, setProfileCounts] = useState({ experiences: 0, educations: 0, skills: 0, documents: 0 });
+  const [qvctThreads, setQvctThreads] = useState<QVCTThread[]>([]);
+  const [trainings, setTrainings] = useState<TrainingProgram[]>([]);
+  const [expandedThread, setExpandedThread] = useState<string | null>(null);
 
   useEffect(() => {
     const loadCounts = async () => {
@@ -333,7 +358,27 @@ function DashboardView({ profile, matches, openJobs, onEditProfile, candidateId,
         documents: docRes.count ?? 0,
       });
     };
+    const loadQVCT = async () => {
+      const { data } = await supabase
+        .from('qvct_discussion_threads')
+        .select('id, title, description, category, status, created_at')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (data) setQvctThreads(data as QVCTThread[]);
+    };
+    const loadTrainings = async () => {
+      const { data } = await supabase
+        .from('training_programs')
+        .select('id, title, code, category, provider, duration_hours, description, is_mandatory, status, start_date, end_date')
+        .in('status', ['planned', 'ongoing'])
+        .order('start_date', { ascending: true })
+        .limit(6);
+      if (data) setTrainings(data as TrainingProgram[]);
+    };
     loadCounts();
+    loadQVCT();
+    loadTrainings();
   }, [candidateId]);
 
   // jobs without a match score
@@ -590,6 +635,118 @@ function DashboardView({ profile, matches, openJobs, onEditProfile, candidateId,
           })}
         </div>
       </section>
+
+      {/* ── Formations SNH disponibles ────────────────────────────────────── */}
+      {trainings.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
+              <BookOpen size={16} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-white font-bold text-lg">Formations disponibles</h2>
+              <p className="text-white/50 text-xs">Programmes de formation ouverts par la SNH</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {trainings.map(tr => (
+              <div key={tr.id} className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md transition-shadow flex flex-col">
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <h3 className="font-bold text-slate-900 text-sm leading-snug flex-1">{tr.title}</h3>
+                  {tr.is_mandatory && (
+                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">Obligatoire</span>
+                  )}
+                </div>
+                {tr.code && <p className="text-xs text-slate-400 mb-2 font-mono">{tr.code}</p>}
+                {tr.description && (
+                  <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 mb-3 flex-1">{tr.description}</p>
+                )}
+                <div className="flex flex-wrap gap-1.5 mt-auto">
+                  {tr.category && (
+                    <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full capitalize">{tr.category}</span>
+                  )}
+                  {tr.duration_hours && (
+                    <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full flex items-center gap-1">
+                      <Clock size={10} />{tr.duration_hours}h
+                    </span>
+                  )}
+                  {tr.provider && (
+                    <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">{tr.provider}</span>
+                  )}
+                </div>
+                {(tr.start_date || tr.end_date) && (
+                  <div className="flex items-center gap-1 mt-2 text-xs text-slate-400">
+                    <Calendar size={10} />
+                    {tr.start_date ? fmtDate(tr.start_date) : '—'}
+                    {tr.end_date ? <> → {fmtDate(tr.end_date)}</> : ''}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Discussions QVCT ─────────────────────────────────────────────── */}
+      {qvctThreads.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-rose-500 rounded-lg flex items-center justify-center">
+              <MessageSquare size={16} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-white font-bold text-lg">Discussions QVCT</h2>
+              <p className="text-white/50 text-xs">Qualité de vie et conditions de travail — discussions ouvertes</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {qvctThreads.map(thread => {
+              const isOpen = expandedThread === thread.id;
+              const catColors: Record<string, string> = {
+                conditions_travail: 'bg-orange-100 text-orange-700',
+                relations: 'bg-blue-100 text-blue-700',
+                organisation: 'bg-teal-100 text-teal-700',
+                sante: 'bg-green-100 text-green-700',
+                autre: 'bg-slate-100 text-slate-600',
+              };
+              const catLabels: Record<string, string> = {
+                conditions_travail: 'Conditions de travail',
+                relations: 'Relations',
+                organisation: 'Organisation',
+                sante: 'Santé',
+                autre: 'Autre',
+              };
+              return (
+                <div key={thread.id} className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setExpandedThread(isOpen ? null : thread.id)}
+                    className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/5 transition"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <MessageSquare size={16} className="text-orange-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-white font-semibold text-sm">{thread.title}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catColors[thread.category] ?? 'bg-slate-100 text-slate-600'}`}>
+                          {catLabels[thread.category] ?? thread.category}
+                        </span>
+                      </div>
+                      <p className="text-white/50 text-xs">{fmtDate(thread.created_at)}</p>
+                    </div>
+                    {isOpen ? <ChevronUp size={15} className="text-white/40 mt-1 flex-shrink-0" /> : <ChevronDown size={15} className="text-white/40 mt-1 flex-shrink-0" />}
+                  </button>
+                  {isOpen && thread.description && (
+                    <div className="px-4 pb-4 pt-0 border-t border-white/10">
+                      <p className="text-white/70 text-sm leading-relaxed mt-3">{thread.description}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -628,7 +785,8 @@ function ProfileCompletion({ profile, hasExperiences, hasEducations, hasSkills, 
 function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCancel }: {
   candidateId: string; profile: CandidateProfile; onSaved: (p: CandidateProfile) => void; onCancel: () => void;
 }) {
-  const STEPS = ['Infos personnelles', 'Expériences', 'Formations', 'Compétences', 'Documents'];
+  const STEPS = ['Infos personnelles', 'Expériences', 'Mon parcours', 'Compétences', 'Documents', 'Formations SNH'];
+  const SAVE_STEPS = [0, 1, 2, 3, 4]; // step 5 is read-only
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({ ...initialProfile });
@@ -636,21 +794,24 @@ function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCanc
   const [educations, setEducations] = useState<Education[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [documents, setDocuments] = useState<CandidateDoc[]>([]);
+  const [snhTrainings, setSNHTrainings] = useState<TrainingProgram[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
-      const [expRes, eduRes, skRes, docRes] = await Promise.all([
+      const [expRes, eduRes, skRes, docRes, trRes] = await Promise.all([
         supabase.from('candidate_experiences').select('*').eq('candidate_id', candidateId).order('start_date', { ascending: false }),
         supabase.from('candidate_educations').select('*').eq('candidate_id', candidateId).order('end_date', { ascending: false }),
         supabase.from('candidate_candidate_skills').select('*').eq('candidate_id', candidateId),
         supabase.from('candidate_documents').select('*').eq('candidate_id', candidateId).order('uploaded_at', { ascending: false }),
+        supabase.from('training_programs').select('id,title,code,category,provider,duration_hours,description,is_mandatory,status,start_date,end_date').order('start_date', { ascending: true }),
       ]);
       setExperiences((expRes.data || []) as Experience[]);
       setEducations((eduRes.data || []) as Education[]);
       setSkills((skRes.data || []) as Skill[]);
       setDocuments((docRes.data || []) as CandidateDoc[]);
+      setSNHTrainings((trRes.data || []) as TrainingProgram[]);
       setLoadingData(false);
     };
     load();
@@ -746,6 +907,7 @@ function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCanc
           {step === 2 && <EducationsStep items={educations} setItems={setEducations} />}
           {step === 3 && <SkillsStep items={skills} setItems={setSkills} />}
           {step === 4 && <DocumentsStep candidateId={candidateId} documents={documents} setDocuments={setDocuments} />}
+          {step === 5 && <SNHTrainingsStep trainings={snhTrainings} />}
         </div>
         {saveError && (
           <div className="mx-8 mb-0 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm flex items-start gap-2">
@@ -759,11 +921,13 @@ function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCanc
             {step > 0 && <button onClick={() => setStep(s => s - 1)} className="flex items-center gap-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 text-sm transition"><ChevronLeft size={15} />Précédent</button>}
           </div>
           <div className="flex gap-2">
-            <button onClick={saveAll} disabled={saving}
-              className="flex items-center gap-2 px-5 py-2 bg-slate-600 text-white rounded-xl hover:bg-slate-700 disabled:opacity-60 text-sm font-medium transition">
-              {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={15} />}
-              Enregistrer
-            </button>
+            {SAVE_STEPS.includes(step) && (
+              <button onClick={saveAll} disabled={saving}
+                className="flex items-center gap-2 px-5 py-2 bg-slate-600 text-white rounded-xl hover:bg-slate-700 disabled:opacity-60 text-sm font-medium transition">
+                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={15} />}
+                Enregistrer
+              </button>
+            )}
             {step < STEPS.length - 1 && (
               <button onClick={() => setStep(s => s + 1)} className="flex items-center gap-1 px-5 py-2 bg-teal-700 text-white rounded-xl hover:bg-teal-800 text-sm font-medium transition">Suivant <ChevronRight size={15} /></button>
             )}
@@ -911,6 +1075,113 @@ function SkillsStep({ items, setItems }: { items: Skill[]; setItems: (v: Skill[]
       <button onClick={add} className="w-full border-2 border-dashed border-slate-200 rounded-xl py-3 text-slate-500 hover:border-teal-400 hover:text-teal-600 flex items-center justify-center gap-2 text-sm transition">
         <Plus size={16} /> Ajouter une compétence
       </button>
+    </div>
+  );
+}
+
+// ── SNH Trainings Step (read-only) ─────────────────────────────────────────────
+const TRAINING_STATUS_LABELS: Record<string, string> = {
+  planned: 'Planifiée',
+  ongoing: 'En cours',
+  completed: 'Terminée',
+};
+const TRAINING_STATUS_COLORS: Record<string, string> = {
+  planned: 'bg-blue-100 text-blue-700',
+  ongoing: 'bg-green-100 text-green-700',
+  completed: 'bg-slate-100 text-slate-500',
+};
+const TRAINING_CAT_LABELS: Record<string, string> = {
+  safety: 'Sécurité',
+  technical: 'Technique',
+  management: 'Management',
+  compliance: 'Conformité',
+  other: 'Autre',
+};
+
+function SNHTrainingsStep({ trainings }: { trainings: TrainingProgram[] }) {
+  const [filter, setFilter] = useState<string>('all');
+  const cats = Array.from(new Set(trainings.map(t => t.category).filter(Boolean))) as string[];
+  const filtered = filter === 'all' ? trainings : trainings.filter(t => t.category === filter);
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+        <BookOpen size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
+        <p className="text-blue-700 text-sm">
+          Ces formations sont proposées par le service Formation de la SNH. Consultez votre responsable ou le service RH pour vous inscrire.
+        </p>
+      </div>
+
+      {/* Filter by category */}
+      {cats.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${filter === 'all' ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            Toutes ({trainings.length})
+          </button>
+          {cats.map(cat => (
+            <button key={cat} onClick={() => setFilter(cat)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${filter === cat ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+              {TRAINING_CAT_LABELS[cat] ?? cat} ({trainings.filter(t => t.category === cat).length})
+            </button>
+          ))}
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-12 text-slate-400 text-sm">
+          <BookOpen size={36} className="mx-auto mb-2 opacity-30" />
+          Aucune formation disponible pour le moment
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(tr => (
+            <div key={tr.id} className="border border-slate-200 rounded-xl p-5 hover:border-teal-300 transition-colors">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h3 className="font-bold text-slate-900 text-sm">{tr.title}</h3>
+                    {tr.is_mandatory && (
+                      <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Obligatoire</span>
+                    )}
+                  </div>
+                  {tr.code && <p className="text-xs text-slate-400 font-mono mb-1">{tr.code}</p>}
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-lg font-medium flex-shrink-0 ${TRAINING_STATUS_COLORS[tr.status] ?? 'bg-slate-100 text-slate-500'}`}>
+                  {TRAINING_STATUS_LABELS[tr.status] ?? tr.status}
+                </span>
+              </div>
+              {tr.description && (
+                <p className="text-sm text-slate-600 leading-relaxed mb-3">{tr.description}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {tr.category && (
+                  <span className="text-xs px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full">
+                    {TRAINING_CAT_LABELS[tr.category] ?? tr.category}
+                  </span>
+                )}
+                {tr.duration_hours && (
+                  <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full flex items-center gap-1">
+                    <Clock size={10} />{tr.duration_hours}h
+                  </span>
+                )}
+                {tr.provider && (
+                  <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full flex items-center gap-1">
+                    <Building2 size={10} />{tr.provider}
+                  </span>
+                )}
+                {(tr.start_date || tr.end_date) && (
+                  <span className="text-xs text-slate-400 flex items-center gap-1 ml-auto">
+                    <Calendar size={10} />
+                    {tr.start_date ? fmtDate(tr.start_date) : '—'}
+                    {tr.end_date ? ` → ${fmtDate(tr.end_date)}` : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

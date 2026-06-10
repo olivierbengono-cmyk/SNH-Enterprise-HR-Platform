@@ -168,12 +168,12 @@ type Section = 'dashboard' | 'profile' | 'documents' | 'jobs' | 'spontaneous' | 
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function CandidatePortal() {
-  const [view, setView] = useState<'auth' | 'portal'>('auth');
+  const [view, setView] = useState<'public' | 'auth' | 'portal'>('public');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [candidateId, setCandidateId] = useState<string | null>(null);
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [section, setSection] = useState<Section>('dashboard');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [openJobs, setOpenJobs] = useState<JobOpening[]>([]);
   const [matches, setMatches] = useState<JobMatch[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -184,26 +184,37 @@ export default function CandidatePortal() {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
+  // job to apply to after auth
+  const [pendingJobId, setPendingJobId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Always load public jobs regardless of auth state
+    supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false })
+      .then(({ data }) => { if (data) setOpenJobs(data as JobOpening[]); });
+    // Then check session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) loadPortal(session.user.id);
+      if (session?.user) {
+        loadPortal(session.user.id);
+      } else {
+        setLoading(false);
+      }
     });
   }, []);
 
   const loadPortal = async (userId: string) => {
     setLoading(true);
     const { data: cand } = await supabase.from('candidates').select('*').eq('user_id', userId).maybeSingle();
-    if (!cand) { setLoading(false); return; }
+    if (!cand) { setLoading(false); setView('public'); return; }
     setCandidateId(cand.id);
     setProfile(cand as CandidateProfile);
 
-    const [expRes, eduRes, skRes, docRes, appRes, jobRes] = await Promise.all([
+    const [expRes, eduRes, skRes, docRes, appRes, matchRes, jobRes] = await Promise.all([
       supabase.from('candidate_experiences').select('*').eq('candidate_id', cand.id).order('start_date', { ascending: false }),
       supabase.from('candidate_educations').select('*').eq('candidate_id', cand.id).order('end_date', { ascending: false }),
       supabase.from('candidate_candidate_skills').select('*').eq('candidate_id', cand.id),
       supabase.from('candidate_documents').select('*').eq('candidate_id', cand.id).order('uploaded_at', { ascending: false }),
       supabase.from('candidate_applications').select('*,job_opening:job_openings(id,title)').eq('candidate_id', cand.id).order('created_at', { ascending: false }),
+      supabase.from('candidate_job_matches').select('*, job_opening:job_openings(*)').eq('candidate_id', cand.id).order('match_score', { ascending: false }),
       supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false }),
     ]);
     setExperiences((expRes.data || []) as Experience[]);
@@ -211,17 +222,10 @@ export default function CandidatePortal() {
     setSkills((skRes.data || []) as Skill[]);
     setDocuments((docRes.data || []) as CandidateDoc[]);
     setApplications((appRes.data || []) as Application[]);
+    setMatches((matchRes.data || []) as unknown as JobMatch[]);
     setOpenJobs((jobRes.data || []) as JobOpening[]);
 
-    // Matching
-    const { data: matchData } = await supabase
-      .from('candidate_job_matches')
-      .select('*, job_opening:job_openings(*)')
-      .eq('candidate_id', cand.id)
-      .order('match_score', { ascending: false });
-    if (matchData) setMatches(matchData as unknown as JobMatch[]);
-
-    // Mock notifications from applications
+    // Notifications from application history
     const notifs: Notification[] = (appRes.data || []).slice(0, 5).map((a: any, i: number) => ({
       id: String(i),
       title: i === 0 ? 'Candidature reçue' : 'Mise à jour de statut',
@@ -240,7 +244,16 @@ export default function CandidatePortal() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setView('auth'); setCandidateId(null); setProfile(null);
+    setView('public');
+    setCandidateId(null); setProfile(null);
+    setApplications([]); setExperiences([]); setEducations([]);
+    setSkills([]); setDocuments([]); setMatches([]); setNotifications([]);
+  };
+
+  const openAuth = (mode: 'login' | 'register' = 'login', jobId?: string) => {
+    setAuthMode(mode);
+    if (jobId) setPendingJobId(jobId);
+    setView('auth');
   };
 
   const profilePct = () => {
@@ -256,14 +269,34 @@ export default function CandidatePortal() {
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   };
 
-  if (loading) return (
+  if (loading && view !== 'public') return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-700" />
     </div>
   );
 
-  if (view === 'auth') return (
-    <AuthView authMode={authMode} setAuthMode={setAuthMode} onAuth={loadPortal} />
+  // ── Public landing ──
+  if (view === 'public' || view === 'auth') return (
+    <>
+      <PublicLanding
+        openJobs={openJobs}
+        onLogin={() => openAuth('login')}
+        onRegister={() => openAuth('register')}
+        onApply={(jobId) => openAuth('login', jobId)}
+        loadingJobs={loading}
+      />
+      {view === 'auth' && (
+        <AuthModal
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+          onClose={() => setView('public')}
+          onAuth={async (uid) => {
+            setPendingJobId(null);
+            await loadPortal(uid);
+          }}
+        />
+      )}
+    </>
   );
 
   return (
@@ -295,6 +328,9 @@ export default function CandidatePortal() {
           <NavItem icon={Bell} label="Notifications" active={section==='notifications'} badge={unreadNotifs || undefined} onClick={() => { setSection('notifications'); setUnreadNotifs(0); }} />
           <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all mt-0.5">
             <LogOut size={16} /> Déconnexion
+          </button>
+          <button onClick={() => setView('public')} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-all mt-0.5">
+            <Globe size={16} /> Voir les offres
           </button>
         </nav>
 
@@ -384,11 +420,251 @@ const SECTION_TITLES: Record<Section, string> = {
   notifications: 'Notifications',
 };
 
-// ── Auth View ─────────────────────────────────────────────────────────────────
-function AuthView({ onAuth, authMode, setAuthMode }: {
+// ── Public Landing ─────────────────────────────────────────────────────────────
+function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: {
+  openJobs: JobOpening[];
+  onLogin: () => void;
+  onRegister: () => void;
+  onApply: (jobId: string) => void;
+  loadingJobs: boolean;
+}) {
+  const [search, setSearch] = useState('');
+  const [filterContract, setFilterContract] = useState('');
+  const [expandedJob, setExpandedJob] = useState<string | null>(null);
+
+  const filtered = openJobs.filter(j => {
+    const txt = `${j.title} ${j.location} ${j.contract_type} ${j.description ?? ''}`.toLowerCase();
+    return (!search || txt.includes(search.toLowerCase())) &&
+           (!filterContract || j.contract_type === filterContract);
+  });
+
+  const contracts = [...new Set(openJobs.map(j => j.contract_type).filter(Boolean))];
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans">
+      {/* ── Header / Hero ── */}
+      <header className="text-white relative overflow-hidden" style={{ background: SNH_BLUE }}>
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 70% 50%, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+        <div className="relative max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <img src="/logoSNH.png" alt="SNH" className="h-7 w-auto brightness-0 invert" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+            </div>
+            <div>
+              <p className="font-bold text-base leading-tight">SNH Cameroun</p>
+              <p className="text-white/60 text-xs">Société Nationale des Hydrocarbures</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onLogin}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-medium transition">
+              <LogIn size={15} /> Connexion
+            </button>
+            <button onClick={onRegister}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-blue-900 rounded-lg text-sm font-bold hover:bg-blue-50 transition">
+              <UserPlus size={15} /> Créer un compte
+            </button>
+          </div>
+        </div>
+
+        {/* Hero content */}
+        <div className="relative max-w-5xl mx-auto px-6 py-12 text-center">
+          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs font-semibold text-white/80 mb-5">
+            <Sparkles size={12} /> {openJobs.length} offre{openJobs.length !== 1 ? 's' : ''} disponible{openJobs.length !== 1 ? 's' : ''}
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">
+            Rejoignez la SNH<br />
+            <span className="text-white/80 font-normal text-2xl">et participez à l'avenir énergétique du Cameroun</span>
+          </h1>
+          <p className="text-white/70 text-base max-w-2xl mx-auto mb-8">
+            Découvrez nos opportunités de carrière, de stage et déposez votre candidature en quelques étapes.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-xl mx-auto">
+            <div className="flex-1 relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Poste, mot-clé, lieu..."
+                className="w-full pl-9 pr-4 py-3 rounded-xl text-gray-900 text-sm outline-none shadow-sm focus:ring-2 focus:ring-white/50"
+              />
+            </div>
+            <select value={filterContract} onChange={e => setFilterContract(e.target.value)}
+              className="px-4 py-3 rounded-xl text-gray-900 text-sm outline-none bg-white shadow-sm min-w-[140px]">
+              <option value="">Tous les contrats</option>
+              {contracts.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Stats bar ── */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-8 flex-wrap">
+          {[
+            { label: 'Offres publiées', value: openJobs.length },
+            { label: 'Types de contrats', value: contracts.length },
+            { label: 'Localisation', value: 'Cameroun' },
+          ].map(s => (
+            <div key={s.label} className="flex items-center gap-2 text-sm text-gray-600">
+              <CheckCircle size={14} className="text-green-500" />
+              <span><strong className="text-gray-900">{s.value}</strong> {s.label}</span>
+            </div>
+          ))}
+          <div className="ml-auto flex items-center gap-2 text-sm text-gray-500">
+            <span>Déjà candidat ?</span>
+            <button onClick={onLogin} className="font-semibold hover:underline" style={{ color: SNH_BLUE }}>
+              Accéder à mon espace
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Job list ── */}
+      <main className="max-w-5xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold text-gray-900">
+            {search || filterContract ? `${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}` : 'Toutes les offres'}
+          </h2>
+        </div>
+
+        {loadingJobs ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: SNH_BLUE }} />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-2xl border border-gray-200">
+            <Briefcase size={40} className="mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-500 font-medium">Aucune offre ne correspond à votre recherche</p>
+            <button onClick={() => { setSearch(''); setFilterContract(''); }} className="mt-3 text-sm font-semibold hover:underline" style={{ color: SNH_BLUE }}>
+              Réinitialiser
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filtered.map(job => (
+              <div key={job.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <div className="p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${SNH_BLUE}15` }}>
+                      <Briefcase size={18} style={{ color: SNH_BLUE }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div>
+                          <h3 className="font-bold text-gray-900 text-base leading-tight">{job.title}</h3>
+                          <div className="flex items-center gap-3 mt-1 flex-wrap">
+                            <span className="text-xs text-gray-500 flex items-center gap-1"><MapPin size={11} />{job.location}</span>
+                            <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={11} />Clôture : {fmtDate(job.closing_date)}</span>
+                            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: `${SNH_BLUE}12`, color: SNH_BLUE }}>{job.contract_type}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => setExpandedJob(expandedJob === job.id ? null : job.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition">
+                            {expandedJob === job.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                            Détails
+                          </button>
+                          <button onClick={() => onApply(job.id)}
+                            className="flex items-center gap-1.5 px-4 py-1.5 text-white rounded-lg text-xs font-bold transition hover:opacity-90"
+                            style={{ background: SNH_BLUE }}>
+                            <Send size={13} /> Postuler
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Skills preview */}
+                      {job.required_skills?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-3">
+                          {job.required_skills.slice(0, 5).map(s => (
+                            <span key={s} className="text-xs bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full">{s}</span>
+                          ))}
+                          {job.required_skills.length > 5 && (
+                            <span className="text-xs text-gray-400">+{job.required_skills.length - 5}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded details */}
+                {expandedJob === job.id && (
+                  <div className="border-t border-gray-100 px-5 py-4 bg-gray-50 space-y-3">
+                    {job.description && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-700 uppercase mb-1.5">Description du poste</p>
+                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{job.description}</p>
+                      </div>
+                    )}
+                    {job.requirements && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-700 uppercase mb-1.5">Profil recherché</p>
+                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{job.requirements}</p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                      {job.min_experience_years > 0 && (
+                        <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                          <p className="text-gray-500 mb-0.5">Expérience</p>
+                          <p className="font-semibold text-gray-900">{job.min_experience_years} an{job.min_experience_years > 1 ? 's' : ''} min.</p>
+                        </div>
+                      )}
+                      {job.education_level && (
+                        <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                          <p className="text-gray-500 mb-0.5">Formation</p>
+                          <p className="font-semibold text-gray-900">{job.education_level}</p>
+                        </div>
+                      )}
+                      <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                        <p className="text-gray-500 mb-0.5">Référence</p>
+                        <p className="font-semibold text-gray-900">{job.reference}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => onApply(job.id)}
+                      className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl text-sm font-bold transition hover:opacity-90"
+                      style={{ background: SNH_BLUE }}>
+                      <Send size={15} /> Postuler à cette offre
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Spontaneous CTA */}
+        <div className="mt-8 rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
+          <div className="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center" style={{ background: `${SNH_BLUE}15` }}>
+            <Send size={22} style={{ color: SNH_BLUE }} />
+          </div>
+          <h3 className="font-bold text-gray-900 mb-1">Vous ne trouvez pas votre bonheur ?</h3>
+          <p className="text-gray-500 text-sm mb-5">Envoyez une candidature spontanée ou recommandée — nous la garderons dans notre vivier de talents.</p>
+          <button onClick={onRegister}
+            className="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl font-bold text-sm transition hover:opacity-90"
+            style={{ background: SNH_BLUE }}>
+            <UserPlus size={16} /> Déposer une candidature spontanée
+          </button>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 mt-8">
+        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between text-xs text-gray-400 flex-wrap gap-2">
+          <p>© {new Date().getFullYear()} Société Nationale des Hydrocarbures — Tous droits réservés</p>
+          <p>Portail de recrutement officiel</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// ── Auth Modal ─────────────────────────────────────────────────────────────────
+function AuthModal({ onAuth, authMode, setAuthMode, onClose }: {
   onAuth: (uid: string) => void;
   authMode: 'login' | 'register';
   setAuthMode: (m: 'login' | 'register') => void;
+  onClose: () => void;
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -427,17 +703,20 @@ function AuthView({ onAuth, authMode, setAuthMode }: {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100">
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 animate-in">
         {/* Header */}
-        <div className="p-8 text-center" style={{ background: SNH_BLUE }}>
-          <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            {authMode === 'login' ? <LogIn size={26} className="text-white" /> : <UserPlus size={26} className="text-white" />}
+        <div className="p-6 text-center relative" style={{ background: SNH_BLUE }}>
+          <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition">
+            <X size={14} className="text-white" />
+          </button>
+          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+            {authMode === 'login' ? <LogIn size={22} className="text-white" /> : <UserPlus size={22} className="text-white" />}
           </div>
-          <h2 className="text-white text-lg font-bold">{authMode === 'login' ? 'Connexion' : 'Créer un compte'}</h2>
-          <p className="text-white/60 text-sm mt-1">Portail Recrutement SNH Cameroun</p>
+          <h2 className="text-white text-base font-bold">{authMode === 'login' ? 'Connexion à mon espace' : 'Créer mon compte candidat'}</h2>
+          <p className="text-white/60 text-xs mt-0.5">Portail Recrutement SNH Cameroun</p>
         </div>
-        <form onSubmit={handleSubmit} className="p-8 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm flex items-center gap-2">
               <AlertCircle size={14} /> {error}
@@ -459,15 +738,21 @@ function AuthView({ onAuth, authMode, setAuthMode }: {
               </button>
             </div>
           </div>
+          {authMode === 'register' && (
+            <p className="text-xs text-gray-500 flex items-start gap-1.5">
+              <Lock size={11} className="mt-0.5 flex-shrink-0 text-gray-400" />
+              Vos données sont traitées de manière confidentielle conformément à la politique de recrutement SNH.
+            </p>
+          )}
           <button type="submit" disabled={loading}
-            className="w-full py-3 text-white rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-60 transition"
+            className="w-full py-3 text-white rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition text-sm"
             style={{ background: SNH_BLUE }}>
             {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
-              authMode === 'login' ? <><LogIn size={16} /> Se connecter</> : <><UserPlus size={16} /> Créer mon compte</>}
+              authMode === 'login' ? <><LogIn size={15} /> Se connecter</> : <><UserPlus size={15} /> Créer mon compte</>}
           </button>
           <div className="text-center">
-            <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-              className="text-sm font-medium transition" style={{ color: SNH_BLUE }}>
+            <button type="button" onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setError(''); }}
+              className="text-sm font-medium transition hover:underline" style={{ color: SNH_BLUE }}>
               {authMode === 'login' ? 'Pas encore de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
             </button>
           </div>

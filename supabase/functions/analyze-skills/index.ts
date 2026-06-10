@@ -357,8 +357,8 @@ Deno.serve(async (req: Request) => {
       const results = employees
         .map((emp) => {
           const { score, mandatory_score, skill_gaps } = computeMatchScore(emp.emp_skills, effectiveReqs);
-          const empSkillMap = new Map(emp.emp_skills.map((s) => s.skill_id));
-          const overlap = departingSkills.filter((s) => empSkillMap.has(s.skill_id)).length;
+          const empSkillSet = new Set(emp.emp_skills.map((s) => s.skill_id));
+          const overlap = departingSkills.filter((s) => empSkillSet.has(s.skill_id)).length;
           const rationale = generateSuccessionRationale(emp, score, overlap, departingSkills.length);
           const trainingPlan = generateTrainingPlan(emp, skill_gaps);
           return {

@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { User, Briefcase, GraduationCap, Zap, FileText, CheckCircle, Plus, Trash2, ChevronRight, ChevronLeft, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, Award, ArrowRight, X, LogIn, UserPlus, LogOut, CreditCard as Edit3, Sparkles, TrendingUp, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Users, ExternalLink } from 'lucide-react';
+import { User, Briefcase, GraduationCap, FileText, CheckCircle, Plus, Trash2, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, ArrowRight, X, LogIn, UserPlus, LogOut, Sparkles, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Bell, LayoutDashboard, Send, Search, Plane as PaperPlane, ChevronRight, Home, Folder, BarChart3, Settings } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface CandidateProfile {
-  id: string;
-  first_name: string; last_name: string; email: string; phone: string | null;
-  location: string | null; linkedin_url: string | null; portfolio_url: string | null;
-  summary: string | null; desired_position: string | null;
+  id: string; first_name: string; last_name: string; email: string;
+  phone: string | null; location: string | null; linkedin_url: string | null;
+  portfolio_url: string | null; summary: string | null; desired_position: string | null;
   desired_salary_min: number | null; desired_salary_max: number | null;
   availability_date: string | null; mobility: string | null;
-  profile_completed: boolean;
+  profile_completed: boolean; birth_date?: string | null; gender?: string | null;
+  nationality?: string | null; region?: string | null; professional_title?: string | null;
+  national_id?: string | null; phone2?: string | null;
 }
 interface JobOpening {
   id: string; title: string; reference: string; contract_type: string;
@@ -25,52 +26,39 @@ interface JobMatch {
   matched_skills: string[]; missing_skills: string[]; ai_summary: string | null;
   job_opening: JobOpening;
 }
+interface Application {
+  id: string; job_opening_id: string | null; desired_position: string | null;
+  cover_letter: string | null; status: string; created_at: string;
+  spontaneous_type?: string | null;
+  job_opening?: { id: string; title: string } | null;
+}
 interface Experience {
   id?: string; job_title: string; company: string; location: string;
   start_date: string; end_date: string; is_current: boolean; description: string;
+  contract_type?: string; sector?: string;
 }
 interface Education {
   id?: string; degree: string; field_of_study: string; institution: string;
-  location: string; start_date: string; end_date: string; is_current: boolean; grade: string;
+  location: string; start_date: string; end_date: string; is_current: boolean;
+  grade: string; education_level?: string; country?: string;
 }
 interface Skill {
   id?: string; name: string;
   category: 'technical' | 'soft' | 'language' | 'certification' | 'other';
   level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
 }
+interface Language { id?: string; name: string; level: string; }
 interface CandidateDoc {
-  id: string;
-  candidate_id: string;
+  id: string; candidate_id: string;
   type: 'cv' | 'cover_letter' | 'diploma' | 'reference' | 'other';
-  file_name: string;
-  file_url: string;
-  file_size: number | null;
-  uploaded_at: string;
+  file_name: string; file_url: string; file_size: number | null; uploaded_at: string;
 }
-interface QVCTThread {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  status: 'open' | 'closed' | 'archived';
-  created_at: string;
-  message_count?: number;
-}
-interface TrainingProgram {
-  id: string;
-  title: string;
-  code: string;
-  category: string | null;
-  provider: string | null;
-  duration_hours: number | null;
-  description: string | null;
-  is_mandatory: boolean;
-  status: string;
-  start_date: string | null;
-  end_date: string | null;
+interface Notification {
+  id: string; title: string; body: string; read: boolean; created_at: string;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────────
+const SNH_BLUE = '#0C447C';
 const SKILL_LEVELS = [
   { value: 'beginner', label: 'Débutant' },
   { value: 'intermediate', label: 'Intermédiaire' },
@@ -84,154 +72,324 @@ const SKILL_CATEGORIES = [
   { value: 'certification', label: 'Certification' },
   { value: 'other', label: 'Autre' },
 ];
-const MOBILITY_OPTIONS = [
-  { value: 'local', label: 'Local (même ville)' },
-  { value: 'regional', label: 'Régional' },
-  { value: 'national', label: 'National' },
-  { value: 'international', label: 'International' },
+const LANG_LEVELS = ['A1','A2','B1','B2','C1','C2','Natif'];
+const REGIONS_CM = ['Centre','Littoral','Ouest','Nord','Extrême-Nord','Adamaoua','Est','Sud','Nord-Ouest','Sud-Ouest'];
+const SNH_DIRECTIONS = [
+  'Direction Exploration & Production',
+  'Direction Financière',
+  'Direction Informatique & Systèmes d\'Information',
+  'Direction Juridique',
+  'Direction des Ressources Humaines',
+  'Direction HSE (Hygiène, Sécurité, Environnement)',
+  'Direction Logistique & Approvisionnement',
+  'Direction des Relations Extérieures & Coopération',
+  'Direction Commerciale',
+  'Direction Générale',
+  'Sans préférence — Au choix de la SNH',
 ];
-const LEVEL_COLORS: Record<string, string> = {
-  beginner: 'bg-slate-100 text-slate-600',
-  intermediate: 'bg-blue-100 text-blue-700',
-  advanced: 'bg-orange-100 text-orange-700',
-  expert: 'bg-green-100 text-green-700',
-};
-const SCORE_COLOR = (s: number) =>
-  s >= 80 ? 'text-green-600' : s >= 60 ? 'text-orange-500' : 'text-red-500';
-const SCORE_BG = (s: number) =>
-  s >= 80 ? 'bg-green-50 border-green-200' : s >= 60 ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-100';
+const DOC_TYPES = [
+  { value: 'cv', label: 'CV / Curriculum Vitae' },
+  { value: 'cover_letter', label: 'Lettre de motivation' },
+  { value: 'diploma', label: 'Diplôme / Attestation de diplôme' },
+  { value: 'reference', label: 'Lettre de recommandation' },
+  { value: 'other', label: 'Autre document' },
+];
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtDate(d: string | null) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+  return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 }
-function inp(err?: string) {
-  return `w-full px-3.5 py-2.5 border rounded-xl text-sm outline-none transition-colors focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${err ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`;
+function fmtSize(bytes: number | null) {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
 }
-function Field({ label, children, error, icon, className = '' }: { label: string; children: React.ReactNode; error?: string; icon?: React.ReactNode; className?: string }) {
+function initials(first: string, last: string) {
+  return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase();
+}
+
+// ── UI primitives ──────────────────────────────────────────────────────────────
+function inp(err?: boolean) {
+  return `w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${err ? 'border-red-300 bg-red-50' : 'border-gray-300'}`;
+}
+function Lbl({ children }: { children: React.ReactNode }) {
+  return <label className="block text-xs font-semibold text-gray-600 mb-1">{children}</label>;
+}
+function Tag({ children, variant = 'blue' }: { children: React.ReactNode; variant?: 'blue'|'green'|'amber'|'purple'|'gray'|'red' }) {
+  const cls: Record<string, string> = {
+    blue: 'bg-blue-50 text-blue-700 border-blue-100',
+    green: 'bg-green-50 text-green-700 border-green-100',
+    amber: 'bg-amber-50 text-amber-700 border-amber-100',
+    purple: 'bg-purple-50 text-purple-700 border-purple-100',
+    gray: 'bg-gray-100 text-gray-600 border-gray-200',
+    red: 'bg-red-50 text-red-700 border-red-100',
+  };
+  return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${cls[variant]}`}>{children}</span>;
+}
+function AppStatus({ status }: { status: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    new:          { label: 'Soumis',         cls: 'bg-blue-50 text-blue-700' },
+    reviewing:    { label: 'En examen',      cls: 'bg-amber-50 text-amber-700' },
+    interview:    { label: 'Entretien',      cls: 'bg-purple-50 text-purple-700' },
+    offer:        { label: 'Offre',          cls: 'bg-teal-50 text-teal-700' },
+    integrated:   { label: 'Intégré(e)',     cls: 'bg-emerald-50 text-emerald-700' },
+    rejected:     { label: 'Refusé(e)',      cls: 'bg-red-50 text-red-700' },
+    withdrawn:    { label: 'Retiré(e)',      cls: 'bg-gray-100 text-gray-600' },
+  };
+  const s = map[status] ?? map.new;
+  return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${s.cls}`}>{s.label}</span>;
+}
+
+// ── Sidebar nav item ───────────────────────────────────────────────────────────
+function NavItem({ icon: Icon, label, active, badge, onClick }: {
+  icon: React.FC<any>; label: string; active?: boolean; badge?: number; onClick: () => void;
+}) {
   return (
-    <div className={className}>
-      <label className="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-1.5">
-        {icon && <span className="text-slate-400">{icon}</span>}{label}
-      </label>
-      {children}
-      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    <button onClick={onClick} className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all mb-0.5 ${active ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}>
+      <Icon size={16} className="flex-shrink-0" />
+      <span className="flex-1 text-left">{label}</span>
+      {badge ? <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{badge}</span> : null}
+    </button>
+  );
+}
+
+// ── Progress bar ───────────────────────────────────────────────────────────────
+function ProgressBar({ pct, color = 'bg-blue-600' }: { pct: number; color?: string }) {
+  return (
+    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
 
+type Section = 'dashboard' | 'profile' | 'documents' | 'jobs' | 'spontaneous' | 'applications' | 'notifications';
+
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function CandidatePortal() {
-  const [view, setView] = useState<'auth' | 'dashboard' | 'profile-edit' | 'apply'>('auth');
+  const [view, setView] = useState<'auth' | 'portal'>('auth');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [candidateId, setCandidateId] = useState<string | null>(null);
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
-  const [matches, setMatches] = useState<JobMatch[]>([]);
-  const [openJobs, setOpenJobs] = useState<JobOpening[]>([]);
+  const [section, setSection] = useState<Section>('dashboard');
   const [loading, setLoading] = useState(false);
+  const [openJobs, setOpenJobs] = useState<JobOpening[]>([]);
+  const [matches, setMatches] = useState<JobMatch[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [documents, setDocuments] = useState<CandidateDoc[]>([]);
+  const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [educations, setEducations] = useState<Education[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
 
-  // On mount, check if already logged in as a candidate
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        loadCandidateProfile(session.user.id);
-      }
+      if (session?.user) loadPortal(session.user.id);
     });
   }, []);
 
-  const loadCandidateProfile = async (userId: string) => {
+  const loadPortal = async (userId: string) => {
     setLoading(true);
-    const { data } = await supabase.from('candidates').select('*').eq('user_id', userId).maybeSingle();
-    if (data) {
-      setCandidateId(data.id);
-      setProfile(data as CandidateProfile);
-      await loadMatches(data.id);
-      setView('dashboard');
-    }
-    setLoading(false);
-  };
+    const { data: cand } = await supabase.from('candidates').select('*').eq('user_id', userId).maybeSingle();
+    if (!cand) { setLoading(false); return; }
+    setCandidateId(cand.id);
+    setProfile(cand as CandidateProfile);
 
-  const loadMatches = async (cid: string) => {
-    const { data } = await supabase
+    const [expRes, eduRes, skRes, docRes, appRes, jobRes] = await Promise.all([
+      supabase.from('candidate_experiences').select('*').eq('candidate_id', cand.id).order('start_date', { ascending: false }),
+      supabase.from('candidate_educations').select('*').eq('candidate_id', cand.id).order('end_date', { ascending: false }),
+      supabase.from('candidate_candidate_skills').select('*').eq('candidate_id', cand.id),
+      supabase.from('candidate_documents').select('*').eq('candidate_id', cand.id).order('uploaded_at', { ascending: false }),
+      supabase.from('candidate_applications').select('*,job_opening:job_openings(id,title)').eq('candidate_id', cand.id).order('created_at', { ascending: false }),
+      supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false }),
+    ]);
+    setExperiences((expRes.data || []) as Experience[]);
+    setEducations((eduRes.data || []) as Education[]);
+    setSkills((skRes.data || []) as Skill[]);
+    setDocuments((docRes.data || []) as CandidateDoc[]);
+    setApplications((appRes.data || []) as Application[]);
+    setOpenJobs((jobRes.data || []) as JobOpening[]);
+
+    // Matching
+    const { data: matchData } = await supabase
       .from('candidate_job_matches')
       .select('*, job_opening:job_openings(*)')
-      .eq('candidate_id', cid)
+      .eq('candidate_id', cand.id)
       .order('match_score', { ascending: false });
-    if (data) setMatches(data as unknown as JobMatch[]);
+    if (matchData) setMatches(matchData as unknown as JobMatch[]);
 
-    // Also load all open jobs
-    const { data: jobs } = await supabase
-      .from('job_openings')
-      .select('*')
-      .eq('status', 'open')
-      .order('publication_date', { ascending: false });
-    if (jobs) setOpenJobs(jobs as JobOpening[]);
+    // Mock notifications from applications
+    const notifs: Notification[] = (appRes.data || []).slice(0, 5).map((a: any, i: number) => ({
+      id: String(i),
+      title: i === 0 ? 'Candidature reçue' : 'Mise à jour de statut',
+      body: i === 0
+        ? `Votre candidature pour "${a.desired_position || a.job_opening?.title || 'ce poste'}" a bien été reçue.`
+        : `Le statut de votre candidature pour "${a.desired_position || a.job_opening?.title || 'ce poste'}" a été mis à jour.`,
+      read: i > 1,
+      created_at: a.created_at,
+    }));
+    setNotifications(notifs);
+    setUnreadNotifs(notifs.filter(n => !n.read).length);
+
+    setView('portal');
+    setLoading(false);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setCandidateId(null); setProfile(null); setMatches([]); setOpenJobs([]);
-    setView('auth');
+    setView('auth'); setCandidateId(null); setProfile(null);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
-      </div>
-    );
-  }
+  const profilePct = () => {
+    if (!profile) return 0;
+    const checks = [
+      profile.phone, profile.location, profile.summary, profile.desired_position,
+      profile.availability_date, profile.professional_title,
+      experiences.length > 0 ? 'ok' : null,
+      educations.length > 0 ? 'ok' : null,
+      skills.length > 0 ? 'ok' : null,
+      documents.length > 0 ? 'ok' : null,
+    ];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  };
+
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-700" />
+    </div>
+  );
+
+  if (view === 'auth') return (
+    <AuthView authMode={authMode} setAuthMode={setAuthMode} onAuth={loadPortal} />
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900">
-      {/* Header */}
-      <div className="bg-black/20 backdrop-blur-sm border-b border-white/10 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/logoSNH.png" alt="SNH" className="h-9 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            <div>
-              <p className="text-white font-bold text-base leading-tight">Portail Candidats</p>
-              <p className="text-white/50 text-xs">SNH — Société Nationale des Hydrocarbures</p>
+    <div className="flex min-h-screen bg-gray-50 font-sans">
+      {/* ── Sidebar ── */}
+      <aside className="w-56 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 sticky top-0 h-screen">
+        {/* Logo */}
+        <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: SNH_BLUE }}>
+            <img src="/logoSNH.png" alt="SNH" className="h-6 w-auto brightness-0 invert" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-900 leading-tight">SNH Cameroun</p>
+            <p className="text-xs text-gray-400">Portail Recrutement</p>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 p-3 overflow-y-auto">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2">Mon espace</p>
+          <NavItem icon={LayoutDashboard} label="Tableau de bord" active={section==='dashboard'} onClick={() => setSection('dashboard')} />
+          <NavItem icon={User} label="Mon profil" active={section==='profile'} onClick={() => setSection('profile')} />
+          <NavItem icon={Folder} label="Mes documents" active={section==='documents'} onClick={() => setSection('documents')} />
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">Recrutement SNH</p>
+          <NavItem icon={Briefcase} label="Offres d'emploi" active={section==='jobs'} onClick={() => setSection('jobs')} />
+          <NavItem icon={Send} label="Candidature spontanée" active={section==='spontaneous'} onClick={() => setSection('spontaneous')} />
+          <NavItem icon={FileText} label="Mes candidatures" active={section==='applications'} badge={applications.length} onClick={() => setSection('applications')} />
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">Compte</p>
+          <NavItem icon={Bell} label="Notifications" active={section==='notifications'} badge={unreadNotifs || undefined} onClick={() => { setSection('notifications'); setUnreadNotifs(0); }} />
+          <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all mt-0.5">
+            <LogOut size={16} /> Déconnexion
+          </button>
+        </nav>
+
+        {/* Footer user */}
+        {profile && (
+          <div className="p-3 border-t border-gray-100 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700 flex-shrink-0">
+              {initials(profile.first_name, profile.last_name)}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-gray-900 truncate">{profile.first_name} {profile.last_name}</p>
+              <p className="text-xs text-gray-400">Candidat</p>
             </div>
           </div>
-          {profile && (
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2">
-                {[
-                  { id: 'dashboard', label: 'Accueil' },
-                  { id: 'profile-edit', label: 'Mon profil' },
-                ].map(v => (
-                  <button key={v.id} onClick={() => setView(v.id as any)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === v.id ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>
-                    {v.label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-1.5">
-                <div className="w-7 h-7 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-bold">
-                  {profile.first_name[0]}{profile.last_name[0]}
-                </div>
-                <span className="text-white text-sm hidden sm:block">{profile.first_name}</span>
-              </div>
-              <button onClick={handleLogout} className="text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
-                <LogOut size={17} />
-              </button>
+        )}
+      </aside>
+
+      {/* ── Main content ── */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Topbar */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between sticky top-0 z-10">
+          <p className="text-base font-semibold text-gray-900">{SECTION_TITLES[section]}</p>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-full px-3 py-1.5">
+              <BarChart3 size={13} className="text-green-600" />
+              <span className="text-xs font-semibold text-green-700">Profil : {profilePct()}%</span>
             </div>
+            {profile && (
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">
+                {initials(profile.first_name, profile.last_name)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 p-6 overflow-y-auto">
+          {section === 'dashboard' && profile && (
+            <DashboardSection
+              profile={profile} experiences={experiences} educations={educations}
+              skills={skills} documents={documents} applications={applications}
+              openJobs={openJobs} matches={matches} pct={profilePct()}
+              onNav={setSection} candidateId={candidateId!}
+              onApplied={(app) => setApplications(prev => [app, ...prev])}
+            />
+          )}
+          {section === 'profile' && profile && (
+            <ProfileSection
+              profile={profile} setProfile={setProfile}
+              experiences={experiences} setExperiences={setExperiences}
+              educations={educations} setEducations={setEducations}
+              skills={skills} setSkills={setSkills}
+              languages={languages} setLanguages={setLanguages}
+              candidateId={candidateId!}
+            />
+          )}
+          {section === 'documents' && candidateId && (
+            <DocumentsSection candidateId={candidateId} documents={documents} setDocuments={setDocuments} />
+          )}
+          {section === 'jobs' && (
+            <JobsSection openJobs={openJobs} matches={matches} candidateId={candidateId!}
+              onApplied={(app) => setApplications(prev => [app, ...prev])} applications={applications} />
+          )}
+          {section === 'spontaneous' && profile && candidateId && (
+            <SpontaneousSection candidateId={candidateId} profile={profile}
+              onApplied={(app) => { setApplications(prev => [app, ...prev]); setSection('applications'); }} />
+          )}
+          {section === 'applications' && (
+            <ApplicationsSection applications={applications} />
+          )}
+          {section === 'notifications' && (
+            <NotificationsSection notifications={notifications} />
           )}
         </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        {view === 'auth' && <AuthView onAuth={loadCandidateProfile} authMode={authMode} setAuthMode={setAuthMode} />}
-        {view === 'dashboard' && profile && <DashboardView profile={profile} matches={matches} openJobs={openJobs} onEditProfile={() => setView('profile-edit')} candidateId={candidateId!} reloadMatches={() => loadMatches(candidateId!)} />}
-        {view === 'profile-edit' && profile && candidateId && <ProfileEditView candidateId={candidateId} profile={profile} onSaved={(p) => { setProfile(p); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
       </div>
     </div>
   );
 }
 
+const SECTION_TITLES: Record<Section, string> = {
+  dashboard: 'Tableau de bord',
+  profile: 'Mon profil',
+  documents: 'Mes documents',
+  jobs: 'Offres d\'emploi SNH',
+  spontaneous: 'Candidature spontanée',
+  applications: 'Mes candidatures',
+  notifications: 'Notifications',
+};
+
 // ── Auth View ─────────────────────────────────────────────────────────────────
-function AuthView({ onAuth, authMode, setAuthMode }: { onAuth: (uid: string) => void; authMode: 'login' | 'register'; setAuthMode: (m: 'login' | 'register') => void }) {
+function AuthView({ onAuth, authMode, setAuthMode }: {
+  onAuth: (uid: string) => void;
+  authMode: 'login' | 'register';
+  setAuthMode: (m: 'login' | 'register') => void;
+}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -249,15 +407,9 @@ function AuthView({ onAuth, authMode, setAuthMode }: { onAuth: (uid: string) => 
         const { data, error: signUpErr } = await supabase.auth.signUp({ email, password });
         if (signUpErr) throw signUpErr;
         if (data.user) {
-          // Create candidate record linked to this user
           const { error: candErr } = await supabase.from('candidates').insert({
-            user_id: data.user.id,
-            first_name: firstName,
-            last_name: lastName,
-            email,
-            profile_completed: false,
-            status: 'active',
-            source: 'direct',
+            user_id: data.user.id, first_name: firstName, last_name: lastName,
+            email, profile_completed: false, status: 'active', source: 'direct',
           });
           if (candErr) throw candErr;
           onAuth(data.user.id);
@@ -275,52 +427,47 @@ function AuthView({ onAuth, authMode, setAuthMode }: { onAuth: (uid: string) => 
   };
 
   return (
-    <div className="flex items-start justify-center pt-8">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-800 to-teal-800 p-8 text-center">
-          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            {authMode === 'login' ? <LogIn size={28} className="text-white" /> : <UserPlus size={28} className="text-white" />}
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100">
+        {/* Header */}
+        <div className="p-8 text-center" style={{ background: SNH_BLUE }}>
+          <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            {authMode === 'login' ? <LogIn size={26} className="text-white" /> : <UserPlus size={26} className="text-white" />}
           </div>
-          <h2 className="text-white text-xl font-bold">{authMode === 'login' ? 'Connexion' : 'Créer un compte'}</h2>
-          <p className="text-white/60 text-sm mt-1">{authMode === 'login' ? 'Accédez à votre espace candidat' : 'Rejoignez la CVthèque SNH'}</p>
+          <h2 className="text-white text-lg font-bold">{authMode === 'login' ? 'Connexion' : 'Créer un compte'}</h2>
+          <p className="text-white/60 text-sm mt-1">Portail Recrutement SNH Cameroun</p>
         </div>
         <form onSubmit={handleSubmit} className="p-8 space-y-4">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm flex items-center gap-2">
-              <AlertCircle size={15} /> {error}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm flex items-center gap-2">
+              <AlertCircle size={14} /> {error}
             </div>
           )}
           {authMode === 'register' && (
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Prénom *">
-                <input value={firstName} onChange={e => setFirstName(e.target.value)} className={inp()} placeholder="Jean" required />
-              </Field>
-              <Field label="Nom *">
-                <input value={lastName} onChange={e => setLastName(e.target.value)} className={inp()} placeholder="Dupont" required />
-              </Field>
+              <div><Lbl>Prénom *</Lbl><input value={firstName} onChange={e => setFirstName(e.target.value)} className={inp()} placeholder="Jean" required /></div>
+              <div><Lbl>Nom *</Lbl><input value={lastName} onChange={e => setLastName(e.target.value)} className={inp()} placeholder="Dupont" required /></div>
             </div>
           )}
-          <Field label="Email" icon={<Mail size={14} />}>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inp()} placeholder="votre@email.cm" required />
-          </Field>
-          <Field label="Mot de passe" icon={<Lock size={14} />}>
+          <div><Lbl>Email</Lbl><input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inp()} placeholder="votre@email.cm" required /></div>
+          <div>
+            <Lbl>Mot de passe</Lbl>
             <div className="relative">
-              <input type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-                className={inp() + ' pr-10'} placeholder="••••••••" required minLength={6} />
-              <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+              <input type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className={inp() + ' pr-10'} placeholder="••••••••" required minLength={6} />
+              <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
-            {authMode === 'register' && <p className="text-xs text-slate-400 mt-1">Minimum 6 caractères</p>}
-          </Field>
+          </div>
           <button type="submit" disabled={loading}
-            className="w-full py-3 bg-teal-700 text-white rounded-xl hover:bg-teal-800 disabled:opacity-60 transition font-semibold flex items-center justify-center gap-2 mt-2">
+            className="w-full py-3 text-white rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-60 transition"
+            style={{ background: SNH_BLUE }}>
             {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
-              authMode === 'login' ? <><LogIn size={17} /> Se connecter</> : <><UserPlus size={17} /> Créer mon compte</>}
+              authMode === 'login' ? <><LogIn size={16} /> Se connecter</> : <><UserPlus size={16} /> Créer mon compte</>}
           </button>
-          <div className="text-center pt-2">
+          <div className="text-center">
             <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-              className="text-sm text-teal-700 hover:text-teal-900 font-medium">
+              className="text-sm font-medium transition" style={{ color: SNH_BLUE }}>
               {authMode === 'login' ? 'Pas encore de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
             </button>
           </div>
@@ -330,302 +477,689 @@ function AuthView({ onAuth, authMode, setAuthMode }: { onAuth: (uid: string) => 
   );
 }
 
-// ── Dashboard View ────────────────────────────────────────────────────────────
-function DashboardView({ profile, matches, openJobs, onEditProfile, candidateId, reloadMatches }: {
-  profile: CandidateProfile; matches: JobMatch[]; openJobs: JobOpening[];
-  onEditProfile: () => void; candidateId: string; reloadMatches: () => void;
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function DashboardSection({ profile, experiences, educations, skills, documents, applications, openJobs, matches, pct, onNav, candidateId, onApplied }: {
+  profile: CandidateProfile; experiences: Experience[]; educations: Education[];
+  skills: Skill[]; documents: CandidateDoc[]; applications: Application[];
+  openJobs: JobOpening[]; matches: JobMatch[]; pct: number; onNav: (s: Section) => void;
+  candidateId: string; onApplied: (app: Application) => void;
 }) {
-  const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
+  const completionItems = [
+    { label: 'Informations personnelles', done: !!(profile.phone && profile.location), pct: profile.phone && profile.location ? 100 : 50 },
+    { label: 'Formations académiques', done: educations.length > 0, pct: educations.length > 0 ? 100 : 0 },
+    { label: 'Expériences professionnelles', done: experiences.length > 0, pct: experiences.length > 0 ? 100 : 0 },
+    { label: 'Compétences', done: skills.length >= 5, pct: Math.min(100, (skills.length / 5) * 100) },
+    { label: 'Documents justificatifs', done: documents.length > 0, pct: documents.length > 0 ? 100 : 0 },
+  ];
+
   const [applying, setApplying] = useState<string | null>(null);
-  const [applied, setApplied] = useState<Set<string>>(new Set());
-  const [profileCounts, setProfileCounts] = useState({ experiences: 0, educations: 0, skills: 0, documents: 0 });
-  const [qvctThreads, setQvctThreads] = useState<QVCTThread[]>([]);
-  const [trainings, setTrainings] = useState<TrainingProgram[]>([]);
-  const [expandedThread, setExpandedThread] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadCounts = async () => {
-      const [expRes, eduRes, skRes, docRes] = await Promise.all([
-        supabase.from('candidate_experiences').select('id', { count: 'exact', head: true }).eq('candidate_id', candidateId),
-        supabase.from('candidate_educations').select('id', { count: 'exact', head: true }).eq('candidate_id', candidateId),
-        supabase.from('candidate_candidate_skills').select('id', { count: 'exact', head: true }).eq('candidate_id', candidateId),
-        supabase.from('candidate_documents').select('id', { count: 'exact', head: true }).eq('candidate_id', candidateId),
-      ]);
-      setProfileCounts({
-        experiences: expRes.count ?? 0,
-        educations: eduRes.count ?? 0,
-        skills: skRes.count ?? 0,
-        documents: docRes.count ?? 0,
-      });
-    };
-    const loadQVCT = async () => {
-      const { data } = await supabase
-        .from('qvct_discussion_threads')
-        .select('id, title, description, category, status, created_at')
-        .eq('status', 'open')
-        .order('created_at', { ascending: false })
-        .limit(5);
-      if (data) setQvctThreads(data as QVCTThread[]);
-    };
-    const loadTrainings = async () => {
-      const { data } = await supabase
-        .from('training_programs')
-        .select('id, title, code, category, provider, duration_hours, description, is_mandatory, status, start_date, end_date')
-        .in('status', ['planned', 'ongoing'])
-        .order('start_date', { ascending: true })
-        .limit(6);
-      if (data) setTrainings(data as TrainingProgram[]);
-    };
-    loadCounts();
-    loadQVCT();
-    loadTrainings();
-  }, [candidateId]);
-
-  // jobs without a match score
-  const topMatches = matches.filter(m => m.match_score >= 60).slice(0, 5);
+  const [applied, setApplied] = useState<Set<string>>(new Set(applications.map(a => a.job_opening_id || '').filter(Boolean)));
 
   const handleApply = async (jobId: string, jobTitle: string) => {
     setApplying(jobId);
-    await supabase.from('candidate_applications').insert({
-      candidate_id: candidateId,
-      job_opening_id: jobId,
-      desired_position: jobTitle,
-      status: 'new',
-    });
-    setApplied(prev => new Set([...prev, jobId]));
+    const { data } = await supabase.from('candidate_applications').insert({
+      candidate_id: candidateId, job_opening_id: jobId,
+      desired_position: jobTitle, status: 'new',
+    }).select().maybeSingle();
+    if (data) { onApplied(data as Application); setApplied(prev => new Set([...prev, jobId])); }
     setApplying(null);
-    reloadMatches();
   };
 
+  const recentActivities = applications.slice(0, 4).map(a => ({
+    title: a.status === 'new' ? 'Candidature soumise' : 'Mise à jour de statut',
+    sub: a.desired_position || a.job_opening?.title || '—',
+    date: fmtDate(a.created_at),
+  }));
+
   return (
-    <div className="space-y-6">
-      {/* Welcome banner */}
-      <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-teal-400 to-teal-700 flex items-center justify-center text-white font-bold text-xl">
-              {profile.first_name[0]}{profile.last_name[0]}
-            </div>
-            <div>
-              <h1 className="text-white text-xl font-bold">Bonjour, {profile.first_name} !</h1>
-              <p className="text-white/60 text-sm">{profile.desired_position || 'Complétez votre profil pour recevoir des recommandations'}</p>
-            </div>
+    <div className="space-y-5">
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { icon: '📋', value: applications.length, label: 'Candidatures soumises' },
+          { icon: '💼', value: openJobs.length, label: 'Offres disponibles' },
+          { icon: '📅', value: applications.filter(a => a.status === 'interview').length, label: 'Entretiens planifiés' },
+          { icon: '⭐', value: `${pct}%`, label: 'Profil complété' },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="text-2xl mb-1">{s.icon}</div>
+            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <ProfileCompletion
-              profile={profile}
-              hasExperiences={profileCounts.experiences > 0}
-              hasEducations={profileCounts.educations > 0}
-              hasSkills={profileCounts.skills > 0}
-              hasDocuments={profileCounts.documents > 0}
-            />
-            <button onClick={onEditProfile}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-slate-800 rounded-xl hover:bg-slate-50 transition text-sm font-medium">
-              <Edit3 size={15} /> Modifier mon profil
-            </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Profile completion */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Complétion du profil</h3>
+          <div className="space-y-3">
+            {completionItems.map(item => (
+              <div key={item.label}>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className={`flex items-center gap-1.5 ${item.done ? 'text-green-700' : 'text-gray-600'}`}>
+                    {item.done ? <CheckCircle size={12} className="text-green-500" /> : <AlertCircle size={12} className="text-amber-500" />}
+                    {item.label}
+                  </span>
+                  <span className={`font-semibold ${item.done ? 'text-green-700' : item.pct > 0 ? 'text-amber-600' : 'text-red-500'}`}>{item.pct.toFixed(0)}%</span>
+                </div>
+                <ProgressBar pct={item.pct} color={item.pct === 100 ? 'bg-green-500' : item.pct > 0 ? 'bg-amber-400' : 'bg-red-400'} />
+              </div>
+            ))}
           </div>
+          <button onClick={() => onNav('profile')} className="mt-4 flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg text-white transition" style={{ background: SNH_BLUE }}>
+            Compléter mon profil <ChevronRight size={14} />
+          </button>
+        </div>
+
+        {/* Recent activity */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Activité récente</h3>
+          {recentActivities.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">Aucune activité récente</p>
+          ) : (
+            <div className="relative border-l-2 border-gray-200 pl-4 ml-2 space-y-4">
+              {recentActivities.map((a, i) => (
+                <div key={i} className="relative">
+                  <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-white" />
+                  <p className="text-sm font-semibold text-gray-900">{a.title}</p>
+                  <p className="text-xs text-gray-500">{a.sub}</p>
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock size={10} />{a.date}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {!profile.profile_completed && (
-        <div className="bg-amber-500/20 border border-amber-400/30 rounded-xl p-4 flex items-start gap-3">
-          <AlertCircle size={18} className="text-amber-400 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-amber-200 font-semibold text-sm">Profil incomplet</p>
-            <p className="text-amber-300/80 text-xs mt-0.5">Complétez vos expériences, formations et compétences pour obtenir vos scores de matching IA avec les offres.</p>
+      {/* Top matching offers */}
+      {matches.filter(m => m.match_score >= 60).length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles size={16} className="text-blue-600" />
+            <h3 className="text-sm font-semibold text-gray-900">Offres recommandées</h3>
+          </div>
+          <div className="space-y-3">
+            {matches.filter(m => m.match_score >= 60).slice(0, 3).map(m => (
+              <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">{m.job_opening.title}</p>
+                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                    <Tag variant="gray">{m.job_opening.contract_type}</Tag>
+                    <Tag variant="gray">{m.job_opening.location}</Tag>
+                  </div>
+                </div>
+                <div className="text-center flex-shrink-0">
+                  <p className={`text-lg font-black ${m.match_score >= 80 ? 'text-green-600' : 'text-amber-600'}`}>{m.match_score}%</p>
+                  <p className="text-xs text-gray-400">Adéquation</p>
+                </div>
+                {applied.has(m.job_opening_id) ? (
+                  <span className="text-xs text-green-700 font-medium flex items-center gap-1"><CheckCircle size={12} />Postulé</span>
+                ) : (
+                  <button onClick={() => handleApply(m.job_opening.id, m.job_opening.title)} disabled={applying === m.job_opening.id}
+                    className="text-xs px-3 py-1.5 rounded-lg text-white font-medium flex items-center gap-1 disabled:opacity-60"
+                    style={{ background: SNH_BLUE }}>
+                    {applying === m.job_opening.id ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <ArrowRight size={11} />}
+                    Postuler
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Profile Section ───────────────────────────────────────────────────────────
+type ProfileTab = 'infos' | 'formations' | 'experiences' | 'competences' | 'langues';
+
+function ProfileSection({ profile, setProfile, experiences, setExperiences, educations, setEducations, skills, setSkills, languages, setLanguages, candidateId }: {
+  profile: CandidateProfile; setProfile: (p: CandidateProfile) => void;
+  experiences: Experience[]; setExperiences: (v: Experience[]) => void;
+  educations: Education[]; setEducations: (v: Education[]) => void;
+  skills: Skill[]; setSkills: (v: Skill[]) => void;
+  languages: Language[]; setLanguages: (v: Language[]) => void;
+  candidateId: string;
+}) {
+  const [tab, setTab] = useState<ProfileTab>('infos');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const TABS: { value: ProfileTab; label: string; icon: React.FC<any> }[] = [
+    { value: 'infos', label: 'Infos personnelles', icon: User },
+    { value: 'formations', label: 'Formations', icon: GraduationCap },
+    { value: 'experiences', label: 'Expériences', icon: Briefcase },
+    { value: 'competences', label: 'Compétences', icon: Star },
+    { value: 'langues', label: 'Langues', icon: Globe },
+  ];
+
+  const save = async () => {
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+    await supabase.from('candidates').update({
+      first_name: profile.first_name, last_name: profile.last_name,
+      phone: profile.phone || null, location: profile.location || null,
+      linkedin_url: profile.linkedin_url || null, portfolio_url: profile.portfolio_url || null,
+      summary: profile.summary || null, desired_position: profile.desired_position || null,
+      desired_salary_min: profile.desired_salary_min || null,
+      desired_salary_max: profile.desired_salary_max || null,
+      availability_date: profile.availability_date || null,
+      mobility: profile.mobility || null, profile_completed: true,
+    }).eq('user_id', user.id);
+
+    if (tab === 'experiences') {
+      await supabase.from('candidate_experiences').delete().eq('candidate_id', candidateId);
+      const valid = experiences.filter(e => e.job_title && e.company && e.start_date);
+      if (valid.length) await supabase.from('candidate_experiences').insert(
+        valid.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+      );
+    }
+    if (tab === 'formations') {
+      await supabase.from('candidate_educations').delete().eq('candidate_id', candidateId);
+      const valid = educations.filter(e => e.degree && e.institution);
+      if (valid.length) await supabase.from('candidate_educations').insert(
+        valid.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+      );
+    }
+    if (tab === 'competences') {
+      await supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId);
+      const valid = skills.filter(s => s.name);
+      if (valid.length) await supabase.from('candidate_candidate_skills').insert(
+        valid.map(({ id: _id, ...s }) => ({ ...s, candidate_id: candidateId }))
+      );
+    }
+    setSaving(false); setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div className="max-w-3xl">
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-5 flex-wrap">
+        {TABS.map(t => {
+          const Icon = t.icon;
+          return (
+            <button key={t.value} onClick={() => setTab(t.value)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all flex-1 justify-center ${tab === t.value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              <Icon size={13} />{t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        {tab === 'infos' && <InfosTab profile={profile} setProfile={setProfile} />}
+        {tab === 'formations' && <FormationsTab items={educations} setItems={setEducations} />}
+        {tab === 'experiences' && <ExperiencesTab items={experiences} setItems={setExperiences} />}
+        {tab === 'competences' && <CompetencesTab items={skills} setItems={setSkills} />}
+        {tab === 'langues' && <LanguesTab items={languages} setItems={setLanguages} />}
+
+        <div className="mt-5 pt-5 border-t border-gray-100 flex justify-end">
+          <button onClick={save} disabled={saving}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition disabled:opacity-60 ${saved ? 'bg-green-600' : ''}`}
+            style={!saved ? { background: SNH_BLUE } : {}}>
+            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
+              saved ? <><CheckCircle size={15} /> Sauvegardé</> : <><CheckCircle size={15} /> Sauvegarder</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfosTab({ profile, setProfile }: { profile: CandidateProfile; setProfile: (p: CandidateProfile) => void }) {
+  const s = (k: keyof CandidateProfile, v: any) => setProfile({ ...profile, [k]: v });
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div><Lbl>Prénom *</Lbl><input value={profile.first_name} onChange={e => s('first_name', e.target.value)} className={inp()} /></div>
+        <div><Lbl>Nom *</Lbl><input value={profile.last_name} onChange={e => s('last_name', e.target.value)} className={inp()} /></div>
+      </div>
+      <div><Lbl>Titre professionnel</Lbl><input value={profile.professional_title || ''} onChange={e => s('professional_title', e.target.value)} className={inp()} placeholder="Ex: Ingénieur Pétrole & Gaz Senior" /></div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Lbl>Téléphone principal</Lbl><input value={profile.phone || ''} onChange={e => s('phone', e.target.value)} className={inp()} placeholder="+237 6XX XXX XXX" /></div>
+        <div><Lbl>Téléphone secondaire</Lbl><input value={profile.phone2 || ''} onChange={e => s('phone2', e.target.value)} className={inp()} placeholder="+237 6XX XXX XXX" /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Lbl>Ville de résidence</Lbl><input value={profile.location || ''} onChange={e => s('location', e.target.value)} className={inp()} placeholder="Yaoundé" /></div>
+        <div><Lbl>Région</Lbl>
+          <select value={profile.region || ''} onChange={e => s('region', e.target.value)} className={inp()}>
+            <option value="">— Sélectionner —</option>
+            {REGIONS_CM.map(r => <option key={r}>{r}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Lbl>Nationalité</Lbl><input value={profile.nationality || ''} onChange={e => s('nationality', e.target.value)} className={inp()} placeholder="Camerounaise" /></div>
+        <div><Lbl>N° CNI / Passeport</Lbl><input value={profile.national_id || ''} onChange={e => s('national_id', e.target.value)} className={inp()} /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Lbl>Poste souhaité</Lbl><input value={profile.desired_position || ''} onChange={e => s('desired_position', e.target.value)} className={inp()} placeholder="Ingénieur Réservoir..." /></div>
+        <div><Lbl>Disponibilité à partir du</Lbl><input type="date" value={profile.availability_date || ''} onChange={e => s('availability_date', e.target.value)} className={inp()} /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Lbl>Prétention salariale min (FCFA)</Lbl><input type="number" value={profile.desired_salary_min || ''} onChange={e => s('desired_salary_min', Number(e.target.value))} className={inp()} /></div>
+        <div><Lbl>Prétention salariale max (FCFA)</Lbl><input type="number" value={profile.desired_salary_max || ''} onChange={e => s('desired_salary_max', Number(e.target.value))} className={inp()} /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Lbl>Profil LinkedIn</Lbl><input value={profile.linkedin_url || ''} onChange={e => s('linkedin_url', e.target.value)} className={inp()} placeholder="https://linkedin.com/in/..." /></div>
+        <div><Lbl>Site / Portfolio</Lbl><input value={profile.portfolio_url || ''} onChange={e => s('portfolio_url', e.target.value)} className={inp()} placeholder="https://..." /></div>
+      </div>
+      <div><Lbl>Résumé / À propos de vous</Lbl>
+        <textarea value={profile.summary || ''} onChange={e => s('summary', e.target.value)} rows={4} className={inp()} placeholder="Décrivez votre parcours, vos expertises et vos ambitions professionnelles..." />
+      </div>
+    </div>
+  );
+}
+
+function FormationsTab({ items, setItems }: { items: Education[]; setItems: (v: Education[]) => void }) {
+  const add = () => setItems([...items, { degree: '', field_of_study: '', institution: '', location: '', start_date: '', end_date: '', is_current: false, grade: '', country: 'Cameroun' }]);
+  const upd = (i: number, k: keyof Education, v: any) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
+  const del = (i: number) => setItems(items.filter((_, j) => j !== i));
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold text-gray-900">Formations académiques</h3>
+        <button onClick={add} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
+          <Plus size={13} /> Ajouter une formation
+        </button>
+      </div>
+      {items.map((edu, i) => (
+        <div key={i} className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-gray-500">Formation {i + 1}</span>
+            <button onClick={() => del(i)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2"><Lbl>Diplôme obtenu *</Lbl><input value={edu.degree} onChange={e => upd(i,'degree',e.target.value)} className={inp()} placeholder="Master, Licence, BTS..." /></div>
+            <div><Lbl>Établissement *</Lbl><input value={edu.institution} onChange={e => upd(i,'institution',e.target.value)} className={inp()} placeholder="ENSP, Université de Yaoundé..." /></div>
+            <div><Lbl>Domaine d'études</Lbl><input value={edu.field_of_study} onChange={e => upd(i,'field_of_study',e.target.value)} className={inp()} placeholder="Génie Pétrolier, Finance..." /></div>
+            <div><Lbl>Pays</Lbl><input value={edu.country || ''} onChange={e => upd(i,'country',e.target.value)} className={inp()} /></div>
+            <div><Lbl>Ville</Lbl><input value={edu.location} onChange={e => upd(i,'location',e.target.value)} className={inp()} /></div>
+            <div><Lbl>Année de début</Lbl><input type="number" value={edu.start_date} onChange={e => upd(i,'start_date',e.target.value)} className={inp()} placeholder="Ex: 2018" /></div>
+            {!edu.is_current && <div><Lbl>Année de fin</Lbl><input type="number" value={edu.end_date} onChange={e => upd(i,'end_date',e.target.value)} className={inp()} placeholder="Ex: 2022" /></div>}
+            <div><Lbl>Mention</Lbl><input value={edu.grade} onChange={e => upd(i,'grade',e.target.value)} className={inp()} placeholder="Très bien, Bien..." /></div>
+          </div>
+          <label className="flex items-center gap-2 mt-3 cursor-pointer text-sm text-gray-700">
+            <input type="checkbox" checked={edu.is_current} onChange={e => upd(i,'is_current',e.target.checked)} className="rounded border-gray-300" />
+            Formation en cours
+          </label>
+        </div>
+      ))}
+      {items.length === 0 && (
+        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2 transition">
+          <Plus size={16} /> Ajouter une formation
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ExperiencesTab({ items, setItems }: { items: Experience[]; setItems: (v: Experience[]) => void }) {
+  const add = () => setItems([...items, { job_title: '', company: '', location: '', start_date: '', end_date: '', is_current: false, description: '', contract_type: 'CDI', sector: '' }]);
+  const upd = (i: number, k: keyof Experience, v: any) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
+  const del = (i: number) => setItems(items.filter((_, j) => j !== i));
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold text-gray-900">Expériences professionnelles</h3>
+        <button onClick={add} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
+          <Plus size={13} /> Ajouter une expérience
+        </button>
+      </div>
+      {items.map((exp, i) => (
+        <div key={i} className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-gray-500">Expérience {i + 1}</span>
+            <button onClick={() => del(i)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Lbl>Poste occupé *</Lbl><input value={exp.job_title} onChange={e => upd(i,'job_title',e.target.value)} className={inp()} placeholder="Ingénieur Réservoir..." /></div>
+            <div><Lbl>Entreprise *</Lbl><input value={exp.company} onChange={e => upd(i,'company',e.target.value)} className={inp()} /></div>
+            <div><Lbl>Secteur d'activité</Lbl><input value={exp.sector || ''} onChange={e => upd(i,'sector',e.target.value)} className={inp()} placeholder="Pétrole & Gaz, Finance..." /></div>
+            <div><Lbl>Type de contrat</Lbl>
+              <select value={exp.contract_type || 'CDI'} onChange={e => upd(i,'contract_type',e.target.value)} className={inp()}>
+                {['CDI','CDD','Stage','Freelance','Alternance','Autre'].map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div><Lbl>Ville</Lbl><input value={exp.location} onChange={e => upd(i,'location',e.target.value)} className={inp()} /></div>
+            <div><Lbl>Date de début *</Lbl><input type="date" value={exp.start_date} onChange={e => upd(i,'start_date',e.target.value)} className={inp()} /></div>
+            {!exp.is_current && <div><Lbl>Date de fin</Lbl><input type="date" value={exp.end_date} onChange={e => upd(i,'end_date',e.target.value)} className={inp()} /></div>}
+          </div>
+          <label className="flex items-center gap-2 my-3 cursor-pointer text-sm text-gray-700">
+            <input type="checkbox" checked={exp.is_current} onChange={e => upd(i,'is_current',e.target.checked)} className="rounded border-gray-300" />
+            Poste actuel
+          </label>
+          <div><Lbl>Description des missions</Lbl>
+            <textarea value={exp.description} onChange={e => upd(i,'description',e.target.value)} rows={3} className={inp()} placeholder="Vos principales responsabilités et réalisations..." />
+          </div>
+        </div>
+      ))}
+      {items.length === 0 && (
+        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2 transition">
+          <Plus size={16} /> Ajouter une expérience
+        </button>
+      )}
+    </div>
+  );
+}
+
+const COMP_CATALOGUE: Record<string, string[]> = {
+  'Hydrocarbures / Pétrole': ['Géologie pétrolière','Ingénierie de réservoir','Forage pétrolier','Sismique & Exploration','Production & Exploitation','Pétrophysique','Modélisation de réservoir'],
+  'Ingénierie': ['AutoCAD','MATLAB','Génie civil','Mécanique des fluides','Hydraulique','Thermodynamique'],
+  'Informatique / SI': ['Python','SQL','Java','JavaScript','Réseaux informatiques','ERP (SAP / Oracle)','Power BI'],
+  'Finance / Comptabilité': ['Comptabilité générale','Contrôle de gestion','SYSCOHADA','Analyse financière','Fiscalité camerounaise'],
+  'Gestion / Management': ['Gestion de projet','Management d\'équipe','Agile / Scrum','Gestion des risques','Leadership'],
+  'HSE / Sécurité': ['ISO 14001','ISO 45001','Audit HSE','Analyse des risques (HAZOP)'],
+  'Droit / Juridique': ['Droit des affaires','Droit pétrolier','Contrats OHADA','Droit du travail'],
+  'Soft Skills': ['Communication','Travail en équipe','Rigueur','Autonomie','Adaptabilité','Esprit d\'analyse'],
+};
+
+function CompetencesTab({ items, setItems }: { items: Skill[]; setItems: (v: Skill[]) => void }) {
+  const [search, setSearch] = useState('');
+  const [newName, setNewName] = useState('');
+
+  const selectedNames = new Set(items.map(s => s.name));
+
+  const toggle = (name: string) => {
+    if (selectedNames.has(name)) {
+      setItems(items.filter(s => s.name !== name));
+    } else {
+      setItems([...items, { name, category: 'technical', level: 'intermediate' }]);
+    }
+  };
+
+  const addCustom = () => {
+    if (!newName.trim() || selectedNames.has(newName.trim())) return;
+    setItems([...items, { name: newName.trim(), category: 'other', level: 'intermediate' }]);
+    setNewName('');
+  };
+
+  const updateLevel = (name: string, level: Skill['level']) => {
+    setItems(items.map(s => s.name === name ? { ...s, level } : s));
+  };
+
+  const f = search.toLowerCase();
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-900">Compétences</h3>
+        <span className="text-xs text-gray-500">{items.length} sélectionnée{items.length > 1 ? 's' : ''}</span>
+      </div>
+      <input value={search} onChange={e => setSearch(e.target.value)} className={inp()} placeholder="🔍 Rechercher une compétence..." />
+
+      {Object.entries(COMP_CATALOGUE).map(([cat, tags]) => {
+        const filtered = !f ? tags : tags.filter(t => t.toLowerCase().includes(f));
+        if (!filtered.length) return null;
+        return (
+          <div key={cat}>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{cat}</p>
+            <div className="flex flex-wrap gap-2">
+              {filtered.map(tag => (
+                <button key={tag} onClick={() => toggle(tag)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedNames.has(tag) ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'}`}>
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Selected skills with levels */}
+      {items.length > 0 && (
+        <div className="pt-4 border-t border-gray-100">
+          <p className="text-xs font-semibold text-gray-500 mb-3">Niveaux des compétences sélectionnées</p>
+          <div className="space-y-2">
+            {items.map(sk => (
+              <div key={sk.name} className="flex items-center gap-3">
+                <span className="text-xs font-medium text-gray-700 flex-1 min-w-0 truncate">{sk.name}</span>
+                <div className="flex gap-1">
+                  {SKILL_LEVELS.map(lv => (
+                    <button key={lv.value} onClick={() => updateLevel(sk.name, lv.value as Skill['level'])}
+                      className={`px-2 py-1 text-xs rounded border transition ${sk.level === lv.value ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-500 hover:border-blue-300'}`}>
+                      {lv.label.slice(0, 3)}.
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => toggle(sk.name)} className="text-red-400 hover:text-red-600"><X size={13} /></button>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* IA Matching section */}
-      {topMatches.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-lg flex items-center justify-center">
-              <Sparkles size={16} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-white font-bold text-lg">Offres recommandées par l'IA</h2>
-              <p className="text-white/50 text-xs">Analysées en fonction de vos compétences et expériences</p>
-            </div>
+      <div className="flex gap-2 pt-3 border-t border-gray-100">
+        <input value={newName} onChange={e => setNewName(e.target.value)} className={inp() + ' flex-1'} placeholder="Ajouter une compétence personnalisée..." onKeyDown={e => e.key === 'Enter' && addCustom()} />
+        <button onClick={addCustom} className="px-4 py-2 text-sm rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
+          <Plus size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Language[]) => void }) {
+  const add = () => setItems([...items, { name: '', level: 'B2' }]);
+  const upd = (i: number, k: keyof Language, v: string) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
+  const del = (i: number) => setItems(items.filter((_, j) => j !== i));
+  const LEVEL_PCT: Record<string, number> = { A1:10, A2:20, B1:40, B2:60, C1:80, C2:95, Natif:100 };
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold text-gray-900">Langues parlées</h3>
+        <button onClick={add} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
+          <Plus size={13} /> Ajouter une langue
+        </button>
+      </div>
+      {items.map((lang, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <input value={lang.name} onChange={e => upd(i,'name',e.target.value)} className={`${inp()} flex-1`} placeholder="Français, Anglais..." />
+          <div className="w-28 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full" style={{ width: `${LEVEL_PCT[lang.level] ?? 50}%`, background: SNH_BLUE }} />
           </div>
-          <div className="space-y-3">
-            {topMatches.map(match => {
-              const job = match.job_opening;
-              const isOpen = expandedMatch === match.id;
-              const alreadyApplied = applied.has(job.id);
-              return (
-                <div key={match.id} className={`rounded-2xl border overflow-hidden transition-all ${SCORE_BG(match.match_score)}`}>
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h3 className="font-bold text-slate-900">{job.title}</h3>
-                          <span className="text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full text-slate-600">{job.contract_type}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
-                          <span className="flex items-center gap-1"><MapPin size={11} />{job.location}</span>
-                          <span className="flex items-center gap-1"><Calendar size={11} />Clôture {fmtDate(job.closing_date)}</span>
-                        </div>
-                      </div>
-                      {/* Score ring */}
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="relative w-16 h-16">
-                          <svg viewBox="0 0 36 36" className="w-16 h-16 -rotate-90">
-                            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3" />
-                            <circle cx="18" cy="18" r="15.9" fill="none"
-                              stroke={match.match_score >= 80 ? '#16a34a' : match.match_score >= 60 ? '#ea580c' : '#dc2626'}
-                              strokeWidth="3" strokeDasharray={`${match.match_score} 100`} strokeLinecap="round" />
-                          </svg>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className={`text-sm font-black ${SCORE_COLOR(match.match_score)}`}>{match.match_score}%</span>
-                          </div>
-                        </div>
-                        <span className="text-xs font-semibold text-slate-500">Adéquation</span>
-                      </div>
-                    </div>
-
-                    {/* Score breakdown */}
-                    <div className="grid grid-cols-3 gap-2 mt-4">
-                      {[
-                        { label: 'Compétences', value: match.skill_match_score },
-                        { label: 'Expérience', value: match.experience_match_score },
-                        { label: 'Formation', value: match.education_match_score },
-                      ].map(s => (
-                        <div key={s.label} className="bg-white/60 rounded-lg p-2 text-center">
-                          <p className={`text-base font-black ${SCORE_COLOR(s.value)}`}>{s.value}%</p>
-                          <p className="text-xs text-slate-500">{s.label}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-between mt-4">
-                      <button onClick={() => setExpandedMatch(isOpen ? null : match.id)}
-                        className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900">
-                        {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                        {isOpen ? 'Moins de détails' : 'Voir l\'analyse IA'}
-                      </button>
-                      {alreadyApplied ? (
-                        <span className="flex items-center gap-1.5 text-sm text-green-700 font-medium">
-                          <CheckCircle size={15} /> Candidature envoyée
-                        </span>
-                      ) : (
-                        <button onClick={() => handleApply(job.id, job.title)} disabled={applying === job.id}
-                          className="flex items-center gap-2 px-4 py-1.5 bg-teal-700 text-white rounded-lg hover:bg-teal-800 text-sm font-medium transition disabled:opacity-60">
-                          {applying === job.id ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <ArrowRight size={14} />}
-                          Postuler
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Expanded IA analysis */}
-                  {isOpen && (
-                    <div className="border-t border-current/10 bg-white/50 p-5 space-y-4">
-                      {match.ai_summary && (
-                        <div className="flex gap-3">
-                          <div className="w-7 h-7 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Sparkles size={13} className="text-white" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Analyse IA</p>
-                            <p className="text-sm text-slate-700 leading-relaxed">{match.ai_summary}</p>
-                          </div>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {match.matched_skills.length > 0 && (
-                          <div>
-                            <p className="text-xs font-semibold text-green-700 uppercase mb-2 flex items-center gap-1">
-                              <CheckCircle size={11} /> Compétences matchées
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {match.matched_skills.map(s => (
-                                <span key={s} className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">{s}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {match.missing_skills.length > 0 && (
-                          <div>
-                            <p className="text-xs font-semibold text-red-600 uppercase mb-2 flex items-center gap-1">
-                              <X size={11} /> Compétences manquantes
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {match.missing_skills.map(s => (
-                                <span key={s} className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">{s}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Profil du poste</p>
-                        <p className="text-sm text-slate-600 leading-relaxed">{job.description}</p>
-                        {job.required_skills?.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {job.required_skills.map(s => (
-                              <span key={s} className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-full border">{s}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
+          <select value={lang.level} onChange={e => upd(i,'level',e.target.value)} className="px-2 py-2 border border-gray-300 rounded-lg text-xs w-20">
+            {LANG_LEVELS.map(l => <option key={l}>{l}</option>)}
+          </select>
+          <button onClick={() => del(i)} className="text-gray-400 hover:text-red-500"><X size={14} /></button>
+        </div>
+      ))}
+      {items.length === 0 && (
+        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2 transition">
+          <Plus size={16} /> Ajouter une langue
+        </button>
       )}
+    </div>
+  );
+}
 
-      {/* All open jobs */}
-      <section>
-        <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
-          <Briefcase size={18} className="text-teal-400" />
-          Toutes les offres ouvertes
-          <span className="text-sm font-normal text-white/50">({openJobs.length} offres)</span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {openJobs.map(job => {
+// ── Documents ─────────────────────────────────────────────────────────────────
+function DocumentsSection({ candidateId, documents, setDocuments }: {
+  candidateId: string; documents: CandidateDoc[]; setDocuments: (d: CandidateDoc[]) => void;
+}) {
+  const [selectedType, setSelectedType] = useState<CandidateDoc['type']>('cv');
+  const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError('Fichier trop volumineux (max 10 Mo)'); e.target.value = ''; return; }
+    setError(''); setUploading(true);
+    const ext = file.name.split('.').pop();
+    const path = `${candidateId}/${selectedType}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('candidates-documents').upload(path, file, { upsert: false });
+    if (upErr) { setError('Erreur upload : ' + upErr.message); setUploading(false); e.target.value = ''; return; }
+    const { data: urlData } = supabase.storage.from('candidates-documents').getPublicUrl(path);
+    const { data: docData } = await supabase.from('candidate_documents').insert({
+      candidate_id: candidateId, type: selectedType, file_name: file.name,
+      file_url: urlData.publicUrl, file_size: file.size,
+    }).select().maybeSingle();
+    if (docData) setDocuments([docData as CandidateDoc, ...documents]);
+    setUploading(false); e.target.value = '';
+  };
+
+  const handleDelete = async (doc: CandidateDoc) => {
+    setDeleting(doc.id);
+    const parts = doc.file_url.split('/candidates-documents/');
+    if (parts[1]) await supabase.storage.from('candidates-documents').remove([decodeURIComponent(parts[1])]);
+    await supabase.from('candidate_documents').delete().eq('id', doc.id);
+    setDocuments(documents.filter(d => d.id !== doc.id));
+    setDeleting(null);
+  };
+
+  return (
+    <div className="max-w-2xl space-y-5">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+        <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-amber-800">Documents requis par la SNH</p>
+          <p className="text-xs text-amber-700 mt-1">Assurez-vous d'avoir téléversé au minimum : votre CV, vos diplômes, votre CNI ou Passeport, et vos attestations d'emploi.</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Téléverser un document</h3>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <Lbl>Type de document *</Lbl>
+            <select value={selectedType} onChange={e => setSelectedType(e.target.value as CandidateDoc['type'])} className={inp()}>
+              {DOC_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <label className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer transition ${uploading ? 'opacity-60 cursor-not-allowed' : ''}`}
+              style={{ background: SNH_BLUE }}>
+              {uploading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Envoi...</> : <><Upload size={14} />Choisir un fichier</>}
+              <input type="file" className="hidden" disabled={uploading} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleFile} />
+            </label>
+          </div>
+        </div>
+        <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center text-sm text-gray-400">
+          <Upload size={28} className="mx-auto mb-2 opacity-40" />
+          <p>Glissez-déposez votre fichier ici</p>
+          <p className="text-xs mt-1">PDF, Word, JPG, PNG — max 10 Mo</p>
+        </div>
+        {error && <p className="text-red-600 text-xs mt-2">{error}</p>}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">Mes documents ({documents.length})</h3>
+        </div>
+        {documents.length === 0 ? (
+          <div className="py-10 text-center text-gray-400 text-sm"><FileText size={32} className="mx-auto mb-2 opacity-30" />Aucun document téléversé</div>
+        ) : (
+          <div>
+            {documents.map(doc => (
+              <div key={doc.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 last:border-0">
+                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <FileText size={16} className="text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{doc.file_name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{DOC_TYPES.find(d => d.value === doc.type)?.label} · {fmtSize(doc.file_size)} · {fmtDate(doc.uploaded_at)}</p>
+                </div>
+                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 p-1.5 rounded hover:bg-blue-50 transition">
+                  <Eye size={14} />
+                </a>
+                <button onClick={() => handleDelete(doc)} disabled={deleting === doc.id} className="text-red-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition disabled:opacity-50">
+                  {deleting === doc.id ? <div className="w-3.5 h-3.5 border border-red-300 border-t-red-500 rounded-full animate-spin" /> : <Trash2 size={14} />}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Jobs ──────────────────────────────────────────────────────────────────────
+function JobsSection({ openJobs, matches, candidateId, onApplied, applications }: {
+  openJobs: JobOpening[]; matches: JobMatch[]; candidateId: string;
+  onApplied: (app: Application) => void; applications: Application[];
+}) {
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [applying, setApplying] = useState<string | null>(null);
+  const applied = new Set(applications.map(a => a.job_opening_id || '').filter(Boolean));
+
+  const filtered = openJobs.filter(j => {
+    const txt = `${j.title} ${j.location} ${j.description}`.toLowerCase();
+    return (!search || txt.includes(search.toLowerCase())) && (filterType === 'all' || j.contract_type === filterType);
+  });
+
+  const handleApply = async (job: JobOpening) => {
+    setApplying(job.id);
+    const { data } = await supabase.from('candidate_applications').insert({
+      candidate_id: candidateId, job_opening_id: job.id,
+      desired_position: job.title, status: 'new',
+    }).select().maybeSingle();
+    if (data) onApplied(data as Application);
+    setApplying(null);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+        <Building2 size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-blue-800">Offres de la Société Nationale des Hydrocarbures</p>
+          <p className="text-xs text-blue-600 mt-0.5">Toutes les offres ci-dessous sont publiées exclusivement par la SNH. Assurez-vous que votre profil est complet avant de postuler.</p>
+        </div>
+      </div>
+
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-40">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} className={inp() + ' pl-9'} placeholder="Rechercher un poste..." />
+        </div>
+        <select value={filterType} onChange={e => setFilterType(e.target.value)} className={`${inp()} w-48`}>
+          <option value="all">Tous types de contrat</option>
+          {['CDI','CDD','Stage académique','Stage professionnel'].map(t => <option key={t}>{t}</option>)}
+        </select>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-12 text-gray-400"><Briefcase size={40} className="mx-auto mb-2 opacity-20" />Aucune offre trouvée</div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(job => {
             const m = matches.find(x => x.job_opening_id === job.id);
-            const alreadyApplied = applied.has(job.id);
+            const isStage = job.contract_type?.toLowerCase().includes('stage');
             return (
-              <div key={job.id} className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-slate-900 text-sm">{job.title}</h3>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5 flex-wrap">
-                      <span className="flex items-center gap-1"><MapPin size={10} />{job.location}</span>
-                      <span className="px-1.5 py-0.5 bg-slate-100 rounded-full">{job.contract_type}</span>
+              <div key={job.id} className={`bg-white rounded-xl border p-4 shadow-sm flex gap-4 items-start transition hover:shadow-md ${isStage ? 'border-l-4 border-l-green-400 border-gray-200' : 'border-l-4 border-l-blue-500 border-gray-200'}`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${isStage ? 'bg-green-50' : 'bg-blue-50'}`}>
+                  {isStage ? '🎓' : '💼'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">{job.title}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">SNH · {job.location}</p>
                     </div>
+                    {m && <span className={`text-sm font-black ${m.match_score >= 80 ? 'text-green-600' : 'text-amber-600'}`}>{m.match_score}%</span>}
                   </div>
-                  {m && (
-                    <span className={`text-sm font-black ml-2 ${SCORE_COLOR(m.match_score)}`}>{m.match_score}%</span>
-                  )}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <Tag variant={isStage ? 'amber' : 'green'}>{job.contract_type}</Tag>
+                    {job.required_skills?.slice(0, 3).map(s => <Tag key={s} variant="blue">{s}</Tag>)}
+                    {(job.required_skills?.length || 0) > 3 && <Tag variant="gray">+{job.required_skills.length - 3}</Tag>}
+                    <Tag variant="gray"><Clock size={10} className="mr-1" />Clôture {fmtDate(job.closing_date)}</Tag>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 mb-3">{job.description}</p>
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {job.required_skills?.slice(0, 3).map(s => (
-                    <span key={s} className="text-xs px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full">{s}</span>
-                  ))}
-                  {(job.required_skills?.length || 0) > 3 && (
-                    <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">+{job.required_skills.length - 3}</span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
-                    <Clock size={10} />Clôture {fmtDate(job.closing_date)}
-                  </span>
-                  {alreadyApplied ? (
-                    <span className="flex items-center gap-1 text-xs text-green-700 font-medium">
-                      <CheckCircle size={12} /> Postulé
-                    </span>
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  {applied.has(job.id) ? (
+                    <span className="flex items-center gap-1 text-xs text-green-700 font-medium"><CheckCircle size={12} />Postulé</span>
                   ) : (
-                    <button onClick={() => handleApply(job.id, job.title)} disabled={applying === job.id}
-                      className="text-xs px-3 py-1.5 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition font-medium flex items-center gap-1 disabled:opacity-60">
-                      {applying === job.id ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <ArrowRight size={11} />}
+                    <button onClick={() => handleApply(job)} disabled={applying === job.id}
+                      className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg text-white font-semibold disabled:opacity-60 transition"
+                      style={{ background: SNH_BLUE }}>
+                      {applying === job.id ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={12} />}
                       Postuler
                     </button>
                   )}
@@ -634,607 +1168,236 @@ function DashboardView({ profile, matches, openJobs, onEditProfile, candidateId,
             );
           })}
         </div>
-      </section>
+      )}
+    </div>
+  );
+}
 
-      {/* ── Formations SNH disponibles ────────────────────────────────────── */}
-      {trainings.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
-              <BookOpen size={16} className="text-white" />
+// ── Spontaneous Application ───────────────────────────────────────────────────
+function SpontaneousSection({ candidateId, profile, onApplied }: {
+  candidateId: string; profile: CandidateProfile; onApplied: (app: Application) => void;
+}) {
+  const [type, setType] = useState<'emploi' | 'stage_academique' | 'stage_professionnel'>('emploi');
+  const [direction, setDirection] = useState('');
+  const [poste, setPoste] = useState('');
+  const [coverLetter, setCoverLetter] = useState('');
+  const [stageTopic, setStageTopic] = useState('');
+  const [stageDuration, setStageDuration] = useState('3 mois');
+  const [stageStart, setStageStart] = useState('');
+  const [stageSchool, setStageSchool] = useState('');
+  const [availability, setAvailability] = useState('Immédiatement');
+  const [salaryExpectation, setSalaryExpectation] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const isStage = type !== 'emploi';
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!direction || !poste || !coverLetter.trim()) return;
+    setSubmitting(true);
+    const desiredPos = `[${type === 'emploi' ? 'Emploi' : type === 'stage_academique' ? 'Stage académique' : 'Stage pro'}] ${poste} — ${direction}`;
+    const notes = isStage ? `Thème : ${stageTopic}\nDurée : ${stageDuration}\nDébut souhaité : ${stageStart}\nÉcole : ${stageSchool}` : '';
+    const { data } = await supabase.from('candidate_applications').insert({
+      candidate_id: candidateId,
+      job_opening_id: null,
+      desired_position: desiredPos,
+      cover_letter: coverLetter,
+      status: 'new',
+      internal_notes: notes || null,
+      spontaneous_type: type,
+    }).select().maybeSingle();
+    setSubmitting(false);
+    if (data) { setDone(true); onApplied(data as Application); }
+  };
+
+  if (done) return (
+    <div className="max-w-lg mx-auto mt-12 text-center bg-white rounded-2xl border border-gray-200 p-10 shadow-sm">
+      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <CheckCircle size={32} className="text-green-600" />
+      </div>
+      <h2 className="text-xl font-bold text-gray-900 mb-2">Candidature envoyée !</h2>
+      <p className="text-gray-500 text-sm">Votre candidature spontanée a été transmise aux services de la SNH. Vous serez contacté(e) prochainement.</p>
+    </div>
+  );
+
+  return (
+    <div className="max-w-2xl">
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3 mb-5">
+        <Send size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-blue-800">Candidature spontanée à la SNH</p>
+          <p className="text-xs text-blue-600 mt-0.5">Soumettez votre dossier directement même en l'absence d'une offre publiée. Précisez le type de candidature et la direction que vous visez.</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Type selector */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Type de candidature *</h3>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { value: 'emploi', icon: '💼', label: 'Emploi', sub: 'CDI ou CDD à la SNH' },
+              { value: 'stage_academique', icon: '🎓', label: 'Stage académique', sub: 'Fin d\'études / mémoire' },
+              { value: 'stage_professionnel', icon: '🔄', label: 'Stage professionnel', sub: 'Perfectionnement / insertion pro' },
+            ].map(t => (
+              <button key={t.value} type="button" onClick={() => setType(t.value as any)}
+                className={`p-4 rounded-xl border-2 text-center transition cursor-pointer ${type === t.value ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300'}`}>
+                <div className="text-2xl mb-1">{t.icon}</div>
+                <p className="text-xs font-semibold text-gray-900">{t.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t.sub}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Direction & poste */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Direction visée à la SNH *</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Lbl>Direction / Service *</Lbl>
+              <select value={direction} onChange={e => setDirection(e.target.value)} className={inp(!direction && submitting)} required>
+                <option value="">— Choisir une direction —</option>
+                {SNH_DIRECTIONS.map(d => <option key={d}>{d}</option>)}
+              </select>
             </div>
             <div>
-              <h2 className="text-white font-bold text-lg">Formations disponibles</h2>
-              <p className="text-white/50 text-xs">Programmes de formation ouverts par la SNH</p>
+              <Lbl>Poste / Fonction visé(e) *</Lbl>
+              <input value={poste} onChange={e => setPoste(e.target.value)} className={inp()} placeholder="Ex: Ingénieur Réservoir, Comptable..." required />
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {trainings.map(tr => (
-              <div key={tr.id} className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md transition-shadow flex flex-col">
-                <div className="flex items-start justify-between mb-2 gap-2">
-                  <h3 className="font-bold text-slate-900 text-sm leading-snug flex-1">{tr.title}</h3>
-                  {tr.is_mandatory && (
-                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">Obligatoire</span>
-                  )}
-                </div>
-                {tr.code && <p className="text-xs text-slate-400 mb-2 font-mono">{tr.code}</p>}
-                {tr.description && (
-                  <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 mb-3 flex-1">{tr.description}</p>
-                )}
-                <div className="flex flex-wrap gap-1.5 mt-auto">
-                  {tr.category && (
-                    <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full capitalize">{tr.category}</span>
-                  )}
-                  {tr.duration_hours && (
-                    <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full flex items-center gap-1">
-                      <Clock size={10} />{tr.duration_hours}h
-                    </span>
-                  )}
-                  {tr.provider && (
-                    <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">{tr.provider}</span>
-                  )}
-                </div>
-                {(tr.start_date || tr.end_date) && (
-                  <div className="flex items-center gap-1 mt-2 text-xs text-slate-400">
-                    <Calendar size={10} />
-                    {tr.start_date ? fmtDate(tr.start_date) : '—'}
-                    {tr.end_date ? <> → {fmtDate(tr.end_date)}</> : ''}
+        </div>
+
+        {/* Stage-specific fields */}
+        {isStage && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <GraduationCap size={15} /> Informations sur le stage
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2"><Lbl>Thème / Sujet du stage *</Lbl><input value={stageTopic} onChange={e => setStageTopic(e.target.value)} className={inp()} placeholder="Ex: Optimisation de la récupération assistée du pétrole..." /></div>
+              <div>
+                <Lbl>Durée souhaitée</Lbl>
+                <select value={stageDuration} onChange={e => setStageDuration(e.target.value)} className={inp()}>
+                  {['1 mois','2 mois','3 mois','4 mois','6 mois','À définir avec la SNH'].map(d => <option key={d}>{d}</option>)}
+                </select>
+              </div>
+              <div><Lbl>Date de début souhaitée</Lbl><input type="date" value={stageStart} onChange={e => setStageStart(e.target.value)} className={inp()} /></div>
+              <div className="col-span-2"><Lbl>École / Université actuelle</Lbl><input value={stageSchool} onChange={e => setStageSchool(e.target.value)} className={inp()} placeholder="ENSP, Université de Yaoundé I, IUT..." /></div>
+            </div>
+          </div>
+        )}
+
+        {/* Cover letter */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Votre dossier de candidature</h3>
+          <div className="space-y-3">
+            <div>
+              <Lbl>Lettre de motivation *</Lbl>
+              <textarea value={coverLetter} onChange={e => setCoverLetter(e.target.value)} rows={8} className={inp()} required
+                placeholder={`Madame, Monsieur le Directeur des Ressources Humaines,\n\nJe me permets de vous adresser ma candidature spontanée auprès de la Société Nationale des Hydrocarbures du Cameroun (SNH) pour un poste de [poste visé] au sein de la [Direction visée].\n\n[Développez vos motivations et votre valeur ajoutée pour la SNH]\n\nDans l'espoir d'une réponse favorable, je reste disponible pour tout entretien à votre convenance.\n\nVeuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${profile.first_name} ${profile.last_name}`} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Lbl>Disponibilité</Lbl>
+                <select value={availability} onChange={e => setAvailability(e.target.value)} className={inp()}>
+                  {['Immédiatement','Dans 1 mois','Dans 2 mois','Dans 3 mois'].map(d => <option key={d}>{d}</option>)}
+                </select>
+              </div>
+              <div>
+                <Lbl>Prétention salariale (FCFA/mois, optionnel)</Lbl>
+                <input type="number" value={salaryExpectation} onChange={e => setSalaryExpectation(e.target.value)} className={inp()} placeholder="Ex: 600000" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-4">
+            <button type="submit" disabled={submitting || !coverLetter.trim() || !direction || !poste}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60 transition"
+              style={{ background: SNH_BLUE }}>
+              {submitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={14} />}
+              Envoyer ma candidature à la SNH
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ── Applications ──────────────────────────────────────────────────────────────
+function ApplicationsSection({ applications }: { applications: Application[] }) {
+  const [filter, setFilter] = useState('all');
+  const filtered = filter === 'all' ? applications : applications.filter(a => a.status === filter);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <select value={filter} onChange={e => setFilter(e.target.value)} className={`${inp()} w-52`}>
+          <option value="all">Tous les statuts</option>
+          {['new','reviewing','interview','offer','integrated','rejected','withdrawn'].map(s => (
+            <option key={s} value={s}>{['Soumis','En examen','Entretien','Offre','Intégré(e)','Refusé(e)','Retiré(e)'][['new','reviewing','interview','offer','integrated','rejected','withdrawn'].indexOf(s)]}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900">Mes candidatures SNH ({filtered.length})</h3>
+        </div>
+        {filtered.length === 0 ? (
+          <div className="py-12 text-center text-gray-400"><FileText size={36} className="mx-auto mb-2 opacity-20" />Aucune candidature</div>
+        ) : (
+          <div>
+            {filtered.map(app => (
+              <div key={app.id} className="flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">{app.desired_position || app.job_opening?.title || '—'}</p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={10} />SNH</span>
+                    {app.job_opening_id ? (
+                      <Tag variant="blue">Offre publiée</Tag>
+                    ) : (
+                      <Tag variant="purple">Candidature spontanée</Tag>
+                    )}
+                    <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={10} />{fmtDate(app.created_at)}</span>
                   </div>
-                )}
+                </div>
+                <AppStatus status={app.status} />
               </div>
             ))}
           </div>
-        </section>
-      )}
-
-      {/* ── Discussions QVCT ─────────────────────────────────────────────── */}
-      {qvctThreads.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-rose-500 rounded-lg flex items-center justify-center">
-              <MessageSquare size={16} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-white font-bold text-lg">Discussions QVCT</h2>
-              <p className="text-white/50 text-xs">Qualité de vie et conditions de travail — discussions ouvertes</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {qvctThreads.map(thread => {
-              const isOpen = expandedThread === thread.id;
-              const catColors: Record<string, string> = {
-                conditions_travail: 'bg-orange-100 text-orange-700',
-                relations: 'bg-blue-100 text-blue-700',
-                organisation: 'bg-teal-100 text-teal-700',
-                sante: 'bg-green-100 text-green-700',
-                autre: 'bg-slate-100 text-slate-600',
-              };
-              const catLabels: Record<string, string> = {
-                conditions_travail: 'Conditions de travail',
-                relations: 'Relations',
-                organisation: 'Organisation',
-                sante: 'Santé',
-                autre: 'Autre',
-              };
-              return (
-                <div key={thread.id} className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => setExpandedThread(isOpen ? null : thread.id)}
-                    className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/5 transition"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <MessageSquare size={16} className="text-orange-300" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="text-white font-semibold text-sm">{thread.title}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catColors[thread.category] ?? 'bg-slate-100 text-slate-600'}`}>
-                          {catLabels[thread.category] ?? thread.category}
-                        </span>
-                      </div>
-                      <p className="text-white/50 text-xs">{fmtDate(thread.created_at)}</p>
-                    </div>
-                    {isOpen ? <ChevronUp size={15} className="text-white/40 mt-1 flex-shrink-0" /> : <ChevronDown size={15} className="text-white/40 mt-1 flex-shrink-0" />}
-                  </button>
-                  {isOpen && thread.description && (
-                    <div className="px-4 pb-4 pt-0 border-t border-white/10">
-                      <p className="text-white/70 text-sm leading-relaxed mt-3">{thread.description}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-    </div>
-  );
-}
-
-// ── Profile completion indicator ───────────────────────────────────────────────
-function ProfileCompletion({ profile, hasExperiences, hasEducations, hasSkills, hasDocuments }: {
-  profile: CandidateProfile;
-  hasExperiences: boolean;
-  hasEducations: boolean;
-  hasSkills: boolean;
-  hasDocuments: boolean;
-}) {
-  const score = [
-    profile.phone,
-    profile.location,
-    profile.summary,
-    profile.desired_position,
-    profile.availability_date,
-    hasExperiences ? 'ok' : null,
-    hasEducations ? 'ok' : null,
-    hasSkills ? 'ok' : null,
-    hasDocuments ? 'ok' : null,
-  ].filter(Boolean).length;
-  const pct = Math.round((score / 9) * 100);
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      <div className="w-20 h-1.5 bg-white/20 rounded-full overflow-hidden">
-        <div className="h-full bg-teal-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-white/60 text-xs">{pct}% profil</span>
-    </div>
-  );
-}
-
-// ── Profile Edit View ─────────────────────────────────────────────────────────
-function ProfileEditView({ candidateId, profile: initialProfile, onSaved, onCancel }: {
-  candidateId: string; profile: CandidateProfile; onSaved: (p: CandidateProfile) => void; onCancel: () => void;
-}) {
-  const STEPS = ['Infos personnelles', 'Expériences', 'Mon parcours', 'Compétences', 'Documents'];
-  const [step, setStep] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState({ ...initialProfile });
-  const [experiences, setExperiences] = useState<Experience[]>([]);
-  const [educations, setEducations] = useState<Education[]>([]);
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [documents, setDocuments] = useState<CandidateDoc[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      const [expRes, eduRes, skRes, docRes] = await Promise.all([
-        supabase.from('candidate_experiences').select('*').eq('candidate_id', candidateId).order('start_date', { ascending: false }),
-        supabase.from('candidate_educations').select('*').eq('candidate_id', candidateId).order('end_date', { ascending: false }),
-        supabase.from('candidate_candidate_skills').select('*').eq('candidate_id', candidateId),
-        supabase.from('candidate_documents').select('*').eq('candidate_id', candidateId).order('uploaded_at', { ascending: false }),
-      ]);
-      setExperiences((expRes.data || []) as Experience[]);
-      setEducations((eduRes.data || []) as Education[]);
-      setSkills((skRes.data || []) as Skill[]);
-      setDocuments((docRes.data || []) as CandidateDoc[]);
-      setLoadingData(false);
-    };
-    load();
-  }, [candidateId]);
-
-  const saveAll = async () => {
-    setSaving(true);
-    setSaveError(null);
-
-    // Update candidate profile using user_id for RLS compatibility
-    const { error: profileErr } = await supabase.from('candidates').update({
-      first_name: profile.first_name, last_name: profile.last_name,
-      phone: profile.phone || null, location: profile.location || null,
-      linkedin_url: profile.linkedin_url || null, portfolio_url: profile.portfolio_url || null,
-      summary: profile.summary || null, desired_position: profile.desired_position || null,
-      desired_salary_min: profile.desired_salary_min || null, desired_salary_max: profile.desired_salary_max || null,
-      availability_date: profile.availability_date || null, mobility: profile.mobility || null,
-      profile_completed: true,
-    }).eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '');
-
-    if (profileErr) {
-      setSaveError('Erreur lors de la mise à jour du profil : ' + profileErr.message);
-      setSaving(false);
-      return;
-    }
-
-    // Replace experiences
-    const { error: delExpErr } = await supabase.from('candidate_experiences').delete().eq('candidate_id', candidateId);
-    if (delExpErr) { setSaveError('Erreur expériences : ' + delExpErr.message); setSaving(false); return; }
-    const validExps = experiences.filter(e => e.job_title && e.company && e.start_date);
-    if (validExps.length) {
-      const { error: insExpErr } = await supabase.from('candidate_experiences').insert(
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        validExps.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
-      );
-      if (insExpErr) { setSaveError('Erreur insertion expériences : ' + insExpErr.message); setSaving(false); return; }
-    }
-
-    // Replace educations
-    const { error: delEduErr } = await supabase.from('candidate_educations').delete().eq('candidate_id', candidateId);
-    if (delEduErr) { setSaveError('Erreur formations : ' + delEduErr.message); setSaving(false); return; }
-    const validEdus = educations.filter(e => e.degree && e.institution);
-    if (validEdus.length) {
-      const { error: insEduErr } = await supabase.from('candidate_educations').insert(
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        validEdus.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
-      );
-      if (insEduErr) { setSaveError('Erreur insertion formations : ' + insEduErr.message); setSaving(false); return; }
-    }
-
-    // Replace skills
-    const { error: delSkErr } = await supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId);
-    if (delSkErr) { setSaveError('Erreur compétences : ' + delSkErr.message); setSaving(false); return; }
-    const validSk = skills.filter(s => s.name);
-    if (validSk.length) {
-      const { error: insSkErr } = await supabase.from('candidate_candidate_skills').insert(
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        validSk.map(({ id: _id, ...s }) => ({ ...s, candidate_id: candidateId }))
-      );
-      if (insSkErr) { setSaveError('Erreur insertion compétences : ' + insSkErr.message); setSaving(false); return; }
-    }
-
-    setSaving(false);
-    const { data } = await supabase.from('candidates').select('*').eq('id', candidateId).maybeSingle();
-    if (data) onSaved(data as CandidateProfile);
-  };
-
-  if (loadingData) return (
-    <div className="flex items-center justify-center h-48">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white" />
-    </div>
-  );
-
-  return (
-    <div className="max-w-3xl mx-auto">
-      {/* Step tabs */}
-      <div className="flex gap-1 bg-white/10 rounded-xl p-1 mb-6">
-        {STEPS.map((s, i) => (
-          <button key={i} onClick={() => setStep(i)}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${step === i ? 'bg-white text-slate-900' : 'text-white/60 hover:text-white'}`}>
-            {s}
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-800 to-teal-800 px-8 py-5">
-          <h2 className="text-white text-xl font-bold">{STEPS[step]}</h2>
-        </div>
-        <div className="p-8">
-          {step === 0 && <PersonalInfoStep profile={profile} setProfile={setProfile} />}
-          {step === 1 && <ExperiencesStep items={experiences} setItems={setExperiences} />}
-          {step === 2 && <EducationsStep items={educations} setItems={setEducations} />}
-          {step === 3 && <SkillsStep items={skills} setItems={setSkills} />}
-          {step === 4 && <DocumentsStep candidateId={candidateId} documents={documents} setDocuments={setDocuments} />}
-        </div>
-        {saveError && (
-          <div className="mx-8 mb-0 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm flex items-start gap-2">
-            <AlertCircle size={15} className="mt-0.5 flex-shrink-0" />
-            <span>{saveError}</span>
-          </div>
         )}
-        <div className="border-t border-slate-100 px-8 py-5 flex items-center justify-between">
-          <div className="flex gap-2">
-            <button onClick={onCancel} className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 text-sm transition">Annuler</button>
-            {step > 0 && <button onClick={() => setStep(s => s - 1)} className="flex items-center gap-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 text-sm transition"><ChevronLeft size={15} />Précédent</button>}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={saveAll} disabled={saving}
-              className="flex items-center gap-2 px-5 py-2 bg-slate-600 text-white rounded-xl hover:bg-slate-700 disabled:opacity-60 text-sm font-medium transition">
-              {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={15} />}
-              Enregistrer
-            </button>
-            {step < STEPS.length - 1 && (
-              <button onClick={() => setStep(s => s + 1)} className="flex items-center gap-1 px-5 py-2 bg-teal-700 text-white rounded-xl hover:bg-teal-800 text-sm font-medium transition">Suivant <ChevronRight size={15} /></button>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );
 }
 
-function PersonalInfoStep({ profile, setProfile }: { profile: CandidateProfile; setProfile: (p: CandidateProfile) => void }) {
-  const set = (k: keyof CandidateProfile, v: any) => setProfile({ ...profile, [k]: v });
+// ── Notifications ─────────────────────────────────────────────────────────────
+function NotificationsSection({ notifications }: { notifications: Notification[] }) {
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Prénom"><input value={profile.first_name} onChange={e => set('first_name', e.target.value)} className={inp()} /></Field>
-        <Field label="Nom"><input value={profile.last_name} onChange={e => set('last_name', e.target.value)} className={inp()} /></Field>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Téléphone" icon={<Phone size={13} />}><input value={profile.phone || ''} onChange={e => set('phone', e.target.value)} className={inp()} placeholder="+237 6XX..." /></Field>
-        <Field label="Localisation" icon={<MapPin size={13} />}><input value={profile.location || ''} onChange={e => set('location', e.target.value)} className={inp()} placeholder="Yaoundé, Cameroun" /></Field>
-      </div>
-      <Field label="Poste souhaité" icon={<Briefcase size={13} />}><input value={profile.desired_position || ''} onChange={e => set('desired_position', e.target.value)} className={inp()} placeholder="Ingénieur pétrolier..." /></Field>
-      <div className="grid grid-cols-3 gap-4">
-        <Field label="Salaire min (XAF)"><input type="number" value={profile.desired_salary_min || ''} onChange={e => set('desired_salary_min', Number(e.target.value))} className={inp()} /></Field>
-        <Field label="Salaire max (XAF)"><input type="number" value={profile.desired_salary_max || ''} onChange={e => set('desired_salary_max', Number(e.target.value))} className={inp()} /></Field>
-        <Field label="Disponibilité" icon={<Calendar size={13} />}><input type="date" value={profile.availability_date || ''} onChange={e => set('availability_date', e.target.value)} className={inp()} /></Field>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="LinkedIn" icon={<Linkedin size={13} />}><input value={profile.linkedin_url || ''} onChange={e => set('linkedin_url', e.target.value)} className={inp()} /></Field>
-        <Field label="Mobilité">
-          <select value={profile.mobility || 'local'} onChange={e => set('mobility', e.target.value)} className={inp()}>
-            {MOBILITY_OPTIONS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-          </select>
-        </Field>
-      </div>
-      <Field label="Résumé professionnel">
-        <textarea value={profile.summary || ''} onChange={e => set('summary', e.target.value)} rows={4} className={inp()} placeholder="Décrivez votre profil..." />
-      </Field>
-    </div>
-  );
-}
-
-function ExperiencesStep({ items, setItems }: { items: Experience[]; setItems: (v: Experience[]) => void }) {
-  const add = () => setItems([...items, { job_title: '', company: '', location: '', start_date: '', end_date: '', is_current: false, description: '' }]);
-  const upd = (i: number, k: keyof Experience, v: any) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
-  const del = (i: number) => setItems(items.filter((_, j) => j !== i));
-  return (
-    <div className="space-y-4">
-      {items.map((exp, i) => (
-        <div key={i} className="border border-slate-200 rounded-xl p-5">
-          <div className="flex justify-between mb-4">
-            <span className="font-semibold text-slate-700 flex items-center gap-2"><Briefcase size={15} className="text-teal-600" />Expérience {i + 1}</span>
-            <button onClick={() => del(i)} className="text-red-400 hover:text-red-600"><Trash2 size={15} /></button>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <Field label="Intitulé du poste *"><input value={exp.job_title} onChange={e => upd(i, 'job_title', e.target.value)} className={inp()} placeholder="Ingénieur..." /></Field>
-            <Field label="Entreprise *"><input value={exp.company} onChange={e => upd(i, 'company', e.target.value)} className={inp()} /></Field>
-            <Field label="Localisation"><input value={exp.location} onChange={e => upd(i, 'location', e.target.value)} className={inp()} /></Field>
-            <Field label="Date de début *"><input type="date" value={exp.start_date} onChange={e => upd(i, 'start_date', e.target.value)} className={inp()} /></Field>
-            {!exp.is_current && <Field label="Date de fin"><input type="date" value={exp.end_date} onChange={e => upd(i, 'end_date', e.target.value)} className={inp()} /></Field>}
-          </div>
-          <label className="flex items-center gap-2 mb-3 cursor-pointer text-sm">
-            <input type="checkbox" checked={exp.is_current} onChange={e => upd(i, 'is_current', e.target.checked)} className="rounded border-slate-300 text-teal-600" />
-            Poste actuel
-          </label>
-          <Field label="Description">
-            <textarea value={exp.description} onChange={e => upd(i, 'description', e.target.value)} rows={2} className={inp()} />
-          </Field>
+    <div className="max-w-2xl">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
         </div>
-      ))}
-      <button onClick={add} className="w-full border-2 border-dashed border-slate-200 rounded-xl py-3 text-slate-500 hover:border-teal-400 hover:text-teal-600 flex items-center justify-center gap-2 text-sm transition">
-        <Plus size={16} /> Ajouter une expérience
-      </button>
-    </div>
-  );
-}
-
-function EducationsStep({ items, setItems }: { items: Education[]; setItems: (v: Education[]) => void }) {
-  const add = () => setItems([...items, { degree: '', field_of_study: '', institution: '', location: '', start_date: '', end_date: '', is_current: false, grade: '' }]);
-  const upd = (i: number, k: keyof Education, v: any) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
-  const del = (i: number) => setItems(items.filter((_, j) => j !== i));
-  return (
-    <div className="space-y-4">
-      {items.map((edu, i) => (
-        <div key={i} className="border border-slate-200 rounded-xl p-5">
-          <div className="flex justify-between mb-4">
-            <span className="font-semibold text-slate-700 flex items-center gap-2"><GraduationCap size={15} className="text-blue-600" />Formation {i + 1}</span>
-            <button onClick={() => del(i)} className="text-red-400 hover:text-red-600"><Trash2 size={15} /></button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Diplôme *"><input value={edu.degree} onChange={e => upd(i, 'degree', e.target.value)} className={inp()} placeholder="Master, Licence..." /></Field>
-            <Field label="Domaine d'étude"><input value={edu.field_of_study} onChange={e => upd(i, 'field_of_study', e.target.value)} className={inp()} /></Field>
-            <Field label="Établissement *"><input value={edu.institution} onChange={e => upd(i, 'institution', e.target.value)} className={inp()} /></Field>
-            <Field label="Mention"><input value={edu.grade} onChange={e => upd(i, 'grade', e.target.value)} className={inp()} placeholder="Très bien..." /></Field>
-            <Field label="Début"><input type="date" value={edu.start_date} onChange={e => upd(i, 'start_date', e.target.value)} className={inp()} /></Field>
-            {!edu.is_current && <Field label="Fin"><input type="date" value={edu.end_date} onChange={e => upd(i, 'end_date', e.target.value)} className={inp()} /></Field>}
-          </div>
-          <label className="flex items-center gap-2 mt-3 cursor-pointer text-sm">
-            <input type="checkbox" checked={edu.is_current} onChange={e => upd(i, 'is_current', e.target.checked)} className="rounded border-slate-300 text-teal-600" />
-            En cours
-          </label>
-        </div>
-      ))}
-      <button onClick={add} className="w-full border-2 border-dashed border-slate-200 rounded-xl py-3 text-slate-500 hover:border-teal-400 hover:text-teal-600 flex items-center justify-center gap-2 text-sm transition">
-        <Plus size={16} /> Ajouter une formation
-      </button>
-    </div>
-  );
-}
-
-function SkillsStep({ items, setItems }: { items: Skill[]; setItems: (v: Skill[]) => void }) {
-  const add = () => setItems([...items, { name: '', category: 'technical', level: 'intermediate' }]);
-  const upd = (i: number, k: keyof Skill, v: any) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
-  const del = (i: number) => setItems(items.filter((_, j) => j !== i));
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-slate-500 mb-4">Listez vos compétences pour améliorer votre score de matching avec les offres.</p>
-      <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 uppercase px-1 hidden sm:grid">
-        <div className="col-span-4">Compétence</div><div className="col-span-3">Catégorie</div><div className="col-span-4">Niveau</div><div className="col-span-1" />
-      </div>
-      {items.map((sk, i) => (
-        <div key={i} className="grid grid-cols-12 gap-2 items-center">
-          <div className="col-span-4"><input value={sk.name} onChange={e => upd(i, 'name', e.target.value)} className={`${inp()} text-sm`} placeholder="Python, Anglais..." /></div>
-          <div className="col-span-3">
-            <select value={sk.category} onChange={e => upd(i, 'category', e.target.value)} className={`${inp()} text-sm`}>
-              {SKILL_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
-          </div>
-          <div className="col-span-4">
-            <div className="flex gap-1">
-              {SKILL_LEVELS.map(lv => (
-                <button key={lv.value} type="button" onClick={() => upd(i, 'level', lv.value)}
-                  className={`flex-1 py-2 text-xs rounded-lg border transition-all ${sk.level === lv.value ? 'bg-teal-600 text-white border-teal-600' : 'border-slate-200 text-slate-500 hover:border-teal-300'}`}>
-                  {lv.label.slice(0, 3)}.
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="col-span-1 flex justify-center">
-            <button onClick={() => del(i)} className="text-red-400 hover:text-red-600"><X size={15} /></button>
-          </div>
-        </div>
-      ))}
-      <button onClick={add} className="w-full border-2 border-dashed border-slate-200 rounded-xl py-3 text-slate-500 hover:border-teal-400 hover:text-teal-600 flex items-center justify-center gap-2 text-sm transition">
-        <Plus size={16} /> Ajouter une compétence
-      </button>
-    </div>
-  );
-}
-
-// ── Documents Step ─────────────────────────────────────────────────────────────
-const DOC_TYPES: { value: CandidateDoc['type']; label: string; accept: string }[] = [
-  { value: 'cv', label: 'CV', accept: '.pdf,.doc,.docx' },
-  { value: 'cover_letter', label: 'Lettre de motivation', accept: '.pdf,.doc,.docx' },
-  { value: 'diploma', label: 'Diplôme / Attestation', accept: '.pdf,.jpg,.jpeg,.png' },
-  { value: 'reference', label: 'Lettre de référence', accept: '.pdf,.doc,.docx' },
-  { value: 'other', label: 'Autre pièce administrative', accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx' },
-];
-
-function fmtSize(bytes: number | null) {
-  if (!bytes) return '';
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
-}
-
-function DocumentsStep({ candidateId, documents, setDocuments }: {
-  candidateId: string;
-  documents: CandidateDoc[];
-  setDocuments: (d: CandidateDoc[]) => void;
-}) {
-  const [uploading, setUploading] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<CandidateDoc['type']>('cv');
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadError(null);
-
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError('Fichier trop volumineux (max 10 Mo)');
-      e.target.value = '';
-      return;
-    }
-
-    setUploading(selectedType);
-    const ext = file.name.split('.').pop();
-    const path = `${candidateId}/${selectedType}-${Date.now()}.${ext}`;
-
-    const { error: upErr } = await supabase.storage
-      .from('candidates-documents')
-      .upload(path, file, { upsert: false });
-
-    if (upErr) {
-      setUploadError('Erreur upload : ' + upErr.message);
-      setUploading(null);
-      e.target.value = '';
-      return;
-    }
-
-    const { data: urlData } = supabase.storage.from('candidates-documents').getPublicUrl(path);
-
-    const { data: docData, error: dbErr } = await supabase.from('candidate_documents').insert({
-      candidate_id: candidateId,
-      type: selectedType,
-      file_name: file.name,
-      file_url: urlData.publicUrl,
-      file_size: file.size,
-    }).select().maybeSingle();
-
-    if (dbErr) {
-      setUploadError('Erreur enregistrement : ' + dbErr.message);
-    } else if (docData) {
-      setDocuments([docData as CandidateDoc, ...documents]);
-    }
-
-    setUploading(null);
-    e.target.value = '';
-  };
-
-  const handleDelete = async (doc: CandidateDoc) => {
-    setDeleting(doc.id);
-    // Extract storage path from URL
-    const urlParts = doc.file_url.split('/candidates-documents/');
-    if (urlParts[1]) {
-      await supabase.storage.from('candidates-documents').remove([decodeURIComponent(urlParts[1])]);
-    }
-    await supabase.from('candidate_documents').delete().eq('id', doc.id);
-    setDocuments(documents.filter(d => d.id !== doc.id));
-    setDeleting(null);
-  };
-
-  const typeLabel = (t: CandidateDoc['type']) => DOC_TYPES.find(d => d.value === t)?.label ?? t;
-
-  return (
-    <div className="space-y-6">
-      <p className="text-sm text-slate-500">Chargez vos pièces administratives (CNI, diplômes, CV, lettres de référence, etc.).</p>
-
-      {/* Upload zone */}
-      <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 space-y-4 hover:border-teal-400 transition-colors">
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Type de document</label>
-            <select
-              value={selectedType}
-              onChange={e => setSelectedType(e.target.value as CandidateDoc['type'])}
-              className={inp()}
-            >
-              {DOC_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
-            </select>
-          </div>
-          <div className="flex-1 sm:pt-7">
-            <label className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${uploading ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-teal-700 text-white hover:bg-teal-800'}`}>
-              {uploading ? (
-                <><div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" /> Envoi en cours...</>
-              ) : (
-                <><Upload size={15} /> Choisir un fichier</>
-              )}
-              <input
-                type="file"
-                className="hidden"
-                disabled={!!uploading}
-                accept={DOC_TYPES.find(d => d.value === selectedType)?.accept}
-                onChange={handleFileChange}
-              />
-            </label>
-          </div>
-        </div>
-        <p className="text-xs text-slate-400">Formats acceptés : PDF, Word, JPG, PNG — Taille max : 10 Mo</p>
-        {uploadError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 text-red-700 text-sm flex items-center gap-2">
-            <AlertCircle size={14} /> {uploadError}
+        {notifications.length === 0 ? (
+          <div className="py-12 text-center text-gray-400"><Bell size={32} className="mx-auto mb-2 opacity-20" />Aucune notification</div>
+        ) : (
+          <div>
+            {notifications.map(n => (
+              <div key={n.id} className={`flex items-start gap-3 px-5 py-4 border-b border-gray-50 last:border-0 ${n.read ? '' : 'bg-blue-50/40'}`}>
+                <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${n.read ? 'bg-gray-300' : 'bg-red-500'}`} />
+                <div className="flex-1">
+                  <p className={`text-sm ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}`}><span className="font-semibold">{n.title}</span> — {n.body}</p>
+                  <p className="text-xs text-gray-400 mt-1 flex items-center gap-1"><Clock size={10} />{fmtDate(n.created_at)}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
-
-      {/* Document list */}
-      {documents.length === 0 ? (
-        <div className="text-center py-8 text-slate-400 text-sm">
-          <FileText size={36} className="mx-auto mb-2 opacity-30" />
-          Aucun document chargé
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {documents.map(doc => (
-            <div key={doc.id} className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-              <div className="w-9 h-9 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
-                <FileText size={18} className="text-teal-700" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{doc.file_name}</p>
-                <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                  <span className="px-1.5 py-0.5 bg-slate-200 rounded-full text-slate-600">{typeLabel(doc.type)}</span>
-                  {doc.file_size && <span>{fmtSize(doc.file_size)}</span>}
-                  <span>{fmtDate(doc.uploaded_at)}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                  className="text-teal-600 hover:text-teal-800 p-1.5 rounded-lg hover:bg-teal-50 transition" title="Voir">
-                  <Eye size={15} />
-                </a>
-                <button onClick={() => handleDelete(doc)} disabled={deleting === doc.id}
-                  className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition disabled:opacity-50" title="Supprimer">
-                  {deleting === doc.id ? <div className="w-3.5 h-3.5 border border-red-300 border-t-red-500 rounded-full animate-spin" /> : <Trash2 size={15} />}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

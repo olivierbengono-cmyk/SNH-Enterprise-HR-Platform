@@ -13,6 +13,9 @@ interface PosOption  { id: string; title: string; }
 export function EmployeeList() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterDept, setFilterDept] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterContract, setFilterContract] = useState('');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -22,9 +25,16 @@ export function EmployeeList() {
   const [posOptions, setPosOptions]   = useState<PosOption[]>([]);
 
   useEffect(() => {
-    loadEmployees();
-    supabase.from('departments').select('id, name').order('name').then(({ data }) => setDeptOptions(data || []));
-    supabase.from('positions').select('id, title').order('title').then(({ data }) => setPosOptions(data || []));
+    const init = async () => {
+      const [dRes, pRes] = await Promise.all([
+        supabase.from('departments').select('id, name').order('name'),
+        supabase.from('positions').select('id, title').order('title'),
+      ]);
+      if (dRes.data) setDeptOptions(dRes.data);
+      if (pRes.data) setPosOptions(pRes.data);
+      await loadEmployees();
+    };
+    init();
   }, []);
 
   const loadEmployees = async () => {
@@ -71,12 +81,22 @@ export function EmployeeList() {
     return { success, errors };
   };
 
-  const filteredEmployees = employees.filter(emp =>
-    emp.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.employee_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees.filter(emp => {
+    const txt = searchTerm.toLowerCase();
+    const matchText = !searchTerm || (
+      emp.first_name.toLowerCase().includes(txt) ||
+      emp.last_name.toLowerCase().includes(txt) ||
+      emp.employee_number.toLowerCase().includes(txt) ||
+      emp.email.toLowerCase().includes(txt) ||
+      ((emp as any).positions?.title ?? '').toLowerCase().includes(txt)
+    );
+    const matchDept = !filterDept || (emp as any).departments?.name === filterDept;
+    const matchStatus = !filterStatus || emp.employment_status === filterStatus;
+    const matchContract = !filterContract || emp.contract_type === filterContract;
+    return matchText && matchDept && matchStatus && matchContract;
+  });
+
+  const hasActiveFilters = searchTerm || filterDept || filterStatus || filterContract;
 
   const getStatusColor = (status: string) => {
     const colors = {
@@ -132,25 +152,72 @@ export function EmployeeList() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Rechercher par nom, matricule, email..."
-              className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none"
-            />
+        <div className="space-y-3 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Nom, matricule, email, poste..."
+                className="w-full pl-11 pr-9 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none"
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <button className="flex items-center gap-2 px-5 py-3 border border-slate-300 rounded-lg hover:bg-slate-50 transition flex-shrink-0">
+              <Download className="w-5 h-5" />
+              <span className="font-medium">Export</span>
+            </button>
           </div>
-          <button className="flex items-center gap-2 px-6 py-3 border border-slate-300 rounded-lg hover:bg-slate-50 transition">
-            <Filter className="w-5 h-5" />
-            <span className="font-medium">Filtres</span>
-          </button>
-          <button className="flex items-center gap-2 px-6 py-3 border border-slate-300 rounded-lg hover:bg-slate-50 transition">
-            <Download className="w-5 h-5" />
-            <span className="font-medium">Export</span>
-          </button>
+
+          <div className="flex flex-wrap gap-2 items-center">
+            <Filter className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <select
+              value={filterDept}
+              onChange={e => setFilterDept(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-slate-700 outline-none bg-white min-w-[160px]"
+            >
+              <option value="">Tous les départements</option>
+              {deptOptions.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+            </select>
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-slate-700 outline-none bg-white"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="active">Actif</option>
+              <option value="on_leave">En congé</option>
+              <option value="suspended">Suspendu</option>
+              <option value="terminated">Terminé</option>
+            </select>
+            <select
+              value={filterContract}
+              onChange={e => setFilterContract(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-slate-700 outline-none bg-white"
+            >
+              <option value="">Tous les contrats</option>
+              <option value="CDI">CDI</option>
+              <option value="CDD">CDD</option>
+              <option value="Stage">Stage</option>
+            </select>
+            {hasActiveFilters && (
+              <button
+                onClick={() => { setSearchTerm(''); setFilterDept(''); setFilterStatus(''); setFilterContract(''); }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition"
+              >
+                <X className="w-3.5 h-3.5" /> Réinitialiser les filtres
+              </button>
+            )}
+            {filteredEmployees.length !== employees.length && (
+              <span className="text-xs text-slate-500 ml-auto">{filteredEmployees.length} résultat{filteredEmployees.length !== 1 ? 's' : ''} sur {employees.length}</span>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto">

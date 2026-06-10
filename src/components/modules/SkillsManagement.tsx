@@ -403,6 +403,13 @@ function SuccessionPlanningTab({ employees }: { employees: Employee[] }) {
     );
   });
 
+  useEffect(() => {
+    if (selectedEmployee && !filteredEmployees.find(e => e.id === selectedEmployee)) {
+      setSelectedEmployee('');
+      setResult(null);
+    }
+  }, [search]);
+
   const analyze = async () => {
     if (!selectedEmployee) return;
     setLoading(true);
@@ -454,6 +461,20 @@ function SuccessionPlanningTab({ employees }: { employees: Employee[] }) {
             />
           </div>
         </div>
+
+        {selectedEmployee && (() => {
+          const sel = employees.find(e => e.id === selectedEmployee);
+          return sel ? (
+            <div className="flex items-center gap-2 mb-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <UserCheck className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span className="text-sm font-medium text-amber-900">{sel.first_name} {sel.last_name}</span>
+              {sel.position_title && <span className="text-xs text-amber-600">— {sel.position_title}</span>}
+              <button onClick={() => { setSelectedEmployee(''); setResult(null); }} className="ml-auto p-0.5 text-amber-400 hover:text-amber-700">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : null;
+        })()}
 
         <div className="flex flex-col sm:flex-row gap-3 mt-3">
           <select

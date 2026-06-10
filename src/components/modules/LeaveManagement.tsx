@@ -23,18 +23,19 @@ export function LeaveManagement({ role }: LeaveManagementProps) {
 
   useEffect(() => {
     loadData();
-    supabase.from('employees').select('id, first_name, last_name').eq('employment_status', 'active').order('first_name').then(({ data }) => setEmployeeOptions(data || []));
   }, [profile, role]);
 
   const loadData = async () => {
     try {
-      const [typesResponse, requestsResponse] = await Promise.all([
+      const [typesResponse, requestsResponse, empResponse] = await Promise.all([
         supabase.from('leave_types').select('*'),
-        loadLeaveRequests()
+        loadLeaveRequests(),
+        supabase.from('employees').select('id, first_name, last_name').eq('employment_status', 'active').order('first_name'),
       ]);
 
       setLeaveTypes(typesResponse.data || []);
       setLeaveRequests(requestsResponse || []);
+      setEmployeeOptions(empResponse.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {

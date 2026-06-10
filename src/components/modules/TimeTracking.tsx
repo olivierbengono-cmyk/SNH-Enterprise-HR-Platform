@@ -47,8 +47,12 @@ export default function TimeTracking() {
   useEffect(() => {
     loadData();
     checkCurrentClockIn();
-    supabase.from('employees').select('id, first_name, last_name').eq('employment_status', 'active').order('first_name').then(({ data }) => setEmployeeOptions(data || []));
   }, [user, selectedDate, activeTab]);
+
+  useEffect(() => {
+    supabase.from('employees').select('id, first_name, last_name').eq('employment_status', 'active').order('first_name')
+      .then(({ data }) => { if (data) setEmployeeOptions(data); });
+  }, []);
 
   const loadData = async () => {
     if (!user) return;

@@ -115,6 +115,28 @@ function StarRating({ value, onChange }: { value: number | null; onChange?: (v: 
   );
 }
 
+// ── Spontaneous application types ─────────────────────────────────────────
+type SpontaneousType = 'emploi' | 'stage_academique' | 'stage_professionnel' | 'recommande';
+
+interface SpontaneousForm {
+  first_name: string; last_name: string; email: string; phone: string;
+  desired_position: string; cover_letter: string; source: string;
+  spontaneous_type: SpontaneousType; notes: string;
+}
+
+const EMPTY_SPONTANEOUS: SpontaneousForm = {
+  first_name: '', last_name: '', email: '', phone: '',
+  desired_position: '', cover_letter: '', source: 'spontaneous',
+  spontaneous_type: 'emploi', notes: '',
+};
+
+const SPONTANEOUS_TYPE_LABELS: Record<SpontaneousType, string> = {
+  emploi: 'Candidature emploi',
+  stage_academique: 'Stage académique',
+  stage_professionnel: 'Stage professionnel',
+  recommande: 'Candidature recommandée',
+};
+
 // ── Main component ─────────────────────────────────────────────────────────
 type MainView = 'candidates' | 'by-job';
 
@@ -130,6 +152,7 @@ export default function CandidateManagement() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [showPortalInfo, setShowPortalInfo] = useState(false);
   const [computingMatch, setComputingMatch] = useState(false);
+  const [showSpontaneousModal, setShowSpontaneousModal] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { if (selectedJob) loadJobMatches(selectedJob.id); }, [selectedJob]);
@@ -265,6 +288,10 @@ export default function CandidateManagement() {
           <p className="text-slate-500 text-sm mt-1">Suivi complet du candidat jusqu'à son intégration</p>
         </div>
         <div className="flex gap-2">
+          <button onClick={() => setShowSpontaneousModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition text-sm font-medium">
+            <UserPlus size={15} /> Candidature spontanée
+          </button>
           <button onClick={() => setShowPortalInfo(true)}
             className="flex items-center gap-2 px-4 py-2 bg-teal-700 text-white rounded-xl hover:bg-teal-800 transition text-sm font-medium">
             <Globe size={15} /> Portail candidats
@@ -460,6 +487,14 @@ export default function CandidateManagement() {
         />
       )}
 
+      {/* Spontaneous application modal */}
+      {showSpontaneousModal && (
+        <SpontaneousApplicationModal
+          onClose={() => setShowSpontaneousModal(false)}
+          onCreated={async () => { setShowSpontaneousModal(false); await loadAll(); }}
+        />
+      )}
+
       {/* Portal info modal */}
       {showPortalInfo && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -487,6 +522,190 @@ export default function CandidateManagement() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Spontaneous Application Modal ─────────────────────────────────────────
+function SpontaneousApplicationModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => Promise<void> }) {
+  const [form, setForm] = useState<SpontaneousForm>(EMPTY_SPONTANEOUS);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    if (!form.first_name.trim() || !form.last_name.trim() || !form.email.trim()) {
+      setError('Prénom, nom et email sont requis.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      // 1. Create or find the candidate record
+      let candidateId: string | null = null;
+      const { data: existing } = await supabase
+        .from('candidates')
+        .select('id')
+        .eq('email', form.email.trim().toLowerCase())
+        .maybeSingle();
+
+      if (existing) {
+        candidateId = existing.id;
+      } else {
+        const { data: newCand, error: candErr } = await supabase.from('candidates').insert({
+          first_name: form.first_name.trim(),
+          last_name: form.last_name.trim(),
+          email: form.email.trim().toLowerCase(),
+          phone: form.phone.trim() || null,
+          desired_position: form.desired_position.trim() || null,
+          source: form.source || 'spontaneous',
+          status: 'active',
+          profile_completed: false,
+        }).select('id').maybeSingle();
+        if (candErr) throw new Error(candErr.message);
+        candidateId = newCand?.id ?? null;
+      }
+
+      if (!candidateId) throw new Error('Impossible de créer le candidat.');
+
+      // 2. Create the application (no job linked = spontaneous)
+      const { error: appErr } = await supabase.from('candidate_applications').insert({
+        candidate_id: candidateId,
+        job_opening_id: null,
+        desired_position: form.desired_position.trim() || null,
+        cover_letter: form.cover_letter.trim() || null,
+        internal_notes: form.notes.trim() || null,
+        status: 'new',
+        spontaneous_type: form.spontaneous_type,
+        onboarding_checklist: [],
+      });
+      if (appErr) throw new Error(appErr.message);
+
+      await onCreated();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div>
+      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">{label}</label>
+      {children}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-2xl my-4 shadow-2xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-amber-600 to-amber-700 rounded-t-2xl p-6 flex items-start justify-between">
+          <div>
+            <h3 className="text-white text-xl font-bold flex items-center gap-2">
+              <UserPlus size={20} /> Ajouter une candidature spontanée
+            </h3>
+            <p className="text-amber-100 text-sm mt-1">Sans offre d'emploi associée — candidature libre ou recommandée</p>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white p-1"><X size={22} /></button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Type selector */}
+          <div>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Type de candidature</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {(Object.entries(SPONTANEOUS_TYPE_LABELS) as [SpontaneousType, string][]).map(([val, label]) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, spontaneous_type: val }))}
+                  className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all text-left ${
+                    form.spontaneous_type === val
+                      ? 'bg-amber-50 border-amber-400 text-amber-800'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'
+                  }`}
+                >
+                  {val === 'recommande' && <span className="block text-amber-500 mb-0.5">★</span>}
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Identity */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Prénom *">
+              <input value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
+                placeholder="Ex: Amélie"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
+            </Field>
+            <Field label="Nom *">
+              <input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
+                placeholder="Ex: Nkomo"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
+            </Field>
+            <Field label="Email *">
+              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="candidat@email.com"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
+            </Field>
+            <Field label="Téléphone">
+              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                placeholder="+237 6XX XXX XXX"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Poste visé">
+              <input value={form.desired_position} onChange={e => setForm(f => ({ ...f, desired_position: e.target.value }))}
+                placeholder="Ex: Ingénieur Réservoir"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
+            </Field>
+            <Field label="Source / Provenance">
+              <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none bg-white">
+                <option value="spontaneous">Candidature spontanée</option>
+                <option value="referral">Recommandation interne</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="job_board">Job board</option>
+                <option value="school">Partenariat école</option>
+                <option value="other">Autre</option>
+              </select>
+            </Field>
+          </div>
+
+          <Field label="Lettre de motivation / Présentation">
+            <textarea value={form.cover_letter} onChange={e => setForm(f => ({ ...f, cover_letter: e.target.value }))}
+              rows={4} placeholder="Résumé du profil ou lettre de motivation..."
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-amber-400 outline-none" />
+          </Field>
+
+          <Field label="Notes RH (internes)">
+            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              rows={2} placeholder="Contexte, recommandations, observations..."
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-amber-400 outline-none" />
+          </Field>
+
+          {error && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
+              <AlertCircle size={15} /> {error}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 p-6 pt-0">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 text-sm font-medium">
+            Annuler
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 disabled:opacity-60 text-sm font-medium transition flex items-center justify-center gap-2">
+            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <UserPlus size={15} />}
+            {saving ? 'Enregistrement...' : 'Créer la candidature'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

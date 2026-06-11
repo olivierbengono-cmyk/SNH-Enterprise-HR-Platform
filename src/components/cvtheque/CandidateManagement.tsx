@@ -97,6 +97,16 @@ function fmtDate(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+function yr2date(v: string | null | undefined): string | null {
+  if (!v) return null;
+  const s = String(v).trim();
+  return /^\d{4}$/.test(s) ? `${s}-01-01` : (s || null);
+}
+function date2yr(v: string | null | undefined): string {
+  if (!v) return '';
+  const s = String(v).trim();
+  return s.length >= 4 ? s.slice(0, 4) : s;
+}
 function fmtSize(bytes: number | null) {
   if (!bytes) return '';
   if (bytes < 1024) return `${bytes} o`;
@@ -368,7 +378,7 @@ export default function CandidateManagement() {
         if (srchLocation && !c.location?.toLowerCase().includes(srchLocation.toLowerCase())) return false;
         if (srchEduLevel) {
           const minIdx = EDU_LEVELS.indexOf(srchEduLevel);
-          const hasLevel = (c.candidate_educations || []).some(e => EDU_LEVELS.indexOf(e.degree) >= minIdx);
+          const hasLevel = (c.candidate_educations || []).some(e => EDU_LEVELS.indexOf(e.education_level || '') >= minIdx);
           if (!hasLevel) return false;
         }
         if (srchMinExp) {
@@ -1111,7 +1121,12 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
       if (educations.length > 0) {
         const valid = educations.filter(e => e.degree && e.institution);
         if (valid.length) await supabase.from('candidate_educations').insert(
-          valid.map(({...e}) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+          valid.map(({...e}) => ({
+            ...e,
+            candidate_id: candidateId,
+            start_date: yr2date(e.start_date),
+            end_date: e.is_current ? null : yr2date(e.end_date),
+          }))
         );
       }
 
@@ -1298,8 +1313,8 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
                     <div><FL>Domaine d'études</FL><input value={edu.field_of_study} onChange={e=>updEdu(i,'field_of_study',e.target.value)} className={fi()} placeholder="Génie Pétrolier..." /></div>
                     <div><FL>Pays</FL><input value={edu.country} onChange={e=>updEdu(i,'country',e.target.value)} className={fi()} /></div>
                     <div><FL>Ville</FL><input value={edu.location} onChange={e=>updEdu(i,'location',e.target.value)} className={fi()} /></div>
-                    <div><FL>Année début</FL><input type="number" value={edu.start_date} onChange={e=>updEdu(i,'start_date',e.target.value)} className={fi()} placeholder="2018" /></div>
-                    {!edu.is_current && <div><FL>Année fin</FL><input type="number" value={edu.end_date} onChange={e=>updEdu(i,'end_date',e.target.value)} className={fi()} placeholder="2022" /></div>}
+                    <div><FL>Année début</FL><input type="number" value={date2yr(edu.start_date)} onChange={e=>updEdu(i,'start_date',e.target.value)} className={fi()} placeholder="2018" min="1950" max="2030" /></div>
+                    {!edu.is_current && <div><FL>Année fin</FL><input type="number" value={date2yr(edu.end_date)} onChange={e=>updEdu(i,'end_date',e.target.value)} className={fi()} placeholder="2022" min="1950" max="2030" /></div>}
                     <div><FL>Mention</FL><input value={edu.grade} onChange={e=>updEdu(i,'grade',e.target.value)} className={fi()} placeholder="Très bien, Bien..." /></div>
                     <div className="col-span-2"><FL>Description / Spécialisation</FL>
                       <textarea value={edu.description} onChange={e=>updEdu(i,'description',e.target.value)} rows={2} className={fi()+' resize-none'} placeholder="Spécialisation, mémoire, projet de fin d'études..." />
@@ -2086,7 +2101,7 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
                         <p className="text-teal-700 text-sm">{edu.institution}</p>
                       </div>
                       <div className="text-right ml-4">
-                        {edu.end_date && <p className="text-xs text-slate-500">{new Date(edu.end_date).getFullYear()}</p>}
+                        {edu.end_date && <p className="text-xs text-slate-500">{date2yr(edu.end_date)}</p>}
                         {edu.grade && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{edu.grade}</span>}
                       </div>
                     </div>

@@ -964,6 +964,20 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
   );
 }
 
+// Convert a 4-digit year string ("2018") to ISO date ("2018-01-01") for DATE columns
+function yearToDate(v: string | null | undefined): string | null {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (/^\d{4}$/.test(s)) return `${s}-01-01`;
+  return s || null;
+}
+// Extract 4-digit year from "2018-01-01" or "2018" for display in number inputs
+function dateToYear(v: string | null | undefined): string {
+  if (!v) return '';
+  const s = String(v).trim();
+  return s.length >= 4 ? s.slice(0, 4) : s;
+}
+
 // ── Profile Section ───────────────────────────────────────────────────────────
 type ProfileTab = 'infos' | 'formations' | 'experiences' | 'competences' | 'langues';
 
@@ -1023,9 +1037,17 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
       // 3. Educations — delete + reinsert
       supabase.from('candidate_educations').delete().eq('candidate_id', candidateId).then(async () => {
         const valid = educations.filter(e => e.degree && e.institution);
-        if (valid.length) await supabase.from('candidate_educations').insert(
-          valid.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
-        );
+        if (valid.length) {
+          const { error: eduErr } = await supabase.from('candidate_educations').insert(
+            valid.map(({ id: _id, ...e }) => ({
+              ...e,
+              candidate_id: candidateId,
+              start_date: yearToDate(e.start_date),
+              end_date: e.is_current ? null : yearToDate(e.end_date),
+            }))
+          );
+          if (eduErr) console.error('Education save error:', eduErr);
+        }
       }),
 
       // 4. Skills — delete + reinsert
@@ -1164,8 +1186,8 @@ function FormationsTab({ items, setItems }: { items: Education[]; setItems: (v: 
             <div><Lbl>Domaine d'études</Lbl><input value={edu.field_of_study} onChange={e => upd(i,'field_of_study',e.target.value)} className={inp()} placeholder="Génie Pétrolier, Finance..." /></div>
             <div><Lbl>Pays</Lbl><input value={edu.country || ''} onChange={e => upd(i,'country',e.target.value)} className={inp()} /></div>
             <div><Lbl>Ville</Lbl><input value={edu.location} onChange={e => upd(i,'location',e.target.value)} className={inp()} /></div>
-            <div><Lbl>Année de début</Lbl><input type="number" value={edu.start_date} onChange={e => upd(i,'start_date',e.target.value)} className={inp()} placeholder="Ex: 2018" /></div>
-            {!edu.is_current && <div><Lbl>Année de fin</Lbl><input type="number" value={edu.end_date} onChange={e => upd(i,'end_date',e.target.value)} className={inp()} placeholder="Ex: 2022" /></div>}
+            <div><Lbl>Année de début</Lbl><input type="number" value={dateToYear(edu.start_date)} onChange={e => upd(i,'start_date',e.target.value)} className={inp()} placeholder="Ex: 2018" min="1950" max="2030" /></div>
+            {!edu.is_current && <div><Lbl>Année de fin</Lbl><input type="number" value={dateToYear(edu.end_date)} onChange={e => upd(i,'end_date',e.target.value)} className={inp()} placeholder="Ex: 2022" min="1950" max="2030" /></div>}
             <div><Lbl>Mention</Lbl><input value={edu.grade} onChange={e => upd(i,'grade',e.target.value)} className={inp()} placeholder="Très bien, Bien..." /></div>
             <div className="col-span-2"><Lbl>Description / Spécialisation</Lbl>
               <textarea value={edu.description || ''} onChange={e => upd(i,'description',e.target.value)} rows={2} className={inp()} placeholder="Décrivez votre spécialisation, mémoire, projet de fin d'études..." />

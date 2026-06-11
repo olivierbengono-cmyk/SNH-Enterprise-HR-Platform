@@ -371,9 +371,6 @@ export default function CandidatePortal() {
           <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all mt-0.5">
             <LogOut size={16} /> Déconnexion
           </button>
-          <button onClick={() => setView('public')} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-all mt-0.5">
-            <Globe size={16} /> Voir les offres
-          </button>
         </nav>
 
         {/* Footer user */}

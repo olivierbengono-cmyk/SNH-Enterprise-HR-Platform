@@ -6,7 +6,7 @@ import {
   FileText, CheckCircle, Clock, UserCheck, XCircle, MessageSquare,
   TrendingUp, Download, ChevronRight, AlertCircle, Sparkles,
   ChevronDown, ChevronUp, Building2, RefreshCw, ArrowRight,
-  ClipboardList, UserPlus, Award, Send, History
+  ClipboardList, UserPlus, Award, Send, History, Plus, Filter
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -44,6 +44,12 @@ interface JobMatch {
   candidate?: Candidate;
 }
 interface PipelineEvent { id: string; from_status: string | null; to_status: string; notes: string | null; created_at: string; }
+
+// ── Form constants ────────────────────────────────────────────────────────
+const EDU_LEVELS = ['CEP','BEPC','BAC','BAC+2 (BTS/DUT)','BAC+3 (Licence)','BAC+4','BAC+5 (Master)','Doctorat','Autre'];
+const SKILL_LEVELS = [{value:'beginner',label:'Débutant'},{value:'intermediate',label:'Intermédiaire'},{value:'advanced',label:'Avancé'},{value:'expert',label:'Expert'}];
+const LANG_LEVELS = [{value:'beginner',label:'Débutant'},{value:'intermediate',label:'Intermédiaire'},{value:'good',label:'Bon'},{value:'excellent',label:'Excellent'}];
+const REGIONS_CM = ['Centre','Littoral','Ouest','Nord','Extrême-Nord','Adamaoua','Est','Sud','Nord-Ouest','Sud-Ouest'];
 
 // ── Pipeline stages ────────────────────────────────────────────────────────
 const PIPELINE_STAGES = [
@@ -149,9 +155,14 @@ export default function CandidateManagement() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+  const [filterJobId, setFilterJobId] = useState('all');
+  const [filterYear, setFilterYear] = useState('all');
+  const [filterSource, setFilterSource] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [computingMatch, setComputingMatch] = useState(false);
-  const [showSpontaneousModal, setShowSpontaneousModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { if (selectedJob) loadJobMatches(selectedJob.id); }, [selectedJob]);
@@ -262,9 +273,26 @@ export default function CandidateManagement() {
 
   const filteredCandidates = candidates.filter(c => {
     const txt = `${c.first_name} ${c.last_name} ${c.email} ${c.desired_position || ''}`.toLowerCase();
-    const appStatus = c.candidate_applications?.[0]?.status || 'new';
-    return (!search || txt.includes(search.toLowerCase())) && (filterStatus === 'all' || appStatus === filterStatus);
+    const app = c.candidate_applications?.[0];
+    const appStatus = app?.status || 'new';
+    const appType = app?.spontaneous_type || '';
+    const appYear = c.created_at ? new Date(c.created_at).getFullYear().toString() : '';
+    const appJobId = app?.job_opening?.id || '';
+    if (search && !txt.includes(search.toLowerCase())) return false;
+    if (filterStatus !== 'all' && appStatus !== filterStatus) return false;
+    if (filterType !== 'all') {
+      if (filterType === 'offre' && !app?.job_opening) return false;
+      if (filterType === 'recommande' && appType !== 'recommande') return false;
+      if (filterType === 'stage' && !['stage_academique','stage_professionnel'].includes(appType)) return false;
+      if (filterType === 'emploi' && appType !== 'emploi' && !app?.job_opening) return false;
+    }
+    if (filterJobId !== 'all' && appJobId !== filterJobId) return false;
+    if (filterYear !== 'all' && appYear !== filterYear) return false;
+    if (filterSource !== 'all' && c.source !== filterSource) return false;
+    return true;
   });
+
+  const availableYears = [...new Set(candidates.map(c => new Date(c.created_at).getFullYear()))].sort((a, b) => b - a);
 
   const stats = {
     total: candidates.length,
@@ -285,9 +313,9 @@ export default function CandidateManagement() {
           <p className="text-slate-500 text-sm mt-1">Suivi complet du candidat jusqu'à son intégration</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowSpontaneousModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition text-sm font-medium">
-            <UserPlus size={15} /> Candidature spontanée
+          <button onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-700 text-white rounded-xl hover:bg-teal-800 transition text-sm font-medium">
+            <UserPlus size={15} /> Ajouter un candidat
           </button>
         </div>
       </div>
@@ -328,10 +356,11 @@ export default function CandidateManagement() {
       {/* ── VIEW: All candidates ── */}
       {mainView === 'candidates' && (
         <>
+          {/* Search + filter bar */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-48">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher..."
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un candidat..."
                 className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
             </div>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
@@ -344,7 +373,76 @@ export default function CandidateManagement() {
                 {REJECTED_STAGES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </optgroup>
             </select>
+            <button onClick={() => setShowFilters(v => !v)}
+              className={`flex items-center gap-2 px-3 py-2.5 border rounded-xl text-sm font-medium transition ${showFilters ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              <Filter size={14} /> Filtres avancés
+              {[filterType, filterJobId, filterYear, filterSource].filter(f => f !== 'all').length > 0 && (
+                <span className="w-5 h-5 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-bold">
+                  {[filterType, filterJobId, filterYear, filterSource].filter(f => f !== 'all').length}
+                </span>
+              )}
+            </button>
           </div>
+
+          {/* Advanced filters panel */}
+          {showFilters && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Type de candidature</label>
+                <select value={filterType} onChange={e => setFilterType(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                  <option value="all">Tous les types</option>
+                  <option value="offre">Sur offre publiée</option>
+                  <option value="emploi">Emploi (spontanée)</option>
+                  <option value="stage">Stage (académique / pro)</option>
+                  <option value="recommande">Recommandé(e)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Offre associée</label>
+                <select value={filterJobId} onChange={e => setFilterJobId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                  <option value="all">Toutes les offres</option>
+                  {jobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Année</label>
+                <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                  <option value="all">Toutes les années</option>
+                  {availableYears.map(y => <option key={y} value={String(y)}>{y}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Source</label>
+                <select value={filterSource} onChange={e => setFilterSource(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                  <option value="all">Toutes les sources</option>
+                  <option value="spontaneous">Candidature spontanée</option>
+                  <option value="referral">Recommandation interne</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="job_board">Job board</option>
+                  <option value="school">Partenariat école</option>
+                  <option value="portal">Portail candidats</option>
+                  <option value="other">Autre</option>
+                </select>
+              </div>
+              {[filterType, filterJobId, filterYear, filterSource].some(f => f !== 'all') && (
+                <div className="col-span-2 sm:col-span-4 flex justify-end">
+                  <button onClick={() => { setFilterType('all'); setFilterJobId('all'); setFilterYear('all'); setFilterSource('all'); }}
+                    className="text-xs text-teal-600 hover:text-teal-800 font-medium flex items-center gap-1">
+                    <X size={12} /> Réinitialiser les filtres
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Results count */}
+          {(search || filterStatus !== 'all' || filterType !== 'all' || filterJobId !== 'all' || filterYear !== 'all' || filterSource !== 'all') && (
+            <p className="text-sm text-slate-500">{filteredCandidates.length} résultat{filteredCandidates.length > 1 ? 's' : ''} sur {candidates.length}</p>
+          )}
 
           {loading ? (
             <div className="flex items-center justify-center h-48"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-700" /></div>
@@ -480,11 +578,12 @@ export default function CandidateManagement() {
         />
       )}
 
-      {/* Spontaneous application modal */}
-      {showSpontaneousModal && (
-        <SpontaneousApplicationModal
-          onClose={() => setShowSpontaneousModal(false)}
-          onCreated={async () => { setShowSpontaneousModal(false); await loadAll(); }}
+      {/* Add candidate modal */}
+      {showAddModal && (
+        <AddCandidateModal
+          jobs={jobs}
+          onClose={() => setShowAddModal(false)}
+          onCreated={async () => { setShowAddModal(false); await loadAll(); }}
         />
       )}
 
@@ -492,57 +591,161 @@ export default function CandidateManagement() {
   );
 }
 
-// ── Spontaneous Application Modal ─────────────────────────────────────────
-function SpontaneousApplicationModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => Promise<void> }) {
-  const [form, setForm] = useState<SpontaneousForm>(EMPTY_SPONTANEOUS);
+// ── Add Candidate Modal (multi-tab, aligns with portal profile) ──────────────
+type AddTab = 'infos' | 'experiences' | 'formations' | 'competences' | 'langues' | 'candidature';
+
+function fi(err = false) {
+  return `w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${err ? 'border-red-300 bg-red-50' : 'border-slate-300 bg-white'}`;
+}
+function FL({ children, req }: { children: React.ReactNode; req?: boolean }) {
+  return <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">{children}{req && <span className="text-red-500 ml-1">*</span>}</label>;
+}
+
+const ADD_TABS: { value: AddTab; label: string }[] = [
+  { value: 'infos',        label: 'Infos personnelles' },
+  { value: 'experiences',  label: 'Expériences' },
+  { value: 'formations',   label: 'Formations' },
+  { value: 'competences',  label: 'Compétences' },
+  { value: 'langues',      label: 'Langues' },
+  { value: 'candidature',  label: 'Candidature' },
+];
+
+interface NewExp { job_title: string; company: string; location: string; start_date: string; end_date: string; is_current: boolean; description: string; contract_type: string; sector: string; }
+interface NewEdu { degree: string; institution: string; field_of_study: string; location: string; country: string; start_date: string; end_date: string; is_current: boolean; grade: string; education_level: string; description: string; }
+interface NewSkill { name: string; category: string; level: string; }
+interface NewLang { name: string; level: string; }
+
+function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; onClose: () => void; onCreated: () => Promise<void> }) {
+  const [tab, setTab] = useState<AddTab>('infos');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSave = async () => {
-    if (!form.first_name.trim() || !form.last_name.trim() || !form.email.trim()) {
-      setError('Prénom, nom et email sont requis.');
-      return;
-    }
-    setSaving(true);
-    setError('');
-    try {
-      // 1. Create or find the candidate record
-      let candidateId: string | null = null;
-      const { data: existing } = await supabase
-        .from('candidates')
-        .select('id')
-        .eq('email', form.email.trim().toLowerCase())
-        .maybeSingle();
+  // Infos personnelles
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [phone2, setPhone2] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [gender, setGender] = useState('');
+  const [nationality, setNationality] = useState('Camerounaise');
+  const [nationalId, setNationalId] = useState('');
+  const [location, setLocation] = useState('');
+  const [region, setRegion] = useState('');
+  const [professionalTitle, setProfessionalTitle] = useState('');
+  const [desiredPosition, setDesiredPosition] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [portfolioUrl, setPortfolioUrl] = useState('');
+  const [summary, setSummary] = useState('');
+  const [desiredSalaryMin, setDesiredSalaryMin] = useState('');
+  const [desiredSalaryMax, setDesiredSalaryMax] = useState('');
+  const [availabilityDate, setAvailabilityDate] = useState('');
 
+  // Expériences
+  const [experiences, setExperiences] = useState<NewExp[]>([]);
+  const addExp = () => setExperiences(p => [...p, { job_title:'', company:'', location:'', start_date:'', end_date:'', is_current:false, description:'', contract_type:'CDI', sector:'' }]);
+  const updExp = (i: number, k: keyof NewExp, v: any) => setExperiences(p => { const a=[...p]; (a[i] as any)[k]=v; return a; });
+  const delExp = (i: number) => setExperiences(p => p.filter((_,j)=>j!==i));
+
+  // Formations
+  const [educations, setEducations] = useState<NewEdu[]>([]);
+  const addEdu = () => setEducations(p => [...p, { degree:'', institution:'', field_of_study:'', location:'', country:'Cameroun', start_date:'', end_date:'', is_current:false, grade:'', education_level:'', description:'' }]);
+  const updEdu = (i: number, k: keyof NewEdu, v: any) => setEducations(p => { const a=[...p]; (a[i] as any)[k]=v; return a; });
+  const delEdu = (i: number) => setEducations(p => p.filter((_,j)=>j!==i));
+
+  // Compétences
+  const [skills, setSkills] = useState<NewSkill[]>([]);
+  const [newSkillName, setNewSkillName] = useState('');
+  const addSkill = () => { const n=newSkillName.trim(); if(n && !skills.find(s=>s.name===n)) { setSkills(p=>[...p,{name:n,category:'technical',level:'intermediate'}]); setNewSkillName(''); } };
+  const updSkillLevel = (name: string, level: string) => setSkills(p => p.map(s => s.name===name ? {...s,level} : s));
+  const delSkill = (name: string) => setSkills(p => p.filter(s=>s.name!==name));
+
+  // Langues
+  const [languages, setLanguages] = useState<NewLang[]>([]);
+  const addLang = () => setLanguages(p => [...p, { name:'', level:'good' }]);
+  const updLang = (i: number, k: keyof NewLang, v: string) => setLanguages(p => { const a=[...p]; (a[i] as any)[k]=v; return a; });
+  const delLang = (i: number) => setLanguages(p => p.filter((_,j)=>j!==i));
+
+  // Candidature
+  const [appType, setAppType] = useState<SpontaneousType>('emploi');
+  const [jobOpeningId, setJobOpeningId] = useState('');
+  const [coverLetter, setCoverLetter] = useState('');
+  const [internalNotes, setInternalNotes] = useState('');
+  const [source, setSource] = useState('spontaneous');
+
+  const tabIdx = ADD_TABS.findIndex(t => t.value === tab);
+
+  const handleSave = async () => {
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+      setTab('infos'); setError('Prénom, nom et email sont obligatoires.'); return;
+    }
+    setSaving(true); setError('');
+    try {
+      // 1. Check existing or create candidate
+      let candidateId: string | null = null;
+      const { data: existing } = await supabase.from('candidates').select('id').eq('email', email.trim().toLowerCase()).maybeSingle();
       if (existing) {
         candidateId = existing.id;
       } else {
         const { data: newCand, error: candErr } = await supabase.from('candidates').insert({
-          first_name: form.first_name.trim(),
-          last_name: form.last_name.trim(),
-          email: form.email.trim().toLowerCase(),
-          phone: form.phone.trim() || null,
-          desired_position: form.desired_position.trim() || null,
-          source: form.source || 'spontaneous',
-          status: 'active',
-          profile_completed: false,
+          first_name: firstName.trim(), last_name: lastName.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim() || null, phone2: phone2.trim() || null,
+          birth_date: birthDate || null, gender: gender || null,
+          nationality: nationality.trim() || null, national_id: nationalId.trim() || null,
+          location: location.trim() || null, region: region || null,
+          professional_title: professionalTitle.trim() || null,
+          desired_position: desiredPosition.trim() || null,
+          linkedin_url: linkedinUrl.trim() || null, portfolio_url: portfolioUrl.trim() || null,
+          summary: summary.trim() || null,
+          desired_salary_min: desiredSalaryMin ? Number(desiredSalaryMin) : null,
+          desired_salary_max: desiredSalaryMax ? Number(desiredSalaryMax) : null,
+          availability_date: availabilityDate || null,
+          source: source || 'spontaneous', status: 'active', profile_completed: false,
         }).select('id').maybeSingle();
         if (candErr) throw new Error(candErr.message);
         candidateId = newCand?.id ?? null;
       }
-
       if (!candidateId) throw new Error('Impossible de créer le candidat.');
 
-      // 2. Create the application (no job linked = spontaneous)
+      // 2. Experiences
+      if (experiences.length > 0) {
+        const valid = experiences.filter(e => e.job_title && e.company);
+        if (valid.length) await supabase.from('candidate_experiences').insert(
+          valid.map(({...e}) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+        );
+      }
+
+      // 3. Educations
+      if (educations.length > 0) {
+        const valid = educations.filter(e => e.degree && e.institution);
+        if (valid.length) await supabase.from('candidate_educations').insert(
+          valid.map(({...e}) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+        );
+      }
+
+      // 4. Skills
+      if (skills.length > 0) {
+        await supabase.from('candidate_candidate_skills').insert(
+          skills.map(s => ({ ...s, candidate_id: candidateId }))
+        );
+      }
+
+      // 5. Languages
+      if (languages.filter(l => l.name.trim()).length > 0) {
+        await supabase.from('candidate_languages').insert(
+          languages.filter(l => l.name.trim()).map(l => ({ ...l, candidate_id: candidateId }))
+        );
+      }
+
+      // 6. Application record
       const { error: appErr } = await supabase.from('candidate_applications').insert({
         candidate_id: candidateId,
-        job_opening_id: null,
-        desired_position: form.desired_position.trim() || null,
-        cover_letter: form.cover_letter.trim() || null,
-        internal_notes: form.notes.trim() || null,
-        status: 'new',
-        spontaneous_type: form.spontaneous_type,
-        onboarding_checklist: [],
+        job_opening_id: jobOpeningId || null,
+        desired_position: desiredPosition.trim() || null,
+        cover_letter: coverLetter.trim() || null,
+        internal_notes: internalNotes.trim() || null,
+        status: 'new', spontaneous_type: appType, onboarding_checklist: [],
       });
       if (appErr) throw new Error(appErr.message);
 
@@ -554,122 +757,300 @@ function SpontaneousApplicationModal({ onClose, onCreated }: { onClose: () => vo
     }
   };
 
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div>
-      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">{label}</label>
-      {children}
-    </div>
-  );
-
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-2xl my-4 shadow-2xl">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 to-amber-700 rounded-t-2xl p-6 flex items-start justify-between">
-          <div>
-            <h3 className="text-white text-xl font-bold flex items-center gap-2">
-              <UserPlus size={20} /> Ajouter une candidature spontanée
-            </h3>
-            <p className="text-amber-100 text-sm mt-1">Sans offre d'emploi associée — candidature libre ou recommandée</p>
+        <div className="border-b border-slate-200 px-6 pt-5 pb-0">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2"><UserPlus size={18} /> Ajouter un candidat</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Saisie manuelle d'un nouveau candidat</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1"><X size={20} /></button>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white p-1"><X size={22} /></button>
+          {/* Tabs */}
+          <div className="flex gap-0 overflow-x-auto -mb-px">
+            {ADD_TABS.map((t, i) => (
+              <button key={t.value} onClick={() => setTab(t.value)}
+                className={`flex-shrink-0 px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${tab === t.value ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Type selector */}
-          <div>
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Type de candidature</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(Object.entries(SPONTANEOUS_TYPE_LABELS) as [SpontaneousType, string][]).map(([val, label]) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, spontaneous_type: val }))}
-                  className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all text-left ${
-                    form.spontaneous_type === val
-                      ? 'bg-amber-50 border-amber-400 text-amber-800'
-                      : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'
-                  }`}
-                >
-                  {val === 'recommande' && <span className="block text-amber-500 mb-0.5">★</span>}
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Identity */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Prénom *">
-              <input value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
-                placeholder="Ex: Amélie"
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
-            </Field>
-            <Field label="Nom *">
-              <input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
-                placeholder="Ex: Nkomo"
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
-            </Field>
-            <Field label="Email *">
-              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="candidat@email.com"
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
-            </Field>
-            <Field label="Téléphone">
-              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                placeholder="+237 6XX XXX XXX"
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
-            </Field>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Poste visé">
-              <input value={form.desired_position} onChange={e => setForm(f => ({ ...f, desired_position: e.target.value }))}
-                placeholder="Ex: Ingénieur Réservoir"
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
-            </Field>
-            <Field label="Source / Provenance">
-              <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none bg-white">
-                <option value="spontaneous">Candidature spontanée</option>
-                <option value="referral">Recommandation interne</option>
-                <option value="linkedin">LinkedIn</option>
-                <option value="job_board">Job board</option>
-                <option value="school">Partenariat école</option>
-                <option value="other">Autre</option>
-              </select>
-            </Field>
-          </div>
-
-          <Field label="Lettre de motivation / Présentation">
-            <textarea value={form.cover_letter} onChange={e => setForm(f => ({ ...f, cover_letter: e.target.value }))}
-              rows={4} placeholder="Résumé du profil ou lettre de motivation..."
-              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-amber-400 outline-none" />
-          </Field>
-
-          <Field label="Notes RH (internes)">
-            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              rows={2} placeholder="Contexte, recommandations, observations..."
-              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-amber-400 outline-none" />
-          </Field>
-
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
           {error && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
-              <AlertCircle size={15} /> {error}
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700 text-sm mb-4">
+              <AlertCircle size={15} className="flex-shrink-0 mt-0.5" /> {error}
+            </div>
+          )}
+
+          {/* ── Tab: Infos personnelles ─── */}
+          {tab === 'infos' && (
+            <div className="space-y-4">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Identité</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div><FL req>Prénom</FL><input value={firstName} onChange={e=>setFirstName(e.target.value)} className={fi(!firstName&&!!error)} placeholder="Jean" /></div>
+                <div><FL req>Nom</FL><input value={lastName} onChange={e=>setLastName(e.target.value)} className={fi(!lastName&&!!error)} placeholder="Dupont" /></div>
+                <div><FL>Date de naissance</FL><input type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)} className={fi()} /></div>
+                <div><FL>Genre</FL>
+                  <select value={gender} onChange={e=>setGender(e.target.value)} className={fi()}>
+                    <option value="">—</option><option value="M">Homme</option><option value="F">Femme</option>
+                  </select>
+                </div>
+                <div><FL>Nationalité</FL><input value={nationality} onChange={e=>setNationality(e.target.value)} className={fi()} /></div>
+                <div><FL>N° CNI / Passeport</FL><input value={nationalId} onChange={e=>setNationalId(e.target.value)} className={fi()} /></div>
+              </div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest pt-2">Contact</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2"><FL req>Email</FL><input type="email" value={email} onChange={e=>setEmail(e.target.value)} className={fi(!email&&!!error)} placeholder="jean.dupont@email.com" /></div>
+                <div><FL>Téléphone principal</FL><input value={phone} onChange={e=>setPhone(e.target.value)} className={fi()} placeholder="+237 6XX XXX XXX" /></div>
+                <div><FL>Téléphone secondaire</FL><input value={phone2} onChange={e=>setPhone2(e.target.value)} className={fi()} placeholder="+237 6XX XXX XXX" /></div>
+                <div><FL>Ville de résidence</FL><input value={location} onChange={e=>setLocation(e.target.value)} className={fi()} placeholder="Yaoundé" /></div>
+                <div><FL>Région</FL>
+                  <select value={region} onChange={e=>setRegion(e.target.value)} className={fi()}>
+                    <option value="">—</option>{REGIONS_CM.map(r=><option key={r}>{r}</option>)}
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest pt-2">Profil professionnel</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div><FL>Titre professionnel</FL><input value={professionalTitle} onChange={e=>setProfessionalTitle(e.target.value)} className={fi()} placeholder="Ingénieur Réservoir Senior" /></div>
+                <div><FL>Poste souhaité</FL><input value={desiredPosition} onChange={e=>setDesiredPosition(e.target.value)} className={fi()} placeholder="Chef de projet, Analyste..." /></div>
+                <div><FL>Prétention min (FCFA)</FL><input type="number" value={desiredSalaryMin} onChange={e=>setDesiredSalaryMin(e.target.value)} className={fi()} /></div>
+                <div><FL>Prétention max (FCFA)</FL><input type="number" value={desiredSalaryMax} onChange={e=>setDesiredSalaryMax(e.target.value)} className={fi()} /></div>
+                <div><FL>Disponible à partir du</FL><input type="date" value={availabilityDate} onChange={e=>setAvailabilityDate(e.target.value)} className={fi()} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><FL>LinkedIn</FL><input value={linkedinUrl} onChange={e=>setLinkedinUrl(e.target.value)} className={fi()} placeholder="https://linkedin.com/in/..." /></div>
+                <div><FL>Site / Portfolio</FL><input value={portfolioUrl} onChange={e=>setPortfolioUrl(e.target.value)} className={fi()} placeholder="https://..." /></div>
+              </div>
+              <div><FL>Résumé / À propos</FL>
+                <textarea value={summary} onChange={e=>setSummary(e.target.value)} rows={3} className={fi()+' resize-none'} placeholder="Décrivez le profil du candidat..." />
+              </div>
+            </div>
+          )}
+
+          {/* ── Tab: Expériences ─── */}
+          {tab === 'experiences' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-slate-900">Expériences professionnelles / Stages</h4>
+                <button onClick={addExp} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-white font-semibold bg-teal-700 hover:bg-teal-800 transition">
+                  <Plus size={13} /> Ajouter
+                </button>
+              </div>
+              {experiences.map((exp,i) => (
+                <div key={i} className="border border-slate-200 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-500">Expérience {i+1}</span>
+                    <button onClick={()=>delExp(i)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><FL>Poste occupé *</FL><input value={exp.job_title} onChange={e=>updExp(i,'job_title',e.target.value)} className={fi()} placeholder="Ingénieur Réservoir..." /></div>
+                    <div><FL>Entreprise *</FL><input value={exp.company} onChange={e=>updExp(i,'company',e.target.value)} className={fi()} /></div>
+                    <div><FL>Secteur</FL><input value={exp.sector} onChange={e=>updExp(i,'sector',e.target.value)} className={fi()} placeholder="Pétrole & Gaz..." /></div>
+                    <div><FL>Type contrat</FL>
+                      <select value={exp.contract_type} onChange={e=>updExp(i,'contract_type',e.target.value)} className={fi()}>
+                        {['CDI','CDD','Stage','Freelance','Alternance','Autre'].map(t=><option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div><FL>Ville</FL><input value={exp.location} onChange={e=>updExp(i,'location',e.target.value)} className={fi()} /></div>
+                    <div><FL>Date de début</FL><input type="date" value={exp.start_date} onChange={e=>updExp(i,'start_date',e.target.value)} className={fi()} /></div>
+                    {!exp.is_current && <div><FL>Date de fin</FL><input type="date" value={exp.end_date} onChange={e=>updExp(i,'end_date',e.target.value)} className={fi()} /></div>}
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+                    <input type="checkbox" checked={exp.is_current} onChange={e=>updExp(i,'is_current',e.target.checked)} className="rounded" /> Poste actuel
+                  </label>
+                  <div><FL>Description des missions</FL>
+                    <textarea value={exp.description} onChange={e=>updExp(i,'description',e.target.value)} rows={2} className={fi()+' resize-none'} placeholder="Responsabilités et réalisations..." />
+                  </div>
+                </div>
+              ))}
+              {experiences.length === 0 && (
+                <button onClick={addExp} className="w-full border-2 border-dashed border-slate-200 rounded-xl py-6 text-sm text-slate-400 hover:border-teal-400 hover:text-teal-600 flex items-center justify-center gap-2 transition">
+                  <Plus size={16}/> Ajouter une expérience
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Tab: Formations ─── */}
+          {tab === 'formations' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-slate-900">Formations académiques</h4>
+                <button onClick={addEdu} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-white font-semibold bg-teal-700 hover:bg-teal-800 transition">
+                  <Plus size={13}/> Ajouter
+                </button>
+              </div>
+              {educations.map((edu,i) => (
+                <div key={i} className="border border-slate-200 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-500">Formation {i+1}</span>
+                    <button onClick={()=>delEdu(i)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><FL>Niveau *</FL>
+                      <select value={edu.education_level} onChange={e=>updEdu(i,'education_level',e.target.value)} className={fi()}>
+                        <option value="">—</option>{EDU_LEVELS.map(l=><option key={l}>{l}</option>)}
+                      </select>
+                    </div>
+                    <div><FL>Diplôme *</FL><input value={edu.degree} onChange={e=>updEdu(i,'degree',e.target.value)} className={fi()} placeholder="Master, Licence, BTS..." /></div>
+                    <div><FL>Établissement *</FL><input value={edu.institution} onChange={e=>updEdu(i,'institution',e.target.value)} className={fi()} placeholder="ENSP, Univ. de Yaoundé..." /></div>
+                    <div><FL>Domaine d'études</FL><input value={edu.field_of_study} onChange={e=>updEdu(i,'field_of_study',e.target.value)} className={fi()} placeholder="Génie Pétrolier..." /></div>
+                    <div><FL>Pays</FL><input value={edu.country} onChange={e=>updEdu(i,'country',e.target.value)} className={fi()} /></div>
+                    <div><FL>Ville</FL><input value={edu.location} onChange={e=>updEdu(i,'location',e.target.value)} className={fi()} /></div>
+                    <div><FL>Année début</FL><input type="number" value={edu.start_date} onChange={e=>updEdu(i,'start_date',e.target.value)} className={fi()} placeholder="2018" /></div>
+                    {!edu.is_current && <div><FL>Année fin</FL><input type="number" value={edu.end_date} onChange={e=>updEdu(i,'end_date',e.target.value)} className={fi()} placeholder="2022" /></div>}
+                    <div><FL>Mention</FL><input value={edu.grade} onChange={e=>updEdu(i,'grade',e.target.value)} className={fi()} placeholder="Très bien, Bien..." /></div>
+                    <div className="col-span-2"><FL>Description / Spécialisation</FL>
+                      <textarea value={edu.description} onChange={e=>updEdu(i,'description',e.target.value)} rows={2} className={fi()+' resize-none'} placeholder="Spécialisation, mémoire, projet de fin d'études..." />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+                    <input type="checkbox" checked={edu.is_current} onChange={e=>updEdu(i,'is_current',e.target.checked)} className="rounded" /> En cours
+                  </label>
+                </div>
+              ))}
+              {educations.length === 0 && (
+                <button onClick={addEdu} className="w-full border-2 border-dashed border-slate-200 rounded-xl py-6 text-sm text-slate-400 hover:border-teal-400 hover:text-teal-600 flex items-center justify-center gap-2 transition">
+                  <Plus size={16}/> Ajouter une formation
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Tab: Compétences ─── */}
+          {tab === 'competences' && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-slate-900">Compétences ({skills.length})</h4>
+              <div className="flex gap-2">
+                <input value={newSkillName} onChange={e=>setNewSkillName(e.target.value)} className={fi()+' flex-1'}
+                  placeholder="Ajouter une compétence..." onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addSkill();}}} />
+                <button onClick={addSkill} className="px-3 py-2.5 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition"><Plus size={16}/></button>
+              </div>
+              {skills.length > 0 ? (
+                <div className="space-y-2">
+                  {skills.map(sk => (
+                    <div key={sk.name} className="flex items-center gap-3 bg-slate-50 rounded-lg px-3 py-2">
+                      <span className="text-sm font-medium text-slate-800 flex-1 min-w-0 truncate">{sk.name}</span>
+                      <div className="flex gap-1">
+                        {SKILL_LEVELS.map(lv => (
+                          <button key={lv.value} onClick={()=>updSkillLevel(sk.name,lv.value)}
+                            className={`px-2 py-0.5 text-xs rounded border transition ${sk.level===lv.value ? 'text-white border-transparent bg-teal-600' : 'border-slate-200 text-slate-500 hover:border-teal-400'}`}>
+                            {lv.label.slice(0,3)}.
+                          </button>
+                        ))}
+                      </div>
+                      <button onClick={()=>delSkill(sk.name)} className="text-red-400 hover:text-red-600"><X size={13}/></button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-6 border-2 border-dashed border-slate-200 rounded-xl">Aucune compétence ajoutée</p>
+              )}
+            </div>
+          )}
+
+          {/* ── Tab: Langues ─── */}
+          {tab === 'langues' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-slate-900">Langues parlées</h4>
+                <button onClick={addLang} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-white font-semibold bg-teal-700 hover:bg-teal-800 transition">
+                  <Plus size={13}/> Ajouter
+                </button>
+              </div>
+              {languages.map((lang,i) => (
+                <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-lg px-3 py-2.5">
+                  <input value={lang.name} onChange={e=>updLang(i,'name',e.target.value)} className={fi()+' flex-1 bg-white'} placeholder="Français, Anglais..." />
+                  <select value={lang.level} onChange={e=>updLang(i,'level',e.target.value)} className="px-2 py-2 border border-slate-300 rounded-lg text-xs bg-white w-32">
+                    {LANG_LEVELS.map(l=><option key={l.value} value={l.value}>{l.label}</option>)}
+                  </select>
+                  <button onClick={()=>delLang(i)} className="text-slate-400 hover:text-red-500"><X size={14}/></button>
+                </div>
+              ))}
+              {languages.length === 0 && (
+                <button onClick={addLang} className="w-full border-2 border-dashed border-slate-200 rounded-xl py-6 text-sm text-slate-400 hover:border-teal-400 hover:text-teal-600 flex items-center justify-center gap-2 transition">
+                  <Plus size={16}/> Ajouter une langue
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Tab: Candidature ─── */}
+          {tab === 'candidature' && (
+            <div className="space-y-4">
+              <div>
+                <FL>Type de candidature</FL>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.entries(SPONTANEOUS_TYPE_LABELS) as [SpontaneousType, string][]).map(([val, label]) => (
+                    <button key={val} type="button" onClick={()=>setAppType(val)}
+                      className={`p-3 rounded-xl border text-sm font-medium transition text-left ${appType===val ? 'bg-teal-50 border-teal-400 text-teal-800' : 'bg-white border-slate-200 text-slate-600 hover:border-teal-300'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <FL>Offre d'emploi associée (optionnel)</FL>
+                <select value={jobOpeningId} onChange={e=>setJobOpeningId(e.target.value)} className={fi()}>
+                  <option value="">— Candidature spontanée (sans offre) —</option>
+                  {jobs.map(j=><option key={j.id} value={j.id}>{j.title} ({j.reference})</option>)}
+                </select>
+              </div>
+              <div>
+                <FL>Source / Provenance</FL>
+                <select value={source} onChange={e=>setSource(e.target.value)} className={fi()}>
+                  <option value="spontaneous">Candidature spontanée</option>
+                  <option value="referral">Recommandation interne</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="job_board">Job board</option>
+                  <option value="school">Partenariat école</option>
+                  <option value="portal">Portail candidats</option>
+                  <option value="other">Autre</option>
+                </select>
+              </div>
+              <div><FL>Lettre de motivation / Présentation</FL>
+                <textarea value={coverLetter} onChange={e=>setCoverLetter(e.target.value)} rows={5}
+                  className={fi()+' resize-none'} placeholder="Résumé du profil ou lettre de motivation..." />
+              </div>
+              <div><FL>Notes RH internes</FL>
+                <textarea value={internalNotes} onChange={e=>setInternalNotes(e.target.value)} rows={3}
+                  className={fi()+' resize-none'} placeholder="Contexte, recommandations, observations..." />
+              </div>
             </div>
           )}
         </div>
 
-        <div className="flex gap-3 p-6 pt-0">
-          <button onClick={onClose}
-            className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 text-sm font-medium">
-            Annuler
+        {/* Footer */}
+        <div className="border-t border-slate-200 px-6 py-4 flex items-center justify-between gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition text-slate-600">
+            Fermer
           </button>
-          <button onClick={handleSave} disabled={saving}
-            className="flex-1 py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 disabled:opacity-60 text-sm font-medium transition flex items-center justify-center gap-2">
-            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <UserPlus size={15} />}
-            {saving ? 'Enregistrement...' : 'Créer la candidature'}
-          </button>
+          <div className="flex items-center gap-2">
+            {tabIdx > 0 && (
+              <button onClick={()=>setTab(ADD_TABS[tabIdx-1].value)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition text-slate-600">
+                Précédent
+              </button>
+            )}
+            {tabIdx < ADD_TABS.length - 1 ? (
+              <button onClick={()=>setTab(ADD_TABS[tabIdx+1].value)}
+                className="flex items-center gap-1.5 px-5 py-2 text-sm rounded-lg bg-teal-700 text-white font-semibold hover:bg-teal-800 transition">
+                Suivant & Sauvegarder <ChevronRight size={15}/>
+              </button>
+            ) : (
+              <button onClick={handleSave} disabled={saving}
+                className="flex items-center gap-2 px-6 py-2 text-sm rounded-lg bg-teal-700 text-white font-semibold hover:bg-teal-800 disabled:opacity-50 transition">
+                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <CheckCircle size={15}/>}
+                {saving ? 'Enregistrement...' : 'Créer le candidat'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

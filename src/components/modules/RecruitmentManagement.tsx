@@ -51,6 +51,7 @@ export function RecruitmentManagement() {
   const [selectedApp, setSelectedApp] = useState<any | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [candidateTotalApps, setCandidateTotalApps] = useState<number | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -72,19 +73,32 @@ export function RecruitmentManagement() {
     setSelectedApp(null);
     setFilterStatus('all');
     setLoadingApps(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('candidate_applications')
       .select(`
         id, status, created_at, cover_letter, desired_position,
         candidate:candidates (
           id, first_name, last_name, email, phone, location,
-          current_position, experience_years, linkedin_url, profile_summary
+          professional_title, linkedin_url, summary, desired_position
         )
       `)
       .eq('job_opening_id', job.id)
       .order('created_at', { ascending: false });
+    if (error) console.error('candidate_applications query error:', error);
     setJobApplications(data || []);
     setLoadingApps(false);
+  };
+
+  const selectApp = async (app: any | null) => {
+    setSelectedApp(app);
+    setCandidateTotalApps(null);
+    if (app?.candidate?.id) {
+      const { count } = await supabase
+        .from('candidate_applications')
+        .select('id', { count: 'exact', head: true })
+        .eq('candidate_id', app.candidate.id);
+      setCandidateTotalApps(count ?? 0);
+    }
   };
 
   const updateStatus = async (appId: string, newStatus: string) => {
@@ -305,7 +319,7 @@ export function RecruitmentManagement() {
                           return (
                             <div
                               key={app.id}
-                              onClick={() => setSelectedApp(isSelected ? null : app)}
+                              onClick={() => selectApp(isSelected ? null : app)}
                               className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition ${
                                 isSelected ? 'bg-green-50 border-r-2 border-r-green-600' : 'hover:bg-slate-50'
                               }`}
@@ -340,14 +354,25 @@ export function RecruitmentManagement() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-slate-900">{fullName}</p>
-                            <p className="text-sm text-slate-500">{cand?.current_position || '—'}</p>
-                            {cand?.location && (
-                              <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                                <MapPin size={10} />{cand.location}
+                            <p className="text-sm text-slate-500">{cand?.professional_title || cand?.desired_position || '—'}</p>
+                            <div className="flex items-center gap-3 mt-1 flex-wrap">
+                              {cand?.location && (
+                                <p className="text-xs text-slate-400 flex items-center gap-1">
+                                  <MapPin size={10} />{cand.location}
+                                </p>
+                              )}
+                              <p className="text-xs flex items-center gap-1 font-semibold">
+                                <FileText size={10} className="text-slate-400" />
+                                {candidateTotalApps == null
+                                  ? <span className="text-slate-300">…</span>
+                                  : <span className={candidateTotalApps > 1 ? 'text-violet-700' : 'text-slate-500'}>
+                                      {candidateTotalApps} candidature{candidateTotalApps > 1 ? 's' : ''} au total
+                                    </span>
+                                }
                               </p>
-                            )}
+                            </div>
                           </div>
-                          <button onClick={() => setSelectedApp(null)} className="p-1 hover:bg-slate-100 rounded transition flex-shrink-0">
+                          <button onClick={() => selectApp(null)} className="p-1 hover:bg-slate-100 rounded transition flex-shrink-0">
                             <X size={14} className="text-slate-400" />
                           </button>
                         </div>

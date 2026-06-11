@@ -1341,36 +1341,99 @@ function CompetencesTab({ items, setItems, masterSkills }: {
   );
 }
 
+const LANGUAGE_CATALOGUE = [
+  { group: 'Langues mondiales', langs: ['Français', 'Anglais', 'Espagnol', 'Arabe', 'Portugais', 'Russe', 'Mandarin', 'Japonais', 'Allemand', 'Italien'] },
+  { group: 'Langues africaines', langs: ['Swahili', 'Haoussa', 'Yoruba', 'Igbo', 'Zulu', 'Amharique', 'Wolof', 'Fula', 'Lingala', 'Shona'] },
+  { group: 'Autres', langs: ['Coréen', 'Hindi', 'Turc', 'Néerlandais', 'Polonais', 'Ukrainien', 'Persan', 'Vietnamien', 'Thaï', 'Grec'] },
+];
+
 function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Language[]) => void }) {
-  const add = () => setItems([...items, { name: '', level: 'good' }]);
-  const upd = (i: number, k: keyof Language, v: string) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
-  const del = (i: number) => setItems(items.filter((_, j) => j !== i));
+  const [search, setSearch] = useState('');
+  const [customName, setCustomName] = useState('');
+  const selectedNames = new Set(items.map(l => l.name));
+
+  const toggle = (name: string) => {
+    if (selectedNames.has(name)) {
+      setItems(items.filter(l => l.name !== name));
+    } else {
+      setItems([...items, { name, level: 'good' }]);
+    }
+  };
+
+  const addCustom = () => {
+    const t = customName.trim();
+    if (!t || selectedNames.has(t)) return;
+    setItems([...items, { name: t, level: 'good' }]);
+    setCustomName('');
+  };
+
+  const updateLevel = (name: string, level: string) => {
+    setItems(items.map(l => l.name === name ? { ...l, level } : l));
+  };
+
+  const f = search.toLowerCase();
   const LEVEL_PCT: Record<string, number> = { beginner: 25, intermediate: 50, good: 75, excellent: 100 };
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between mb-2">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">Langues parlées</h3>
-        <button onClick={add} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
-          <Plus size={13} /> Ajouter une langue
+        <span className="text-xs text-gray-500">{items.length} sélectionnée{items.length > 1 ? 's' : ''}</span>
+      </div>
+
+      <input value={search} onChange={e => setSearch(e.target.value)} className={inp()} placeholder="Rechercher une langue..." />
+
+      {LANGUAGE_CATALOGUE.map(group => {
+        const list = group.langs.filter(l => !f || l.toLowerCase().includes(f));
+        if (list.length === 0) return null;
+        return (
+          <div key={group.group}>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{group.group}</p>
+            <div className="flex flex-wrap gap-2">
+              {list.map(lang => (
+                <button key={lang} type="button" onClick={() => toggle(lang)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedNames.has(lang) ? 'bg-green-50 border-green-500 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-700'}`}>
+                  {lang}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {items.length > 0 && (
+        <div className="pt-4 border-t border-gray-100">
+          <p className="text-xs font-semibold text-gray-500 mb-3">Niveaux des langues sélectionnées</p>
+          <div className="space-y-2">
+            {items.map(lang => (
+              <div key={lang.name} className="flex items-center gap-3">
+                <span className="text-xs font-medium text-gray-700 w-24 flex-shrink-0 truncate">{lang.name}</span>
+                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${LEVEL_PCT[lang.level] ?? 75}%`, background: SNH_GREEN }} />
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  {LANG_LEVELS.map(lv => (
+                    <button key={lv.value} type="button" onClick={() => updateLevel(lang.name, lv.value)}
+                      className={`px-2 py-1 text-xs rounded border transition ${lang.level === lv.value ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:border-green-400'}`}
+                      style={lang.level === lv.value ? { background: SNH_GREEN } : {}}>
+                      {lv.label.slice(0, 3)}.
+                    </button>
+                  ))}
+                </div>
+                <button type="button" onClick={() => toggle(lang.name)} className="text-red-400 hover:text-red-600 flex-shrink-0"><X size={13} /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-3 border-t border-gray-100">
+        <input value={customName} onChange={e => setCustomName(e.target.value)} className={inp() + ' flex-1'}
+          placeholder="Ajouter une langue non listée..." onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())} />
+        <button type="button" onClick={addCustom} className="px-4 py-2 text-sm rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
+          <Plus size={14} />
         </button>
       </div>
-      {items.map((lang, i) => (
-        <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2.5">
-          <input value={lang.name} onChange={e => upd(i,'name',e.target.value)} className={`${inp()} flex-1 bg-white`} placeholder="Français, Anglais, Espagnol..." />
-          <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden flex-shrink-0">
-            <div className="h-full rounded-full transition-all" style={{ width: `${LEVEL_PCT[lang.level] ?? 50}%`, background: SNH_GREEN }} />
-          </div>
-          <select value={lang.level} onChange={e => upd(i,'level',e.target.value)} className="px-2 py-2 border border-gray-300 rounded-lg text-xs bg-white w-32">
-            {LANG_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-          </select>
-          <button onClick={() => del(i)} className="text-gray-400 hover:text-red-500 flex-shrink-0"><X size={14} /></button>
-        </div>
-      ))}
-      {items.length === 0 && (
-        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-green-500 hover:text-green-700 flex items-center justify-center gap-2 transition">
-          <Plus size={16} /> Ajouter une langue
-        </button>
-      )}
     </div>
   );
 }

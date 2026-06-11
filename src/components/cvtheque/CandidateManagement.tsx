@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   Users, Search, X, Eye, Star, Trash2, Briefcase, MapPin,
@@ -174,7 +174,7 @@ const SPONTANEOUS_TYPE_LABELS: Record<SpontaneousType, string> = {
 };
 
 // ── Main component ─────────────────────────────────────────────────────────
-type MainView = 'candidates' | 'by-job';
+type MainView = 'candidates' | 'by-job' | 'search';
 
 export default function CandidateManagement() {
   const [mainView, setMainView] = useState<MainView>('candidates');
@@ -193,6 +193,16 @@ export default function CandidateManagement() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [computingMatch, setComputingMatch] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // ── Search view state ──────────────────────────────────────────────────────
+  const [srchSkills, setSrchSkills] = useState<string[]>([]);
+  const [srchSkillInput, setSrchSkillInput] = useState('');
+  const [srchShowSugg, setSrchShowSugg] = useState(false);
+  const [srchMinExp, setSrchMinExp] = useState('');
+  const [srchLocation, setSrchLocation] = useState('');
+  const [srchEduLevel, setSrchEduLevel] = useState('');
+  const [srchAvailBefore, setSrchAvailBefore] = useState('');
+  const [srchStatus, setSrchStatus] = useState('active');
 
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { if (selectedJob) loadJobMatches(selectedJob.id); }, [selectedJob]);
@@ -334,6 +344,62 @@ export default function CandidateManagement() {
     integrated: candidates.filter(c => c.candidate_applications?.[0]?.status === 'integrated').length,
   };
 
+  // ── Search: derived data ──────────────────────────────────────────────────
+  const allSkillNames = useMemo(() =>
+    [...new Set(candidates.flatMap(c => (c.candidate_candidate_skills || []).map(s => s.name)))].sort(),
+    [candidates]
+  );
+
+  const srchSkillSuggestions = useMemo(() =>
+    allSkillNames.filter(s =>
+      srchSkillInput.length > 0 &&
+      s.toLowerCase().includes(srchSkillInput.toLowerCase()) &&
+      !srchSkills.includes(s)
+    ).slice(0, 8),
+    [allSkillNames, srchSkillInput, srchSkills]
+  );
+
+  const searchResults = useMemo(() => {
+    return candidates
+      .filter(c => {
+        const appStatus = c.candidate_applications?.[0]?.status || 'new';
+        if (srchStatus === 'active' && ['rejected', 'withdrawn', 'integrated'].includes(appStatus)) return false;
+        if (srchStatus !== 'all' && srchStatus !== 'active' && appStatus !== srchStatus) return false;
+        if (srchLocation && !c.location?.toLowerCase().includes(srchLocation.toLowerCase())) return false;
+        if (srchEduLevel) {
+          const minIdx = EDU_LEVELS.indexOf(srchEduLevel);
+          const hasLevel = (c.candidate_educations || []).some(e => EDU_LEVELS.indexOf(e.degree) >= minIdx);
+          if (!hasLevel) return false;
+        }
+        if (srchMinExp) {
+          const minYrs = parseInt(srchMinExp) || 0;
+          const expYrs = (c.candidate_experiences || []).reduce((acc, e) => {
+            const s = new Date(e.start_date).getFullYear();
+            const en = e.is_current ? new Date().getFullYear() : (e.end_date ? new Date(e.end_date).getFullYear() : s);
+            return acc + Math.max(0, en - s);
+          }, 0);
+          if (expYrs < minYrs) return false;
+        }
+        if (srchAvailBefore && c.availability_date) {
+          if (new Date(c.availability_date) > new Date(srchAvailBefore)) return false;
+        }
+        return true;
+      })
+      .map(c => {
+        const candSkills = (c.candidate_candidate_skills || []).map(s => s.name.toLowerCase());
+        const matched = srchSkills.filter(s => candSkills.some(cs => cs.includes(s.toLowerCase()) || s.toLowerCase().includes(cs)));
+        const missing = srchSkills.filter(s => !matched.includes(s));
+        const skillScore = srchSkills.length > 0 ? Math.round((matched.length / srchSkills.length) * 100) : 100;
+        const expYrs = (c.candidate_experiences || []).reduce((acc, e) => {
+          const s = new Date(e.start_date).getFullYear();
+          const en = e.is_current ? new Date().getFullYear() : (e.end_date ? new Date(e.end_date).getFullYear() : s);
+          return acc + Math.max(0, en - s);
+        }, 0);
+        return { ...c, _matched: matched, _missing: missing, _skillScore: skillScore, _expYrs: expYrs };
+      })
+      .sort((a, b) => b._skillScore - a._skillScore || b._expYrs - a._expYrs);
+  }, [candidates, srchSkills, srchMinExp, srchLocation, srchEduLevel, srchAvailBefore, srchStatus]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -380,6 +446,10 @@ export default function CandidateManagement() {
         <button onClick={() => setMainView('by-job')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mainView === 'by-job' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
           <Sparkles size={15} /> Adéquation IA par offre
+        </button>
+        <button onClick={() => setMainView('search')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mainView === 'search' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+          <Search size={15} /> Recherche multi-critères
         </button>
       </div>
 
@@ -592,6 +662,223 @@ export default function CandidateManagement() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── VIEW: Search multi-criteria ── */}
+      {mainView === 'search' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* ── Criteria panel ── */}
+          <div className="space-y-5">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
+              {/* Skills — hero criterion */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                  Compétences recherchées
+                </label>
+                {srchSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {srchSkills.map(s => (
+                      <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-teal-50 text-teal-800 border border-teal-200 rounded-full font-medium">
+                        {s}
+                        <button onClick={() => setSrchSkills(prev => prev.filter(x => x !== s))} className="hover:text-red-500 transition">
+                          <X size={11} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="relative">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={srchSkillInput}
+                    onChange={e => { setSrchSkillInput(e.target.value); setSrchShowSugg(true); }}
+                    onFocus={() => setSrchShowSugg(true)}
+                    onBlur={() => setTimeout(() => setSrchShowSugg(false), 150)}
+                    placeholder="Ajouter une compétence..."
+                    className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
+                  {srchShowSugg && srchSkillSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                      {srchSkillSuggestions.map(s => (
+                        <button key={s} onMouseDown={() => { setSrchSkills(prev => [...prev, s]); setSrchSkillInput(''); setSrchShowSugg(false); }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-teal-50 hover:text-teal-800 transition text-slate-700 border-b border-slate-50 last:border-0">
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {srchSkillInput && !srchSkillSuggestions.some(s => s.toLowerCase() === srchSkillInput.toLowerCase()) && (
+                    <button
+                      onMouseDown={() => { if (srchSkillInput.trim()) { setSrchSkills(prev => [...prev, srchSkillInput.trim()]); setSrchSkillInput(''); } }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 bg-teal-600 text-white rounded-md font-medium hover:bg-teal-700 transition">
+                      + Ajouter
+                    </button>
+                  )}
+                </div>
+                {allSkillNames.length > 0 && srchSkillInput.length === 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-slate-400 mb-1.5">Compétences fréquentes :</p>
+                    <div className="flex flex-wrap gap-1">
+                      {allSkillNames.slice(0, 12).filter(s => !srchSkills.includes(s)).slice(0, 10).map(s => (
+                        <button key={s} onClick={() => setSrchSkills(prev => [...prev, s])}
+                          className="text-xs px-2 py-0.5 border border-slate-200 text-slate-600 rounded-full hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 transition">
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-slate-100 pt-4 space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Expérience minimum</label>
+                  <select value={srchMinExp} onChange={e => setSrchMinExp(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                    <option value="">Indifférente</option>
+                    <option value="1">1 an minimum</option>
+                    <option value="2">2 ans minimum</option>
+                    <option value="3">3 ans minimum</option>
+                    <option value="5">5 ans minimum</option>
+                    <option value="7">7 ans minimum</option>
+                    <option value="10">10 ans minimum</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Niveau d'études minimum</label>
+                  <select value={srchEduLevel} onChange={e => setSrchEduLevel(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                    <option value="">Indifférent</option>
+                    {EDU_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Localisation</label>
+                  <input value={srchLocation} onChange={e => setSrchLocation(e.target.value)} placeholder="Yaoundé, Douala..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Disponible avant le</label>
+                  <input type="date" value={srchAvailBefore} onChange={e => setSrchAvailBefore(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Statut</label>
+                  <select value={srchStatus} onChange={e => setSrchStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                    <option value="active">Actifs uniquement</option>
+                    <option value="all">Tous les candidats</option>
+                    {ALL_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {(srchSkills.length > 0 || srchMinExp || srchLocation || srchEduLevel || srchAvailBefore || srchStatus !== 'active') && (
+                <button
+                  onClick={() => { setSrchSkills([]); setSrchMinExp(''); setSrchLocation(''); setSrchEduLevel(''); setSrchAvailBefore(''); setSrchStatus('active'); }}
+                  className="w-full text-xs py-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 transition flex items-center justify-center gap-1.5">
+                  <X size={12} /> Réinitialiser les critères
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ── Results panel ── */}
+          <div className="lg:col-span-2 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-500">
+                <span className="font-semibold text-slate-800">{searchResults.length}</span> candidat{searchResults.length > 1 ? 's' : ''} trouvé{searchResults.length > 1 ? 's' : ''}
+                {srchSkills.length > 0 && <span className="ml-1 text-teal-600">· {srchSkills.length} compétence{srchSkills.length > 1 ? 's' : ''} requise{srchSkills.length > 1 ? 's' : ''}</span>}
+              </p>
+            </div>
+
+            {searchResults.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center text-slate-400">
+                <Users size={40} className="mx-auto mb-3 opacity-25" />
+                <p className="text-sm font-medium">Aucun candidat ne correspond à ces critères</p>
+                <p className="text-xs mt-1">Essayez d'assouplir les filtres</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {searchResults.map(c => {
+                  const appStatus = c.candidate_applications?.[0]?.status || 'new';
+                  const stage = getStageInfo(appStatus);
+                  const hasSkillCriteria = srchSkills.length > 0;
+                  const score = c._skillScore as number;
+                  const matched = (c._matched as string[]) || [];
+                  const missing = (c._missing as string[]) || [];
+                  const expYrs = c._expYrs as number;
+                  return (
+                    <div key={c.id}
+                      onClick={() => openCandidate(c)}
+                      className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-md transition cursor-pointer group">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                          {c.first_name[0]}{c.last_name[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <div>
+                              <p className="font-semibold text-slate-900 text-sm">{c.first_name} {c.last_name}</p>
+                              <p className="text-xs text-slate-500">{c.desired_position || c.candidate_applications?.[0]?.job_opening?.title || '—'}</p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {hasSkillCriteria && (
+                                <span className={`text-sm font-black ${score >= 80 ? 'text-emerald-600' : score >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                                  {score}%
+                                </span>
+                              )}
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${stage.color}`}>{stage.label}</span>
+                            </div>
+                          </div>
+
+                          {hasSkillCriteria && (
+                            <div className="mt-2">
+                              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2">
+                                <div className={`h-full rounded-full transition-all ${score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                                  style={{ width: `${score}%` }} />
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {matched.map(s => (
+                                  <span key={s} className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full flex items-center gap-0.5">
+                                    <CheckCircle size={9} className="flex-shrink-0" />{s}
+                                  </span>
+                                ))}
+                                {missing.map(s => (
+                                  <span key={s} className="text-xs px-2 py-0.5 bg-red-50 text-red-600 border border-red-200 rounded-full flex items-center gap-0.5">
+                                    <XCircle size={9} className="flex-shrink-0" />{s}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {!hasSkillCriteria && (c.candidate_candidate_skills || []).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {(c.candidate_candidate_skills || []).slice(0, 5).map((sk: CandSkill) => (
+                                <span key={sk.id} className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full border border-slate-200">{sk.name}</span>
+                              ))}
+                              {(c.candidate_candidate_skills || []).length > 5 && (
+                                <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-400 rounded-full">+{(c.candidate_candidate_skills || []).length - 5}</span>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-3 mt-2 text-xs text-slate-400 flex-wrap">
+                            {c.location && <span className="flex items-center gap-1"><MapPin size={10} />{c.location}</span>}
+                            {expYrs > 0 && <span className="flex items-center gap-1"><Briefcase size={10} />{expYrs} an{expYrs > 1 ? 's' : ''} d'exp.</span>}
+                            {c.availability_date && <span className="flex items-center gap-1"><Calendar size={10} />Dispo. {fmtDate(c.availability_date)}</span>}
+                          </div>
+                        </div>
+                        <ChevronRight size={15} className="text-slate-300 group-hover:text-slate-500 transition flex-shrink-0 mt-1" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

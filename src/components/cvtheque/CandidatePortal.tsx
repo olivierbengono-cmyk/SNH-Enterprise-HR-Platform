@@ -424,6 +424,7 @@ export default function CandidatePortal() {
               educations={educations} setEducations={setEducations}
               skills={skills} setSkills={setSkills}
               languages={languages} setLanguages={setLanguages}
+              masterSkills={masterSkills}
               candidateId={candidateId!}
             />
           )}
@@ -964,12 +965,13 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
 // ── Profile Section ───────────────────────────────────────────────────────────
 type ProfileTab = 'infos' | 'formations' | 'experiences' | 'competences' | 'langues';
 
-function ProfileSection({ profile, setProfile, experiences, setExperiences, educations, setEducations, skills, setSkills, languages, setLanguages, candidateId }: {
+function ProfileSection({ profile, setProfile, experiences, setExperiences, educations, setEducations, skills, setSkills, languages, setLanguages, masterSkills, candidateId }: {
   profile: CandidateProfile; setProfile: (p: CandidateProfile) => void;
   experiences: Experience[]; setExperiences: (v: Experience[]) => void;
   educations: Education[]; setEducations: (v: Education[]) => void;
   skills: Skill[]; setSkills: (v: Skill[]) => void;
   languages: Language[]; setLanguages: (v: Language[]) => void;
+  masterSkills: MasterSkill[];
   candidateId: string;
 }) {
   const [tab, setTab] = useState<ProfileTab>('infos');

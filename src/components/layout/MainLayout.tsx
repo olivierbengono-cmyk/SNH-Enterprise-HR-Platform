@@ -6,7 +6,7 @@ import {
   Home, Users, Calendar, GraduationCap, Target,
   FileText, TrendingUp, Settings, Bell, LogOut, Menu, X,
   Briefcase, UserCheck, Shield, Award, Key, Bot, Clock, DollarSign, Network,
-  ChevronDown, ChevronRight, Search, ArrowLeft, Lock, Building2
+  ChevronDown, ChevronRight, Search, ArrowLeft, Lock, Building2, ExternalLink
 } from 'lucide-react';
 import AIAssistant from '../ai/AIAssistant';
 import { CommandPalette } from './CommandPalette';
@@ -432,6 +432,19 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
           </button>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Link to standalone recruitment portal */}
+            <a
+              href="/candidature/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition hover:opacity-90"
+              style={{ background: '#006B3C', color: 'white', borderColor: '#006B3C' }}
+              title="Ouvrir le portail de recrutement"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Portail candidats
+            </a>
+
             {canGoBack && (
               <button
                 onClick={handleBack}

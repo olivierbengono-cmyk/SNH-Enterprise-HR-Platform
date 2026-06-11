@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NavigationProvider } from './contexts/NavigationContext';
-import CandidatePortal from './components/cvtheque/CandidatePortal';
 import CandidateManagement from './components/cvtheque/CandidateManagement';
 import { LoginForm } from './components/auth/LoginForm';
 import { ChangePasswordForm } from './components/auth/ChangePasswordForm';
@@ -45,15 +44,6 @@ import OrgStructureManagement from './components/modules/OrgStructureManagement'
 function AppContent() {
   const { user, profile, loading, reloadProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-
-  // Detect public portal URL param
-  const [isPublicPortal, setIsPublicPortal] = useState(false);
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('view') === 'candidature') {
-      setIsPublicPortal(true);
-    }
-  }, []);
   const [preselectedDiscussionId, setPreselectedDiscussionId] = useState<string | null>(null);
 
   const handleTabChange = (tab: string) => {
@@ -68,10 +58,6 @@ function AppContent() {
     }
     setActiveTab(tab);
   };
-
-  if (isPublicPortal) {
-    return <CandidatePortal />;
-  }
 
   if (loading) {
     return (

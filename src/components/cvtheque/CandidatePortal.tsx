@@ -177,7 +177,7 @@ export default function CandidatePortal() {
   const [candidateId, setCandidateId] = useState<string | null>(null);
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [section, setSection] = useState<Section>('dashboard');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [openJobs, setOpenJobs] = useState<JobOpening[]>([]);
   const [matches, setMatches] = useState<JobMatch[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -192,21 +192,17 @@ export default function CandidatePortal() {
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Always load public jobs regardless of auth state
+    // Load public jobs immediately — no auth required
     supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false })
       .then(({ data }) => { if (data) setOpenJobs(data as JobOpening[]); });
-    // Then check session
+    // Check session silently — if logged in, transition to portal view without spinner
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        loadPortal(session.user.id);
-      } else {
-        setLoading(false);
-      }
+      if (session?.user) loadPortal(session.user.id, false);
     });
   }, []);
 
-  const loadPortal = async (userId: string) => {
-    setLoading(true);
+  const loadPortal = async (userId: string, showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     const { data: cand } = await supabase.from('candidates').select('*').eq('user_id', userId).maybeSingle();
     if (!cand) { setLoading(false); setView('public'); return; }
     setCandidateId(cand.id);
@@ -273,9 +269,13 @@ export default function CandidatePortal() {
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   };
 
-  if (loading && view !== 'public') return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2" style={{ borderColor: SNH_GREEN }} />
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+      <div className="w-14 h-14 bg-white rounded-xl shadow-md flex items-center justify-center overflow-hidden p-1">
+        <img src="/logoSNH.png" alt="SNH" className="h-full w-auto object-contain" />
+      </div>
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: SNH_GREEN }} />
+      <p className="text-sm text-gray-500">Chargement de votre espace…</p>
     </div>
   );
 

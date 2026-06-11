@@ -445,7 +445,8 @@ export default function CandidatePortal() {
           {section === 'applications' && (
             <ApplicationsSection applications={applications} openJobs={openJobs}
               documents={documents} candidateId={candidateId!}
-              onApplied={(app) => setApplications(prev => [app, ...prev])} />
+              onApplied={(app) => setApplications(prev => [app, ...prev])}
+              onWithdrawn={(appId) => setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'withdrawn' } : a))} />
           )}
           {section === 'notifications' && (
             <NotificationsSection notifications={notifications} />
@@ -1840,7 +1841,6 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications, 
                         <h3 className="text-sm font-bold text-gray-900 hover:underline">{job.title}</h3>
                         <p className="text-xs text-gray-500 mt-0.5">SNH · {job.location}</p>
                       </div>
-                      {m && <span className={`text-sm font-black ${m.match_score >= 80 ? 'text-green-600' : 'text-amber-600'}`}>{m.match_score}%</span>}
                     </div>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       <Tag variant={isStage ? 'amber' : 'green'}>{job.contract_type}</Tag>
@@ -2135,19 +2135,32 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
 }
 
 // ── Applications ──────────────────────────────────────────────────────────────
-function ApplicationsSection({ applications, openJobs, documents, candidateId, onApplied }: {
+function ApplicationsSection({ applications, openJobs, documents, candidateId, onApplied, onWithdrawn }: {
   applications: Application[]; openJobs: JobOpening[];
   documents: CandidateDoc[]; candidateId: string;
   onApplied: (app: Application) => void;
+  onWithdrawn: (appId: string) => void;
 }) {
   const [filter, setFilter] = useState('all');
   const [selectedJob, setSelectedJob] = useState<JobOpening | null>(null);
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
+  const [confirmWithdrawId, setConfirmWithdrawId] = useState<string | null>(null);
   const filtered = filter === 'all' ? applications : applications.filter(a => a.status === filter);
   const applied = new Set(applications.map(a => a.job_opening_id || '').filter(Boolean));
 
   const STATUS_LABELS: Record<string, string> = {
     new: 'Soumis', reviewing: 'En examen', interview: 'Entretien',
     offer: 'Offre', integrated: 'Intégré(e)', rejected: 'Refusé(e)', withdrawn: 'Retiré(e)',
+  };
+
+  const canWithdraw = (status: string) => ['new', 'reviewing'].includes(status);
+
+  const handleWithdraw = async (appId: string) => {
+    setWithdrawing(appId);
+    await supabase.from('candidate_applications').update({ status: 'withdrawn' }).eq('id', appId);
+    onWithdrawn(appId);
+    setWithdrawing(null);
+    setConfirmWithdrawId(null);
   };
 
   return (
@@ -2171,15 +2184,16 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
               {filtered.map(app => {
                 const job = openJobs.find(j => j.id === app.job_opening_id);
                 const isStage = job?.contract_type?.toLowerCase().includes('stage');
+                const isConfirming = confirmWithdrawId === app.id;
                 return (
                   <div key={app.id}
-                    onClick={() => job && setSelectedJob(job)}
-                    className={`flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0 ${job ? 'cursor-pointer hover:bg-gray-50 transition' : ''}`}>
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0 ${isStage ? 'bg-amber-50' : ''}`}
-                      style={!isStage ? { background: `${SNH_GREEN}10` } : {}}>
+                    className="flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0 cursor-pointer ${isStage ? 'bg-amber-50' : ''}`}
+                      style={!isStage ? { background: `${SNH_GREEN}10` } : {}}
+                      onClick={() => job && setSelectedJob(job)}>
                       {isStage ? '🎓' : '💼'}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => job && setSelectedJob(job)}>
                       <p className="text-sm font-semibold text-gray-900">{app.desired_position || app.job_opening?.title || '—'}</p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={10} />SNH</span>
@@ -2189,7 +2203,27 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
                       <AppStatus status={app.status} />
-                      {job && <ChevronRight size={14} className="text-gray-300" />}
+                      {job && <ChevronRight size={14} className="text-gray-300 cursor-pointer" onClick={() => setSelectedJob(job)} />}
+                      {canWithdraw(app.status) && (
+                        isConfirming ? (
+                          <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                            <span className="text-xs text-red-700 font-medium">Confirmer ?</span>
+                            <button onClick={() => handleWithdraw(app.id)} disabled={withdrawing === app.id}
+                              className="text-xs px-2 py-0.5 bg-red-600 text-white rounded font-semibold hover:bg-red-700 transition disabled:opacity-50">
+                              {withdrawing === app.id ? '...' : 'Oui'}
+                            </button>
+                            <button onClick={() => setConfirmWithdrawId(null)}
+                              className="text-xs px-2 py-0.5 border border-red-200 text-red-600 rounded hover:bg-red-100 transition">
+                              Non
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={(e) => { e.stopPropagation(); setConfirmWithdrawId(app.id); }}
+                            className="text-xs px-2.5 py-1 border border-slate-200 text-slate-500 rounded-lg hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition font-medium">
+                            Dépostuler
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
                 );

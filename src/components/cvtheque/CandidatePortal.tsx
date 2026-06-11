@@ -944,10 +944,6 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
                     <Tag variant="gray">{m.job_opening.location}</Tag>
                   </div>
                 </div>
-                <div className="text-center flex-shrink-0">
-                  <p className={`text-lg font-black ${m.match_score >= 80 ? 'text-green-600' : 'text-amber-600'}`}>{m.match_score}%</p>
-                  <p className="text-xs text-gray-400">Adéquation</p>
-                </div>
                 {applied.has(m.job_opening_id) ? (
                   <span className="text-xs text-green-700 font-medium flex items-center gap-1"><CheckCircle size={12} />Postulé</span>
                 ) : (
@@ -1642,7 +1638,6 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   <Tag variant={isStage ? 'amber' : 'green'}>{job.contract_type}</Tag>
                   {job.reference && <Tag variant="gray">Réf. {job.reference}</Tag>}
-                  {match && <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${match.match_score >= 80 ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>Compatibilité {match.match_score}%</span>}
                 </div>
               </div>
             </div>

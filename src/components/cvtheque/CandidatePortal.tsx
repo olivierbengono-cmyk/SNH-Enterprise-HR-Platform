@@ -12,6 +12,7 @@ interface CandidateProfile {
   profile_completed: boolean; birth_date?: string | null; gender?: string | null;
   nationality?: string | null; region?: string | null; professional_title?: string | null;
   national_id?: string | null; phone2?: string | null;
+  facebook_url?: string | null; twitter_url?: string | null; instagram_url?: string | null;
 }
 interface JobOpening {
   id: string; title: string; reference: string; contract_type: string;
@@ -40,7 +41,7 @@ interface Experience {
 interface Education {
   id?: string; degree: string; field_of_study: string; institution: string;
   location: string; start_date: string; end_date: string; is_current: boolean;
-  grade: string; education_level?: string; country?: string;
+  grade: string; education_level?: string; country?: string; description?: string;
 }
 interface Skill {
   id?: string; name: string;
@@ -49,9 +50,9 @@ interface Skill {
 }
 interface Language { id?: string; name: string; level: string; }
 interface CandidateDoc {
-  id: string; candidate_id: string;
-  type: 'cv' | 'cover_letter' | 'diploma' | 'reference' | 'other';
+  id: string; candidate_id: string; type: string;
   file_name: string; file_url: string; file_size: number | null; uploaded_at: string;
+  expiration_date?: string | null;
 }
 interface Notification {
   id: string; title: string; body: string; read: boolean; created_at: string;
@@ -76,7 +77,12 @@ const SKILL_CATEGORIES = [
   { value: 'certification', label: 'Certification' },
   { value: 'other', label: 'Autre' },
 ];
-const LANG_LEVELS = ['A1','A2','B1','B2','C1','C2','Natif'];
+const LANG_LEVELS = [
+  { value: 'beginner',     label: 'Débutant' },
+  { value: 'intermediate', label: 'Intermédiaire' },
+  { value: 'good',         label: 'Bon' },
+  { value: 'excellent',    label: 'Excellent' },
+];
 const REGIONS_CM = ['Centre','Littoral','Ouest','Nord','Extrême-Nord','Adamaoua','Est','Sud','Nord-Ouest','Sud-Ouest'];
 const SNH_DIRECTIONS = [
   'Direction Exploration & Production',
@@ -92,11 +98,26 @@ const SNH_DIRECTIONS = [
   'Sans préférence — Au choix de la SNH',
 ];
 const DOC_TYPES = [
-  { value: 'cv', label: 'CV / Curriculum Vitae' },
-  { value: 'cover_letter', label: 'Lettre de motivation' },
-  { value: 'diploma', label: 'Diplôme / Attestation de diplôme' },
-  { value: 'reference', label: 'Lettre de recommandation' },
-  { value: 'other', label: 'Autre document' },
+  { value: 'cv',                  label: 'CV / Curriculum Vitae' },
+  { value: 'cover_letter',        label: 'Lettre de motivation' },
+  { value: 'diploma',             label: 'Diplôme / Attestation de diplôme' },
+  { value: 'cni_passport',        label: 'CNI / Passeport' },
+  { value: 'employment_cert',     label: "Attestation d'emploi" },
+  { value: 'work_cert',           label: 'Certificat de travail' },
+  { value: 'criminal_record',     label: 'Extrait de casier judiciaire (n°3)' },
+  { value: 'birth_cert',          label: 'Acte de naissance' },
+  { value: 'residence_cert',      label: 'Certificat de résidence' },
+  { value: 'medical_cert',        label: 'Certificat médical d\'aptitude' },
+  { value: 'tax_cert',            label: 'Attestation de régularité fiscale' },
+  { value: 'cnps_cert',           label: 'Attestation CNPS' },
+  { value: 'reference',           label: 'Lettre de recommandation' },
+  { value: 'other',               label: 'Autre document' },
+];
+
+const EDU_LEVELS = [
+  'CEP', 'BEPC', 'BAC',
+  'BAC+2 (BTS/DUT)', 'BAC+3 (Licence)', 'BAC+4',
+  'BAC+5 (Master)', 'Doctorat', 'Autre',
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -991,9 +1012,9 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
   };
 
   return (
-    <div className="max-w-3xl">
+    <div>
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-5 flex-wrap">
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-5 flex-wrap max-w-2xl">
         {TABS.map(t => {
           const Icon = t.icon;
           return (
@@ -1063,6 +1084,11 @@ function InfosTab({ profile, setProfile }: { profile: CandidateProfile; setProfi
         <div><Lbl>Profil LinkedIn</Lbl><input value={profile.linkedin_url || ''} onChange={e => s('linkedin_url', e.target.value)} className={inp()} placeholder="https://linkedin.com/in/..." /></div>
         <div><Lbl>Site / Portfolio</Lbl><input value={profile.portfolio_url || ''} onChange={e => s('portfolio_url', e.target.value)} className={inp()} placeholder="https://..." /></div>
       </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div><Lbl>Facebook</Lbl><input value={profile.facebook_url || ''} onChange={e => s('facebook_url', e.target.value)} className={inp()} placeholder="https://facebook.com/..." /></div>
+        <div><Lbl>Twitter / X</Lbl><input value={profile.twitter_url || ''} onChange={e => s('twitter_url', e.target.value)} className={inp()} placeholder="https://x.com/..." /></div>
+        <div><Lbl>Instagram</Lbl><input value={profile.instagram_url || ''} onChange={e => s('instagram_url', e.target.value)} className={inp()} placeholder="https://instagram.com/..." /></div>
+      </div>
       <div><Lbl>Résumé / À propos de vous</Lbl>
         <textarea value={profile.summary || ''} onChange={e => s('summary', e.target.value)} rows={4} className={inp()} placeholder="Décrivez votre parcours, vos expertises et vos ambitions professionnelles..." />
       </div>
@@ -1071,7 +1097,7 @@ function InfosTab({ profile, setProfile }: { profile: CandidateProfile; setProfi
 }
 
 function FormationsTab({ items, setItems }: { items: Education[]; setItems: (v: Education[]) => void }) {
-  const add = () => setItems([...items, { degree: '', field_of_study: '', institution: '', location: '', start_date: '', end_date: '', is_current: false, grade: '', country: 'Cameroun' }]);
+  const add = () => setItems([...items, { degree: '', field_of_study: '', institution: '', location: '', start_date: '', end_date: '', is_current: false, grade: '', country: 'Cameroun', education_level: '', description: '' }]);
   const upd = (i: number, k: keyof Education, v: any) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
   const del = (i: number) => setItems(items.filter((_, j) => j !== i));
   return (
@@ -1089,7 +1115,13 @@ function FormationsTab({ items, setItems }: { items: Education[]; setItems: (v: 
             <button onClick={() => del(i)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2"><Lbl>Diplôme obtenu *</Lbl><input value={edu.degree} onChange={e => upd(i,'degree',e.target.value)} className={inp()} placeholder="Master, Licence, BTS..." /></div>
+            <div><Lbl>Niveau *</Lbl>
+              <select value={edu.education_level || ''} onChange={e => upd(i,'education_level',e.target.value)} className={inp()}>
+                <option value="">— Sélectionner —</option>
+                {EDU_LEVELS.map(l => <option key={l}>{l}</option>)}
+              </select>
+            </div>
+            <div><Lbl>Diplôme obtenu *</Lbl><input value={edu.degree} onChange={e => upd(i,'degree',e.target.value)} className={inp()} placeholder="Master en Génie Pétrolier..." /></div>
             <div><Lbl>Établissement *</Lbl><input value={edu.institution} onChange={e => upd(i,'institution',e.target.value)} className={inp()} placeholder="ENSP, Université de Yaoundé..." /></div>
             <div><Lbl>Domaine d'études</Lbl><input value={edu.field_of_study} onChange={e => upd(i,'field_of_study',e.target.value)} className={inp()} placeholder="Génie Pétrolier, Finance..." /></div>
             <div><Lbl>Pays</Lbl><input value={edu.country || ''} onChange={e => upd(i,'country',e.target.value)} className={inp()} /></div>
@@ -1097,6 +1129,9 @@ function FormationsTab({ items, setItems }: { items: Education[]; setItems: (v: 
             <div><Lbl>Année de début</Lbl><input type="number" value={edu.start_date} onChange={e => upd(i,'start_date',e.target.value)} className={inp()} placeholder="Ex: 2018" /></div>
             {!edu.is_current && <div><Lbl>Année de fin</Lbl><input type="number" value={edu.end_date} onChange={e => upd(i,'end_date',e.target.value)} className={inp()} placeholder="Ex: 2022" /></div>}
             <div><Lbl>Mention</Lbl><input value={edu.grade} onChange={e => upd(i,'grade',e.target.value)} className={inp()} placeholder="Très bien, Bien..." /></div>
+            <div className="col-span-2"><Lbl>Description / Spécialisation</Lbl>
+              <textarea value={edu.description || ''} onChange={e => upd(i,'description',e.target.value)} rows={2} className={inp()} placeholder="Décrivez votre spécialisation, mémoire, projet de fin d'études..." />
+            </div>
           </div>
           <label className="flex items-center gap-2 mt-3 cursor-pointer text-sm text-gray-700">
             <input type="checkbox" checked={edu.is_current} onChange={e => upd(i,'is_current',e.target.checked)} className="rounded border-gray-300" />
@@ -1120,7 +1155,7 @@ function ExperiencesTab({ items, setItems }: { items: Experience[]; setItems: (v
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-900">Expériences professionnelles</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Expériences professionnelles / Stages</h3>
         <button onClick={add} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
           <Plus size={13} /> Ajouter une expérience
         </button>
@@ -1259,10 +1294,10 @@ function CompetencesTab({ items, setItems }: { items: Skill[]; setItems: (v: Ski
 }
 
 function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Language[]) => void }) {
-  const add = () => setItems([...items, { name: '', level: 'B2' }]);
+  const add = () => setItems([...items, { name: '', level: 'good' }]);
   const upd = (i: number, k: keyof Language, v: string) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
   const del = (i: number) => setItems(items.filter((_, j) => j !== i));
-  const LEVEL_PCT: Record<string, number> = { A1:10, A2:20, B1:40, B2:60, C1:80, C2:95, Natif:100 };
+  const LEVEL_PCT: Record<string, number> = { beginner: 25, intermediate: 50, good: 75, excellent: 100 };
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-2">
@@ -1272,15 +1307,15 @@ function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Lang
         </button>
       </div>
       {items.map((lang, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <input value={lang.name} onChange={e => upd(i,'name',e.target.value)} className={`${inp()} flex-1`} placeholder="Français, Anglais..." />
-          <div className="w-28 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full rounded-full" style={{ width: `${LEVEL_PCT[lang.level] ?? 50}%`, background: SNH_BLUE }} />
+        <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2.5">
+          <input value={lang.name} onChange={e => upd(i,'name',e.target.value)} className={`${inp()} flex-1 bg-white`} placeholder="Français, Anglais, Espagnol..." />
+          <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden flex-shrink-0">
+            <div className="h-full rounded-full transition-all" style={{ width: `${LEVEL_PCT[lang.level] ?? 50}%`, background: SNH_GREEN }} />
           </div>
-          <select value={lang.level} onChange={e => upd(i,'level',e.target.value)} className="px-2 py-2 border border-gray-300 rounded-lg text-xs w-20">
-            {LANG_LEVELS.map(l => <option key={l}>{l}</option>)}
+          <select value={lang.level} onChange={e => upd(i,'level',e.target.value)} className="px-2 py-2 border border-gray-300 rounded-lg text-xs bg-white w-32">
+            {LANG_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
           </select>
-          <button onClick={() => del(i)} className="text-gray-400 hover:text-red-500"><X size={14} /></button>
+          <button onClick={() => del(i)} className="text-gray-400 hover:text-red-500 flex-shrink-0"><X size={14} /></button>
         </div>
       ))}
       {items.length === 0 && (
@@ -1293,13 +1328,27 @@ function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Lang
 }
 
 // ── Documents ─────────────────────────────────────────────────────────────────
+function docExpiryStatus(expDate: string | null | undefined): 'expired' | 'soon' | 'ok' | null {
+  if (!expDate) return null;
+  const d = new Date(expDate);
+  const now = new Date();
+  const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return 'expired';
+  if (diffDays <= 30) return 'soon';
+  return 'ok';
+}
+
 function DocumentsSection({ candidateId, documents, setDocuments }: {
   candidateId: string; documents: CandidateDoc[]; setDocuments: (d: CandidateDoc[]) => void;
 }) {
-  const [selectedType, setSelectedType] = useState<CandidateDoc['type']>('cv');
+  const [selectedType, setSelectedType] = useState('cv');
+  const [expirationDate, setExpirationDate] = useState('');
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  const expiredDocs = documents.filter(d => docExpiryStatus(d.expiration_date) === 'expired');
+  const soonDocs = documents.filter(d => docExpiryStatus(d.expiration_date) === 'soon');
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1314,9 +1363,10 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
     const { data: docData } = await supabase.from('candidate_documents').insert({
       candidate_id: candidateId, type: selectedType, file_name: file.name,
       file_url: urlData.publicUrl, file_size: file.size,
+      expiration_date: expirationDate || null,
     }).select().maybeSingle();
     if (docData) setDocuments([docData as CandidateDoc, ...documents]);
-    setUploading(false); e.target.value = '';
+    setUploading(false); setExpirationDate(''); e.target.value = '';
   };
 
   const handleDelete = async (doc: CandidateDoc) => {
@@ -1329,7 +1379,27 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
   };
 
   return (
-    <div className="max-w-2xl space-y-5">
+    <div className="space-y-5">
+      {/* Expiry alerts */}
+      {expiredDocs.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-800">Documents expirés</p>
+            <p className="text-xs text-red-700 mt-1">{expiredDocs.map(d => DOC_TYPES.find(t => t.value === d.type)?.label ?? d.type).join(', ')} — Veuillez mettre à jour ces documents.</p>
+          </div>
+        </div>
+      )}
+      {soonDocs.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Documents expirant bientôt (dans 30 jours)</p>
+            <p className="text-xs text-amber-700 mt-1">{soonDocs.map(d => DOC_TYPES.find(t => t.value === d.type)?.label ?? d.type).join(', ')} — Pensez à renouveler ces documents.</p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
         <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
         <div>
@@ -1343,23 +1413,21 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
             <Lbl>Type de document *</Lbl>
-            <select value={selectedType} onChange={e => setSelectedType(e.target.value as CandidateDoc['type'])} className={inp()}>
+            <select value={selectedType} onChange={e => setSelectedType(e.target.value)} className={inp()}>
               {DOC_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
           </div>
-          <div className="flex items-end">
-            <label className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer transition ${uploading ? 'opacity-60 cursor-not-allowed' : ''}`}
-              style={{ background: SNH_BLUE }}>
-              {uploading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Envoi...</> : <><Upload size={14} />Choisir un fichier</>}
-              <input type="file" className="hidden" disabled={uploading} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleFile} />
-            </label>
+          <div>
+            <Lbl>Date d'expiration (si applicable)</Lbl>
+            <input type="date" value={expirationDate} onChange={e => setExpirationDate(e.target.value)} className={inp()} min={new Date().toISOString().split('T')[0]} />
           </div>
         </div>
-        <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center text-sm text-gray-400">
-          <Upload size={28} className="mx-auto mb-2 opacity-40" />
-          <p>Glissez-déposez votre fichier ici</p>
-          <p className="text-xs mt-1">PDF, Word, JPG, PNG — max 10 Mo</p>
-        </div>
+        <label className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer transition ${uploading ? 'opacity-60 cursor-not-allowed' : ''}`}
+          style={{ background: SNH_GREEN }}>
+          {uploading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Envoi en cours...</> : <><Upload size={14} />Choisir et téléverser un fichier</>}
+          <input type="file" className="hidden" disabled={uploading} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleFile} />
+        </label>
+        <p className="text-xs text-gray-400 mt-2 text-center">PDF, Word, JPG, PNG — max 10 Mo</p>
         {error && <p className="text-red-600 text-xs mt-2">{error}</p>}
       </div>
 
@@ -1371,23 +1439,34 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
           <div className="py-10 text-center text-gray-400 text-sm"><FileText size={32} className="mx-auto mb-2 opacity-30" />Aucun document téléversé</div>
         ) : (
           <div>
-            {documents.map(doc => (
-              <div key={doc.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 last:border-0">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${SNH_GREEN}15` }}>
-                  <FileText size={16} style={{ color: SNH_GREEN }} />
+            {documents.map(doc => {
+              const expStatus = docExpiryStatus(doc.expiration_date);
+              return (
+                <div key={doc.id} className={`flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 last:border-0 ${expStatus === 'expired' ? 'bg-red-50' : expStatus === 'soon' ? 'bg-amber-50' : ''}`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${expStatus === 'expired' ? 'bg-red-100' : expStatus === 'soon' ? 'bg-amber-100' : ''}`}
+                    style={!expStatus || expStatus === 'ok' ? { background: `${SNH_GREEN}15` } : {}}>
+                    <FileText size={16} style={{ color: expStatus === 'expired' ? '#dc2626' : expStatus === 'soon' ? '#d97706' : SNH_GREEN }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{doc.file_name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {DOC_TYPES.find(d => d.value === doc.type)?.label ?? doc.type} · {fmtSize(doc.file_size)} · Ajouté le {fmtDate(doc.uploaded_at)}
+                    </p>
+                    {doc.expiration_date && (
+                      <p className={`text-xs font-semibold mt-0.5 ${expStatus === 'expired' ? 'text-red-600' : expStatus === 'soon' ? 'text-amber-600' : 'text-gray-500'}`}>
+                        {expStatus === 'expired' ? '⚠ Expiré le ' : expStatus === 'soon' ? '⚠ Expire le ' : 'Expire le '}{fmtDate(doc.expiration_date)}
+                      </p>
+                    )}
+                  </div>
+                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded transition hover:bg-green-50" style={{ color: SNH_GREEN }}>
+                    <Eye size={14} />
+                  </a>
+                  <button onClick={() => handleDelete(doc)} disabled={deleting === doc.id} className="text-red-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition disabled:opacity-50">
+                    {deleting === doc.id ? <div className="w-3.5 h-3.5 border border-red-300 border-t-red-500 rounded-full animate-spin" /> : <Trash2 size={14} />}
+                  </button>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{doc.file_name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{DOC_TYPES.find(d => d.value === doc.type)?.label} · {fmtSize(doc.file_size)} · {fmtDate(doc.uploaded_at)}</p>
-                </div>
-                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded transition hover:bg-green-50" style={{ color: SNH_GREEN }}>
-                  <Eye size={14} />
-                </a>
-                <button onClick={() => handleDelete(doc)} disabled={deleting === doc.id} className="text-red-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition disabled:opacity-50">
-                  {deleting === doc.id ? <div className="w-3.5 h-3.5 border border-red-300 border-t-red-500 rounded-full animate-spin" /> : <Trash2 size={14} />}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -1539,7 +1618,7 @@ function SpontaneousSection({ candidateId, profile, onApplied }: {
   );
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <div className="rounded-xl p-4 flex items-start gap-3 mb-5 border" style={{ background: `${SNH_GREEN}0D`, borderColor: `${SNH_GREEN}30` }}>
         <Send size={16} className="flex-shrink-0 mt-0.5" style={{ color: SNH_GREEN }} />
         <div>
@@ -1695,7 +1774,7 @@ function ApplicationsSection({ applications }: { applications: Application[] }) 
 // ── Notifications ─────────────────────────────────────────────────────────────
 function NotificationsSection({ notifications }: { notifications: Notification[] }) {
   return (
-    <div className="max-w-2xl">
+    <div>
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b border-gray-100">
           <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>

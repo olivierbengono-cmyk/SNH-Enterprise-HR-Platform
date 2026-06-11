@@ -34,7 +34,8 @@ interface Application {
 interface OnboardingItem { id: string; label: string; done: boolean; }
 interface Experience { id: string; job_title: string; company: string; location: string | null; start_date: string; end_date: string | null; is_current: boolean; description: string | null; }
 interface Education { id: string; degree: string; field_of_study: string | null; institution: string; end_date: string | null; grade: string | null; }
-interface CandSkill { id: string; name: string; category: string; level: string; }
+interface CandSkill { id: string; skill_id?: string | null; name: string; category: string; level: string; }
+interface MasterSkill { id: string; name: string; category: string; description?: string | null; }
 interface CandDoc { id: string; type: string; file_name: string; file_url: string; file_size: number | null; }
 interface JobOpening { id: string; title: string; reference: string; contract_type: string; location: string; status: string; publication_date: string; closing_date: string; required_skills: string[]; nice_to_have_skills: string[]; min_experience_years: number; }
 interface JobMatch {
@@ -619,6 +620,11 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
   const [tab, setTab] = useState<AddTab>('infos');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [masterSkills, setMasterSkills] = useState<MasterSkill[]>([]);
+  useEffect(() => {
+    supabase.from('skills').select('id, name, category, description').order('category').order('name')
+      .then(({ data }) => { if (data) setMasterSkills(data as MasterSkill[]); });
+  }, []);
 
   // Infos personnelles
   const [firstName, setFirstName] = useState('');
@@ -656,7 +662,16 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
   // Compétences
   const [skills, setSkills] = useState<NewSkill[]>([]);
   const [newSkillName, setNewSkillName] = useState('');
-  const addSkill = () => { const n=newSkillName.trim(); if(n && !skills.find(s=>s.name===n)) { setSkills(p=>[...p,{name:n,category:'technical',level:'intermediate'}]); setNewSkillName(''); } };
+  const [skillSearch, setSkillSearch] = useState('');
+  const selectedSkillNames = new Set(skills.map(s => s.name));
+  const toggleSkill = (ms: MasterSkill) => {
+    if (selectedSkillNames.has(ms.name)) {
+      setSkills(p => p.filter(s => s.name !== ms.name));
+    } else {
+      setSkills(p => [...p, { name: ms.name, category: ms.category, level: 'intermediate' }]);
+    }
+  };
+  const addSkill = () => { const n=newSkillName.trim(); if(n && !selectedSkillNames.has(n)) { setSkills(p=>[...p,{name:n,category:'other',level:'intermediate'}]); setNewSkillName(''); } };
   const updSkillLevel = (name: string, level: string) => setSkills(p => p.map(s => s.name===name ? {...s,level} : s));
   const delSkill = (name: string) => setSkills(p => p.filter(s=>s.name!==name));
 
@@ -726,8 +741,9 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
 
       // 4. Skills
       if (skills.length > 0) {
+        const masterMap = Object.fromEntries(masterSkills.map(m => [m.name, m.id]));
         await supabase.from('candidate_candidate_skills').insert(
-          skills.map(s => ({ ...s, candidate_id: candidateId }))
+          skills.map(s => ({ ...s, candidate_id: candidateId, skill_id: masterMap[s.name] ?? null }))
         );
       }
 
@@ -927,32 +943,58 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
           {/* ── Tab: Compétences ─── */}
           {tab === 'competences' && (
             <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-slate-900">Compétences ({skills.length})</h4>
-              <div className="flex gap-2">
-                <input value={newSkillName} onChange={e=>setNewSkillName(e.target.value)} className={fi()+' flex-1'}
-                  placeholder="Ajouter une compétence..." onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addSkill();}}} />
-                <button onClick={addSkill} className="px-3 py-2.5 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition"><Plus size={16}/></button>
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-slate-900">Compétences ({skills.length} sélectionnée{skills.length > 1 ? 's' : ''})</h4>
               </div>
-              {skills.length > 0 ? (
-                <div className="space-y-2">
-                  {skills.map(sk => (
-                    <div key={sk.name} className="flex items-center gap-3 bg-slate-50 rounded-lg px-3 py-2">
-                      <span className="text-sm font-medium text-slate-800 flex-1 min-w-0 truncate">{sk.name}</span>
-                      <div className="flex gap-1">
-                        {SKILL_LEVELS.map(lv => (
-                          <button key={lv.value} onClick={()=>updSkillLevel(sk.name,lv.value)}
-                            className={`px-2 py-0.5 text-xs rounded border transition ${sk.level===lv.value ? 'text-white border-transparent bg-teal-600' : 'border-slate-200 text-slate-500 hover:border-teal-400'}`}>
-                            {lv.label.slice(0,3)}.
-                          </button>
-                        ))}
-                      </div>
-                      <button onClick={()=>delSkill(sk.name)} className="text-red-400 hover:text-red-600"><X size={13}/></button>
+              <input value={skillSearch} onChange={e=>setSkillSearch(e.target.value)} className={fi()} placeholder="Rechercher dans le référentiel..." />
+              {/* Master skills picker grouped by category */}
+              {['technical','soft','language','certification','other'].map(cat => {
+                const f = skillSearch.toLowerCase();
+                const list = masterSkills.filter(m => m.category === cat && (!f || m.name.toLowerCase().includes(f)));
+                if (!list.length) return null;
+                return (
+                  <div key={cat}>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{CAT_LABELS[cat] ?? cat}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {list.map(ms => (
+                        <button key={ms.id} type="button" onClick={()=>toggleSkill(ms)}
+                          title={ms.description ?? ms.name}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedSkillNames.has(ms.name) ? 'bg-teal-50 border-teal-500 text-teal-800' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-teal-400 hover:text-teal-700'}`}>
+                          {ms.name}
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                );
+              })}
+              {/* Selected skills with level */}
+              {skills.length > 0 && (
+                <div className="pt-3 border-t border-slate-100">
+                  <p className="text-xs font-semibold text-slate-500 mb-2">Niveaux des compétences sélectionnées</p>
+                  <div className="space-y-2">
+                    {skills.map(sk => (
+                      <div key={sk.name} className="flex items-center gap-3 bg-slate-50 rounded-lg px-3 py-2">
+                        <span className="text-sm font-medium text-slate-800 flex-1 min-w-0 truncate">{sk.name}</span>
+                        <div className="flex gap-1">
+                          {SKILL_LEVELS.map(lv => (
+                            <button key={lv.value} type="button" onClick={()=>updSkillLevel(sk.name,lv.value)}
+                              className={`px-2 py-0.5 text-xs rounded border transition ${sk.level===lv.value ? 'text-white border-transparent bg-teal-600' : 'border-slate-200 text-slate-500 hover:border-teal-400'}`}>
+                              {lv.label.slice(0,3)}.
+                            </button>
+                          ))}
+                        </div>
+                        <button type="button" onClick={()=>delSkill(sk.name)} className="text-red-400 hover:text-red-600"><X size={13}/></button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <p className="text-sm text-slate-400 text-center py-6 border-2 border-dashed border-slate-200 rounded-xl">Aucune compétence ajoutée</p>
               )}
+              {/* Custom skill not in referential */}
+              <div className="flex gap-2 pt-3 border-t border-slate-100">
+                <input value={newSkillName} onChange={e=>setNewSkillName(e.target.value)} className={fi()+' flex-1'}
+                  placeholder="Compétence personnalisée (hors référentiel)..." onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addSkill();}}} />
+                <button type="button" onClick={addSkill} className="px-3 py-2.5 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition"><Plus size={16}/></button>
+              </div>
             </div>
           )}
 

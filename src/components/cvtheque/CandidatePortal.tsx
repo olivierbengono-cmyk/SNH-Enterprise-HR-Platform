@@ -44,10 +44,11 @@ interface Education {
   grade: string; education_level?: string; country?: string; description?: string;
 }
 interface Skill {
-  id?: string; name: string;
+  id?: string; skill_id?: string | null; name: string;
   category: 'technical' | 'soft' | 'language' | 'certification' | 'other';
   level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
 }
+interface MasterSkill { id: string; name: string; category: string; description?: string | null; }
 interface Language { id?: string; name: string; level: string; }
 interface CandidateDoc {
   id: string; candidate_id: string; type: string;
@@ -209,13 +210,16 @@ export default function CandidatePortal() {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [masterSkills, setMasterSkills] = useState<MasterSkill[]>([]);
   // job to apply to after auth
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load public jobs immediately — no auth required
+    // Load public jobs and master skills list immediately — no auth required
     supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false })
       .then(({ data }) => { if (data) setOpenJobs(data as JobOpening[]); });
+    supabase.from('skills').select('id, name, category, description').order('category').order('name')
+      .then(({ data }) => { if (data) setMasterSkills(data as MasterSkill[]); });
     // Check session silently — if logged in, transition to portal view without spinner
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) loadPortal(session.user.id, false);
@@ -1013,7 +1017,7 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
       await supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId);
       const valid = skills.filter(s => s.name);
       if (valid.length) await supabase.from('candidate_candidate_skills').insert(
-        valid.map(({ id: _id, ...s }) => ({ ...s, candidate_id: candidateId }))
+        valid.map(({ id: _id, ...s }) => ({ ...s, candidate_id: candidateId, skill_id: s.skill_id ?? null }))
       );
     }
     setSaving(false); setSaved(true);
@@ -1039,7 +1043,7 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
         {tab === 'infos' && <InfosTab profile={profile} setProfile={setProfile} />}
         {tab === 'formations' && <FormationsTab items={educations} setItems={setEducations} />}
         {tab === 'experiences' && <ExperiencesTab items={experiences} setItems={setExperiences} />}
-        {tab === 'competences' && <CompetencesTab items={skills} setItems={setSkills} />}
+        {tab === 'competences' && <CompetencesTab items={skills} setItems={setSkills} masterSkills={masterSkills} />}
         {tab === 'langues' && <LanguesTab items={languages} setItems={setLanguages} />}
 
         <div className="mt-5 pt-5 border-t border-gray-100 flex justify-end">
@@ -1206,34 +1210,34 @@ function ExperiencesTab({ items, setItems }: { items: Experience[]; setItems: (v
   );
 }
 
-const COMP_CATALOGUE: Record<string, string[]> = {
-  'Hydrocarbures / Pétrole': ['Géologie pétrolière','Ingénierie de réservoir','Forage pétrolier','Sismique & Exploration','Production & Exploitation','Pétrophysique','Modélisation de réservoir'],
-  'Ingénierie': ['AutoCAD','MATLAB','Génie civil','Mécanique des fluides','Hydraulique','Thermodynamique'],
-  'Informatique / SI': ['Python','SQL','Java','JavaScript','Réseaux informatiques','ERP (SAP / Oracle)','Power BI'],
-  'Finance / Comptabilité': ['Comptabilité générale','Contrôle de gestion','SYSCOHADA','Analyse financière','Fiscalité camerounaise'],
-  'Gestion / Management': ['Gestion de projet','Management d\'équipe','Agile / Scrum','Gestion des risques','Leadership'],
-  'HSE / Sécurité': ['ISO 14001','ISO 45001','Audit HSE','Analyse des risques (HAZOP)'],
-  'Droit / Juridique': ['Droit des affaires','Droit pétrolier','Contrats OHADA','Droit du travail'],
-  'Soft Skills': ['Communication','Travail en équipe','Rigueur','Autonomie','Adaptabilité','Esprit d\'analyse'],
+const CAT_LABEL: Record<string, string> = {
+  technical: 'Technique', soft: 'Soft Skills', language: 'Langues', certification: 'Certifications', other: 'Autres',
 };
 
-function CompetencesTab({ items, setItems }: { items: Skill[]; setItems: (v: Skill[]) => void }) {
+function CompetencesTab({ items, setItems, masterSkills }: {
+  items: Skill[]; setItems: (v: Skill[]) => void; masterSkills: MasterSkill[];
+}) {
   const [search, setSearch] = useState('');
   const [newName, setNewName] = useState('');
 
   const selectedNames = new Set(items.map(s => s.name));
 
-  const toggle = (name: string) => {
-    if (selectedNames.has(name)) {
-      setItems(items.filter(s => s.name !== name));
+  const toggle = (ms: MasterSkill) => {
+    if (selectedNames.has(ms.name)) {
+      setItems(items.filter(s => s.name !== ms.name));
     } else {
-      setItems([...items, { name, category: 'technical', level: 'intermediate' }]);
+      setItems([...items, {
+        name: ms.name,
+        skill_id: ms.id,
+        category: (ms.category as Skill['category']) || 'technical',
+        level: 'intermediate',
+      }]);
     }
   };
 
   const addCustom = () => {
     if (!newName.trim() || selectedNames.has(newName.trim())) return;
-    setItems([...items, { name: newName.trim(), category: 'other', level: 'intermediate' }]);
+    setItems([...items, { name: newName.trim(), skill_id: null, category: 'other', level: 'intermediate' }]);
     setNewName('');
   };
 
@@ -1242,25 +1246,37 @@ function CompetencesTab({ items, setItems }: { items: Skill[]; setItems: (v: Ski
   };
 
   const f = search.toLowerCase();
+
+  // Group master skills by category
+  const grouped = masterSkills.reduce<Record<string, MasterSkill[]>>((acc, ms) => {
+    const cat = ms.category || 'other';
+    if (!acc[cat]) acc[cat] = [];
+    if (!f || ms.name.toLowerCase().includes(f)) acc[cat].push(ms);
+    return acc;
+  }, {});
+
+  const catOrder = ['technical', 'soft', 'language', 'certification', 'other'];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">Compétences</h3>
         <span className="text-xs text-gray-500">{items.length} sélectionnée{items.length > 1 ? 's' : ''}</span>
       </div>
-      <input value={search} onChange={e => setSearch(e.target.value)} className={inp()} placeholder="🔍 Rechercher une compétence..." />
+      <input value={search} onChange={e => setSearch(e.target.value)} className={inp()} placeholder="Rechercher une compétence..." />
 
-      {Object.entries(COMP_CATALOGUE).map(([cat, tags]) => {
-        const filtered = !f ? tags : tags.filter(t => t.toLowerCase().includes(f));
-        if (!filtered.length) return null;
+      {catOrder.map(cat => {
+        const list = grouped[cat];
+        if (!list || list.length === 0) return null;
         return (
           <div key={cat}>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{cat}</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{CAT_LABEL[cat] ?? cat}</p>
             <div className="flex flex-wrap gap-2">
-              {filtered.map(tag => (
-                <button key={tag} onClick={() => toggle(tag)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedNames.has(tag) ? 'bg-green-50 border-green-500 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-700'}`}>
-                  {tag}
+              {list.map(ms => (
+                <button key={ms.id} type="button" onClick={() => toggle(ms)}
+                  title={ms.description ?? ms.name}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedNames.has(ms.name) ? 'bg-green-50 border-green-500 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-700'}`}>
+                  {ms.name}
                 </button>
               ))}
             </div>
@@ -1278,14 +1294,17 @@ function CompetencesTab({ items, setItems }: { items: Skill[]; setItems: (v: Ski
                 <span className="text-xs font-medium text-gray-700 flex-1 min-w-0 truncate">{sk.name}</span>
                 <div className="flex gap-1">
                   {SKILL_LEVELS.map(lv => (
-                    <button key={lv.value} onClick={() => updateLevel(sk.name, lv.value as Skill['level'])}
+                    <button key={lv.value} type="button" onClick={() => updateLevel(sk.name, lv.value as Skill['level'])}
                       className={`px-2 py-1 text-xs rounded border transition ${sk.level === lv.value ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:border-green-400'}`}
                         style={sk.level === lv.value ? { background: SNH_GREEN } : {}}>
                       {lv.label.slice(0, 3)}.
                     </button>
                   ))}
                 </div>
-                <button onClick={() => toggle(sk.name)} className="text-red-400 hover:text-red-600"><X size={13} /></button>
+                <button type="button" onClick={() => {
+                  const ms = masterSkills.find(m => m.name === sk.name);
+                  if (ms) toggle(ms); else setItems(items.filter(s => s.name !== sk.name));
+                }} className="text-red-400 hover:text-red-600"><X size={13} /></button>
               </div>
             ))}
           </div>
@@ -1293,8 +1312,8 @@ function CompetencesTab({ items, setItems }: { items: Skill[]; setItems: (v: Ski
       )}
 
       <div className="flex gap-2 pt-3 border-t border-gray-100">
-        <input value={newName} onChange={e => setNewName(e.target.value)} className={inp() + ' flex-1'} placeholder="Ajouter une compétence personnalisée..." onKeyDown={e => e.key === 'Enter' && addCustom()} />
-        <button onClick={addCustom} className="px-4 py-2 text-sm rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
+        <input value={newName} onChange={e => setNewName(e.target.value)} className={inp() + ' flex-1'} placeholder="Ajouter une compétence personnalisée (non listée)..." onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())} />
+        <button type="button" onClick={addCustom} className="px-4 py-2 text-sm rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
           <Plus size={14} />
         </button>
       </div>

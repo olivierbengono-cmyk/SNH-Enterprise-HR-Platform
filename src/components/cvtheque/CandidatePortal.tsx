@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { User, Briefcase, GraduationCap, FileText, CheckCircle, Plus, Trash2, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, ArrowRight, X, LogIn, UserPlus, LogOut, Sparkles, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Bell, LayoutDashboard, Send, Search, Plane as PaperPlane, ChevronRight, Home, Folder, BarChart3, Settings } from 'lucide-react';
+import { User, Briefcase, GraduationCap, FileText, CheckCircle, XCircle, Plus, Trash2, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, ArrowRight, X, LogIn, UserPlus, LogOut, Sparkles, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Bell, LayoutDashboard, Send, Search, Plane as PaperPlane, ChevronRight, Home, Folder, BarChart3, Settings } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface CandidateProfile {
@@ -222,6 +222,15 @@ export default function CandidatePortal() {
     });
   }, []);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const dest = (e as CustomEvent<string>).detail as Section;
+      if (dest) setSection(dest);
+    };
+    document.addEventListener('portal-nav', handler);
+    return () => document.removeEventListener('portal-nav', handler);
+  }, []);
+
   const loadPortal = async (userId: string, showSpinner = true) => {
     if (showSpinner) setLoading(true);
     const { data: cand } = await supabase.from('candidates').select('*').eq('user_id', userId).maybeSingle();
@@ -422,7 +431,7 @@ export default function CandidatePortal() {
               onApplied={(app) => setApplications(prev => [app, ...prev])} applications={applications} />
           )}
           {section === 'spontaneous' && profile && candidateId && (
-            <SpontaneousSection candidateId={candidateId} profile={profile}
+            <SpontaneousSection candidateId={candidateId} profile={profile} documents={documents}
               onApplied={(app) => { setApplications(prev => [app, ...prev]); setSection('applications'); }} />
           )}
           {section === 'applications' && (
@@ -1570,30 +1579,78 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications }
 }
 
 // ── Spontaneous Application ───────────────────────────────────────────────────
-function SpontaneousSection({ candidateId, profile, onApplied }: {
-  candidateId: string; profile: CandidateProfile; onApplied: (app: Application) => void;
+const REQUIRED_DOCS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
+  emploi: [
+    { value: 'cv',              label: 'CV / Curriculum Vitae' },
+    { value: 'cover_letter',    label: 'Lettre de motivation' },
+    { value: 'diploma',         label: 'Diplôme / Attestation de diplôme' },
+    { value: 'cni_passport',    label: 'CNI / Passeport' },
+    { value: 'employment_cert', label: "Attestation d'emploi" },
+    { value: 'work_cert',       label: 'Certificat de travail' },
+  ],
+  stage_academique: [
+    { value: 'cv',           label: 'CV / Curriculum Vitae' },
+    { value: 'cover_letter', label: 'Lettre de motivation' },
+    { value: 'diploma',      label: 'Diplôme / Attestation de scolarité' },
+    { value: 'cni_passport', label: 'CNI / Passeport' },
+  ],
+  stage_professionnel: [
+    { value: 'cv',           label: 'CV / Curriculum Vitae' },
+    { value: 'cover_letter', label: 'Lettre de motivation' },
+    { value: 'cni_passport', label: 'CNI / Passeport' },
+  ],
+};
+
+function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
+  candidateId: string;
+  profile: CandidateProfile;
+  documents: CandidateDoc[];
+  onApplied: (app: Application) => void;
 }) {
   const [type, setType] = useState<'emploi' | 'stage_academique' | 'stage_professionnel'>('emploi');
-  const [direction, setDirection] = useState('');
   const [poste, setPoste] = useState('');
   const [coverLetter, setCoverLetter] = useState('');
   const [stageTopic, setStageTopic] = useState('');
   const [stageDuration, setStageDuration] = useState('3 mois');
   const [stageStart, setStageStart] = useState('');
+  const [stageEnd, setStageEnd] = useState('');
   const [stageSchool, setStageSchool] = useState('');
+  const [stageSupervisor, setStageSupervisor] = useState('');
+  const [stageEduLevel, setStageEduLevel] = useState('');
   const [availability, setAvailability] = useState('Immédiatement');
   const [salaryExpectation, setSalaryExpectation] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
   const isStage = type !== 'emploi';
+  const uploadedTypes = new Set(documents.map(d => d.type));
+  const requiredDocs = REQUIRED_DOCS_BY_TYPE[type] ?? [];
+  const missingDocs = requiredDocs.filter(d => !uploadedTypes.has(d.value));
+  const hasMissingDocs = missingDocs.length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!direction || !poste || !coverLetter.trim()) return;
+    if (hasMissingDocs || !poste || !coverLetter.trim()) return;
     setSubmitting(true);
-    const desiredPos = `[${type === 'emploi' ? 'Emploi' : type === 'stage_academique' ? 'Stage académique' : 'Stage pro'}] ${poste} — ${direction}`;
-    const notes = isStage ? `Thème : ${stageTopic}\nDurée : ${stageDuration}\nDébut souhaité : ${stageStart}\nÉcole : ${stageSchool}` : '';
+    const typeLabel = type === 'emploi' ? 'Emploi' : type === 'stage_academique' ? 'Stage académique' : 'Stage professionnel';
+    const desiredPos = `[${typeLabel}] ${poste}`;
+    let notes = '';
+    if (isStage) {
+      notes = [
+        stageTopic && `Thème : ${stageTopic}`,
+        stageDuration && `Durée : ${stageDuration}`,
+        stageStart && `Début souhaité : ${stageStart}`,
+        stageEnd && `Fin souhaitée : ${stageEnd}`,
+        stageSchool && `École/Université : ${stageSchool}`,
+        stageSupervisor && `Encadreur académique : ${stageSupervisor}`,
+        stageEduLevel && `Niveau d'études actuel : ${stageEduLevel}`,
+      ].filter(Boolean).join('\n');
+    } else {
+      notes = [
+        availability && `Disponibilité : ${availability}`,
+        salaryExpectation && `Prétention salariale : ${salaryExpectation} FCFA/mois`,
+      ].filter(Boolean).join('\n');
+    }
     const { data } = await supabase.from('candidate_applications').insert({
       candidate_id: candidateId,
       job_opening_id: null,
@@ -1623,7 +1680,7 @@ function SpontaneousSection({ candidateId, profile, onApplied }: {
         <Send size={16} className="flex-shrink-0 mt-0.5" style={{ color: SNH_GREEN }} />
         <div>
           <p className="text-sm font-semibold" style={{ color: SNH_GREEN }}>Candidature spontanée à la SNH</p>
-          <p className="text-xs mt-0.5" style={{ color: `${SNH_GREEN}CC` }}>Soumettez votre dossier directement même en l'absence d'une offre publiée. Précisez le type de candidature et la direction que vous visez.</p>
+          <p className="text-xs mt-0.5" style={{ color: `${SNH_GREEN}CC` }}>Soumettez votre dossier directement même en l'absence d'une offre publiée. Précisez le type de candidature et le poste que vous visez.</p>
         </div>
       </div>
 
@@ -1633,14 +1690,14 @@ function SpontaneousSection({ candidateId, profile, onApplied }: {
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Type de candidature *</h3>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { value: 'emploi', icon: '💼', label: 'Emploi', sub: 'CDI ou CDD à la SNH' },
-              { value: 'stage_academique', icon: '🎓', label: 'Stage académique', sub: 'Fin d\'études / mémoire' },
-              { value: 'stage_professionnel', icon: '🔄', label: 'Stage professionnel', sub: 'Perfectionnement / insertion pro' },
+              { value: 'emploi', icon: Briefcase, label: 'Emploi', sub: 'CDI ou CDD à la SNH' },
+              { value: 'stage_academique', icon: GraduationCap, label: 'Stage académique', sub: "Fin d'études / mémoire" },
+              { value: 'stage_professionnel', icon: BookOpen, label: 'Stage professionnel', sub: 'Perfectionnement / insertion pro' },
             ].map(t => (
-              <button key={t.value} type="button" onClick={() => setType(t.value as any)}
+              <button key={t.value} type="button" onClick={() => setType(t.value as typeof type)}
                 className={`p-4 rounded-xl border-2 text-center transition cursor-pointer ${type === t.value ? 'bg-green-50' : 'border-gray-200 bg-white hover:border-green-400'}`}
                 style={type === t.value ? { borderColor: SNH_GREEN } : {}}>
-                <div className="text-2xl mb-1">{t.icon}</div>
+                <t.icon size={22} className="mx-auto mb-1.5" style={{ color: type === t.value ? SNH_GREEN : '#9ca3af' }} />
                 <p className="text-xs font-semibold text-gray-900">{t.label}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{t.sub}</p>
               </button>
@@ -1648,21 +1705,47 @@ function SpontaneousSection({ candidateId, profile, onApplied }: {
           </div>
         </div>
 
-        {/* Direction & poste */}
+        {/* Required documents checklist */}
+        <div className={`rounded-xl border p-4 ${hasMissingDocs ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+          <div className="flex items-start gap-3">
+            {hasMissingDocs
+              ? <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
+              : <CheckCircle size={16} className="text-green-600 flex-shrink-0 mt-0.5" />}
+            <div className="flex-1">
+              <p className={`text-sm font-semibold ${hasMissingDocs ? 'text-red-800' : 'text-green-800'}`}>
+                Documents obligatoires pour une candidature {type === 'emploi' ? "d'emploi" : type === 'stage_academique' ? 'de stage académique' : 'de stage professionnel'}
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                {requiredDocs.map(doc => {
+                  const present = uploadedTypes.has(doc.value);
+                  return (
+                    <div key={doc.value} className="flex items-center gap-1.5">
+                      {present
+                        ? <CheckCircle size={12} className="text-green-600 flex-shrink-0" />
+                        : <XCircle size={12} className="text-red-500 flex-shrink-0" />}
+                      <span className={`text-xs ${present ? 'text-green-700' : 'text-red-700 font-medium'}`}>{doc.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {hasMissingDocs && (
+                <p className="text-xs text-red-700 mt-2 font-medium">
+                  Il manque {missingDocs.length} document{missingDocs.length > 1 ? 's' : ''} requis. Veuillez les ajouter dans{' '}
+                  <button type="button" className="underline font-semibold" onClick={() => {
+                    document.dispatchEvent(new CustomEvent('portal-nav', { detail: 'documents' }));
+                  }}>Mes documents</button>{' '}avant de soumettre.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Poste */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Direction visée à la SNH *</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Lbl>Direction / Service *</Lbl>
-              <select value={direction} onChange={e => setDirection(e.target.value)} className={inp(!direction && submitting)} required>
-                <option value="">— Choisir une direction —</option>
-                {SNH_DIRECTIONS.map(d => <option key={d}>{d}</option>)}
-              </select>
-            </div>
-            <div>
-              <Lbl>Poste / Fonction visé(e) *</Lbl>
-              <input value={poste} onChange={e => setPoste(e.target.value)} className={inp()} placeholder="Ex: Ingénieur Réservoir, Comptable..." required />
-            </div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Poste visé *</h3>
+          <div>
+            <Lbl>Intitulé du poste / fonction *</Lbl>
+            <input value={poste} onChange={e => setPoste(e.target.value)} className={inp()} placeholder="Ex: Ingénieur Réservoir, Comptable, Juriste..." required />
           </div>
         </div>
 
@@ -1673,28 +1756,49 @@ function SpontaneousSection({ candidateId, profile, onApplied }: {
               <GraduationCap size={15} /> Informations sur le stage
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><Lbl>Thème / Sujet du stage *</Lbl><input value={stageTopic} onChange={e => setStageTopic(e.target.value)} className={inp()} placeholder="Ex: Optimisation de la récupération assistée du pétrole..." /></div>
+              <div className="col-span-2">
+                <Lbl>Thème / Sujet du stage</Lbl>
+                <input value={stageTopic} onChange={e => setStageTopic(e.target.value)} className={inp()} placeholder="Ex: Optimisation de la récupération assistée du pétrole..." />
+              </div>
+              {type === 'stage_academique' && (
+                <div className="col-span-2">
+                  <Lbl>Niveau d'études actuel</Lbl>
+                  <select value={stageEduLevel} onChange={e => setStageEduLevel(e.target.value)} className={inp()}>
+                    <option value="">— Sélectionner —</option>
+                    {EDU_LEVELS.map(l => <option key={l}>{l}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <Lbl>Durée souhaitée</Lbl>
                 <select value={stageDuration} onChange={e => setStageDuration(e.target.value)} className={inp()}>
                   {['1 mois','2 mois','3 mois','4 mois','6 mois','À définir avec la SNH'].map(d => <option key={d}>{d}</option>)}
                 </select>
               </div>
-              <div><Lbl>Date de début souhaitée</Lbl><input type="date" value={stageStart} onChange={e => setStageStart(e.target.value)} className={inp()} /></div>
-              <div className="col-span-2"><Lbl>École / Université actuelle</Lbl><input value={stageSchool} onChange={e => setStageSchool(e.target.value)} className={inp()} placeholder="ENSP, Université de Yaoundé I, IUT..." /></div>
+              <div>
+                <Lbl>Date de début souhaitée</Lbl>
+                <input type="date" value={stageStart} onChange={e => setStageStart(e.target.value)} className={inp()} />
+              </div>
+              <div>
+                <Lbl>Date de fin souhaitée</Lbl>
+                <input type="date" value={stageEnd} onChange={e => setStageEnd(e.target.value)} className={inp()} />
+              </div>
+              <div>
+                <Lbl>Encadreur académique</Lbl>
+                <input value={stageSupervisor} onChange={e => setStageSupervisor(e.target.value)} className={inp()} placeholder="Nom du professeur / maître de stage" />
+              </div>
+              <div className="col-span-2">
+                <Lbl>École / Université actuelle</Lbl>
+                <input value={stageSchool} onChange={e => setStageSchool(e.target.value)} className={inp()} placeholder="ENSP, Université de Yaoundé I, IUT..." />
+              </div>
             </div>
           </div>
         )}
 
-        {/* Cover letter */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Votre dossier de candidature</h3>
-          <div className="space-y-3">
-            <div>
-              <Lbl>Lettre de motivation *</Lbl>
-              <textarea value={coverLetter} onChange={e => setCoverLetter(e.target.value)} rows={8} className={inp()} required
-                placeholder={`Madame, Monsieur le Directeur des Ressources Humaines,\n\nJe me permets de vous adresser ma candidature spontanée auprès de la Société Nationale des Hydrocarbures du Cameroun (SNH) pour un poste de [poste visé] au sein de la [Direction visée].\n\n[Développez vos motivations et votre valeur ajoutée pour la SNH]\n\nDans l'espoir d'une réponse favorable, je reste disponible pour tout entretien à votre convenance.\n\nVeuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${profile.first_name} ${profile.last_name}`} />
-            </div>
+        {/* Emploi-specific fields */}
+        {!isStage && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Conditions</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Lbl>Disponibilité</Lbl>
@@ -1708,14 +1812,24 @@ function SpontaneousSection({ candidateId, profile, onApplied }: {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Cover letter */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Lettre de motivation *</h3>
+          <textarea value={coverLetter} onChange={e => setCoverLetter(e.target.value)} rows={9} className={inp()} required
+            placeholder={`Madame, Monsieur le Directeur des Ressources Humaines,\n\nJe me permets de vous adresser ma candidature spontanée auprès de la Société Nationale des Hydrocarbures du Cameroun (SNH) pour un poste de [poste visé].\n\n[Développez vos motivations et votre valeur ajoutée pour la SNH]\n\nDans l'espoir d'une réponse favorable, je reste disponible pour tout entretien à votre convenance.\n\nVeuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${profile.first_name} ${profile.last_name}`} />
 
           <div className="flex gap-3 mt-4">
-            <button type="submit" disabled={submitting || !coverLetter.trim() || !direction || !poste}
+            <button type="submit" disabled={submitting || hasMissingDocs || !coverLetter.trim() || !poste}
               className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60 transition"
-              style={{ background: SNH_BLUE }}>
+              style={{ background: hasMissingDocs ? '#9ca3af' : SNH_BLUE }}>
               {submitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={14} />}
               Envoyer ma candidature à la SNH
             </button>
+            {hasMissingDocs && (
+              <p className="text-xs text-red-600 self-center">Complétez vos documents avant de soumettre.</p>
+            )}
           </div>
         </div>
       </form>

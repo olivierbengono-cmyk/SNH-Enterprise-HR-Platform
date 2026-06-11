@@ -311,7 +311,7 @@ export default function CandidatePortal() {
         <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
         {/* Logo */}
         <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ background: SNH_GREEN }}>
+          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-100 shadow-sm">
             <img src="/logoSNH.png" alt="SNH" className="h-7 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
           </div>
           <div>
@@ -458,8 +458,8 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
         {/* Navbar */}
         <div className="relative max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden">
-              <img src="/logoSNH.png" alt="SNH" className="h-8 w-auto" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden p-1">
+              <img src="/logoSNH.png" alt="SNH" className="h-full w-auto object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
             </div>
             <div>
               <p className="font-extrabold text-base leading-tight tracking-wide">SNH Cameroun</p>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, ChevronRight, ChevronLeft, Search } from 'lucide-react';
+import { X, AlertCircle, ChevronRight, ChevronLeft, Search, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface MasterSkill { id: string; name: string; category: string; }
@@ -74,6 +74,14 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
 
   // ── Tab 4: Langues & Conditions ───────────────────────────────────────────
   const [salaryRange, setSalaryRange] = useState('');
+  const [requiredLanguages, setRequiredLanguages] = useState<{ language: string; level: string }[]>([]);
+  const [benefits, setBenefits] = useState('');
+  const [otherConditions, setOtherConditions] = useState('');
+
+  const addLanguage = () => setRequiredLanguages(p => [...p, { language: '', level: 'Courant' }]);
+  const updLanguage = (i: number, k: 'language' | 'level', v: string) =>
+    setRequiredLanguages(p => { const a = [...p]; a[i] = { ...a[i], [k]: v }; return a; });
+  const delLanguage = (i: number) => setRequiredLanguages(p => p.filter((_, j) => j !== i));
 
   useEffect(() => {
     supabase.from('departments').select('id, name').order('name').then(({ data }) => {
@@ -131,6 +139,9 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
         openings_count: openingsCount,
         is_internal: isInternal,
         work_mode: workMode || null,
+        required_languages: requiredLanguages.filter(l => l.language.trim()).map(l => `${l.language.trim()} (${l.level})`),
+        benefits: benefits.trim() || null,
+        other_conditions: otherConditions.trim() || null,
       });
       if (insertError) throw insertError;
       onSuccess();
@@ -205,12 +216,6 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
                     <option value="open">Publiée</option>
                     <option value="draft">Brouillon</option>
                     <option value="closed">Fermée</option>
-                  </select>
-                </div>
-                <div>
-                  <Lbl>Télétravail</Lbl>
-                  <select value={workMode} onChange={e => setWorkMode(e.target.value)} className={inp()}>
-                    {WORK_MODES.map(m => <option key={m}>{m}</option>)}
                   </select>
                 </div>
                 <div>
@@ -381,34 +386,127 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
 
           {/* ── Tab 4: Langues & Conditions ─────────────────────────────── */}
           {tab === 'conditions' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
+
+              {/* Langues requises */}
               <div>
-                <Lbl>Fourchette salariale</Lbl>
-                <input value={salaryRange} onChange={e => setSalaryRange(e.target.value)} className={inp()}
-                  placeholder="Ex: 400 000 – 700 000 FCFA/mois" />
-                <p className="text-xs text-slate-400 mt-1">Laissez vide si confidentiel.</p>
+                <div className="flex items-center justify-between mb-3">
+                  <Lbl>Langues requises</Lbl>
+                  <button type="button" onClick={addLanguage}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-snh-green text-white font-semibold hover:bg-snh-green-dark transition">
+                    <Plus size={12} /> Ajouter une langue
+                  </button>
+                </div>
+                {requiredLanguages.length === 0 ? (
+                  <button type="button" onClick={addLanguage}
+                    className="w-full border-2 border-dashed border-slate-200 rounded-xl py-5 text-sm text-slate-400 hover:border-snh-green hover:text-snh-green flex items-center justify-center gap-2 transition">
+                    <Plus size={15} /> Cliquez pour ajouter une exigence linguistique
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    {requiredLanguages.map((lang, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className="flex-1">
+                          <label className="block text-xs text-slate-500 mb-1">Langue</label>
+                          <input value={lang.language} onChange={e => updLanguage(i, 'language', e.target.value)}
+                            className={inp()} placeholder="Français, Anglais, Espagnol..." />
+                        </div>
+                        <div className="w-44 flex-shrink-0">
+                          <label className="block text-xs text-slate-500 mb-1">Niveau requis</label>
+                          <select value={lang.level} onChange={e => updLanguage(i, 'level', e.target.value)} className={inp()}>
+                            {['Notions', 'Scolaire', 'Intermédiaire', 'Courant', 'Professionnel', 'Bilingue', 'Langue maternelle'].map(l => (
+                              <option key={l}>{l}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <button type="button" onClick={() => delLanguage(i)}
+                          className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition flex-shrink-0">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Récapitulatif</p>
-                <dl className="space-y-2 text-sm">
-                  {[
-                    ['Titre', title || '—'],
-                    ['Référence', reference || '—'],
-                    ['Contrat', contractType],
-                    ['Localisation', location || '—'],
-                    ['Statut', status === 'open' ? 'Publiée' : status === 'draft' ? 'Brouillon' : 'Fermée'],
-                    ['Postes', String(openingsCount)],
-                    ['Niveau requis', educationLevel || 'Indifférent'],
-                    ['Expérience min.', `${minExperienceYears} an${minExperienceYears > 1 ? 's' : ''}`],
-                    ['Compétences obligatoires', requiredSkills.length ? requiredSkills.join(', ') : '—'],
-                    ['Compétences bonus', niceToHaveSkills.length ? niceToHaveSkills.join(', ') : '—'],
-                  ].map(([k, v]) => (
-                    <div key={k} className="flex gap-2">
-                      <dt className="text-slate-500 w-44 flex-shrink-0">{k}</dt>
-                      <dd className="text-slate-800 font-medium">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
+
+              {/* Conditions de rémunération */}
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Rémunération & Avantages</p>
+                <div className="space-y-4">
+                  <div>
+                    <Lbl>Fourchette salariale</Lbl>
+                    <input value={salaryRange} onChange={e => setSalaryRange(e.target.value)} className={inp()}
+                      placeholder="Ex: 400 000 – 700 000 FCFA/mois" />
+                    <p className="text-xs text-slate-400 mt-1">Laissez vide si confidentiel.</p>
+                  </div>
+                  <div>
+                    <Lbl>Avantages et bénéfices</Lbl>
+                    <textarea value={benefits} onChange={e => setBenefits(e.target.value)} rows={3}
+                      className={inp() + ' resize-none'}
+                      placeholder="Assurance santé, voiture de fonction, tickets restaurant, prime de performance, logement de fonction..." />
+                  </div>
+                </div>
+              </div>
+
+              {/* Autres conditions */}
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Autres conditions</p>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Lbl>Mode de travail</Lbl>
+                    <select value={workMode} onChange={e => setWorkMode(e.target.value)} className={inp()}>
+                      {WORK_MODES.map(m => <option key={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <Lbl>Disponibilité requise</Lbl>
+                    <select className={inp()} defaultValue="">
+                      <option value="">— Non précisée —</option>
+                      <option>Immédiate</option>
+                      <option>Sous 1 mois</option>
+                      <option>Sous 3 mois</option>
+                      <option>Flexible</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <Lbl>Autres conditions particulières</Lbl>
+                  <textarea value={otherConditions} onChange={e => setOtherConditions(e.target.value)} rows={3}
+                    className={inp() + ' resize-none'}
+                    placeholder="Mobilité géographique, horaires décalés, astreintes, port d'EPI obligatoire, permis B requis..." />
+                </div>
+              </div>
+
+              {/* Récapitulatif */}
+              <div className="border-t border-slate-100 pt-4">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Récapitulatif de l'offre</p>
+                  <dl className="space-y-2 text-sm">
+                    {[
+                      ['Titre', title || '—'],
+                      ['Référence', reference || '—'],
+                      ['Contrat', contractType],
+                      ['Localisation', location || '—'],
+                      ['Mode de travail', workMode],
+                      ['Statut', status === 'open' ? 'Publiée' : status === 'draft' ? 'Brouillon' : 'Fermée'],
+                      ['Postes', String(openingsCount)],
+                      ['Niveau requis', educationLevel || 'Indifférent'],
+                      ['Expérience min.', `${minExperienceYears} an${minExperienceYears > 1 ? 's' : ''}`],
+                      ['Langues', requiredLanguages.filter(l => l.language.trim()).length
+                        ? requiredLanguages.filter(l => l.language.trim()).map(l => `${l.language} (${l.level})`).join(', ')
+                        : '—'],
+                      ['Compétences requises', requiredSkills.length ? requiredSkills.join(', ') : '—'],
+                      ['Compétences bonus', niceToHaveSkills.length ? niceToHaveSkills.join(', ') : '—'],
+                      ['Salaire', salaryRange || 'Confidentiel'],
+                      ['Avantages', benefits || '—'],
+                    ].map(([k, v]) => (
+                      <div key={k} className="flex gap-2">
+                        <dt className="text-slate-500 w-44 flex-shrink-0">{k}</dt>
+                        <dd className="text-slate-800 font-medium break-words">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
               </div>
             </div>
           )}

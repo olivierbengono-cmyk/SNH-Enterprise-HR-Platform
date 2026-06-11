@@ -58,7 +58,11 @@ interface Notification {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const SNH_BLUE = '#0C447C';
+const SNH_GREEN = '#006B3C';
+const SNH_RED   = '#CE1126';
+const SNH_GOLD  = '#FCD116';
+/** @deprecated use SNH_GREEN */
+const SNH_BLUE  = SNH_GREEN;
 const SKILL_LEVELS = [
   { value: 'beginner', label: 'Débutant' },
   { value: 'intermediate', label: 'Intermédiaire' },
@@ -112,7 +116,7 @@ function initials(first: string, last: string) {
 
 // ── UI primitives ──────────────────────────────────────────────────────────────
 function inp(err?: boolean) {
-  return `w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${err ? 'border-red-300 bg-red-50' : 'border-gray-300'}`;
+  return `w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition focus:ring-2 focus:ring-green-600 focus:border-green-600 bg-white ${err ? 'border-red-300 bg-red-50' : 'border-gray-300'}`;
 }
 function Lbl({ children }: { children: React.ReactNode }) {
   return <label className="block text-xs font-semibold text-gray-600 mb-1">{children}</label>;
@@ -147,7 +151,7 @@ function NavItem({ icon: Icon, label, active, badge, onClick }: {
   icon: React.FC<any>; label: string; active?: boolean; badge?: number; onClick: () => void;
 }) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all mb-0.5 ${active ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}>
+    <button onClick={onClick} className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all mb-0.5 ${active ? 'bg-green-50 text-green-800' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}>
       <Icon size={16} className="flex-shrink-0" />
       <span className="flex-1 text-left">{label}</span>
       {badge ? <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{badge}</span> : null}
@@ -271,7 +275,7 @@ export default function CandidatePortal() {
 
   if (loading && view !== 'public') return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-700" />
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2" style={{ borderColor: SNH_GREEN }} />
     </div>
   );
 
@@ -303,10 +307,12 @@ export default function CandidatePortal() {
     <div className="flex min-h-screen bg-gray-50 font-sans">
       {/* ── Sidebar ── */}
       <aside className="w-56 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 sticky top-0 h-screen">
+        {/* Tricolor top accent */}
+        <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
         {/* Logo */}
         <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: SNH_BLUE }}>
-            <img src="/logoSNH.png" alt="SNH" className="h-6 w-auto brightness-0 invert" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ background: SNH_GREEN }}>
+            <img src="/logoSNH.png" alt="SNH" className="h-7 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
           </div>
           <div>
             <p className="text-sm font-bold text-gray-900 leading-tight">SNH Cameroun</p>
@@ -337,7 +343,7 @@ export default function CandidatePortal() {
         {/* Footer user */}
         {profile && (
           <div className="p-3 border-t border-gray-100 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700 flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-xs font-bold text-green-800 flex-shrink-0">
               {initials(profile.first_name, profile.last_name)}
             </div>
             <div className="min-w-0">
@@ -354,12 +360,12 @@ export default function CandidatePortal() {
         <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between sticky top-0 z-10">
           <p className="text-base font-semibold text-gray-900">{SECTION_TITLES[section]}</p>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-full px-3 py-1.5">
-              <BarChart3 size={13} className="text-green-600" />
-              <span className="text-xs font-semibold text-green-700">Profil : {profilePct()}%</span>
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
+              <BarChart3 size={13} className="text-green-700" />
+              <span className="text-xs font-semibold text-green-800">Profil : {profilePct()}%</span>
             </div>
             {profile && (
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">
+              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-xs font-bold text-green-800">
                 {initials(profile.first_name, profile.last_name)}
               </div>
             )}
@@ -443,25 +449,31 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       {/* ── Header / Hero ── */}
-      <header className="text-white relative overflow-hidden" style={{ background: SNH_BLUE }}>
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 70% 50%, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-        <div className="relative max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
+      <header className="text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${SNH_GREEN} 0%, #004d2b 100%)` }}>
+        {/* Subtle dot grid */}
+        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+        {/* Gold accent line at top */}
+        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
+
+        {/* Navbar */}
+        <div className="relative max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-              <img src="/logoSNH.png" alt="SNH" className="h-7 w-auto brightness-0 invert" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden">
+              <img src="/logoSNH.png" alt="SNH" className="h-8 w-auto" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
             </div>
             <div>
-              <p className="font-bold text-base leading-tight">SNH Cameroun</p>
+              <p className="font-extrabold text-base leading-tight tracking-wide">SNH Cameroun</p>
               <p className="text-white/60 text-xs">Société Nationale des Hydrocarbures</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={onLogin}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-medium transition">
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/25 rounded-lg text-sm font-medium transition">
               <LogIn size={15} /> Connexion
             </button>
             <button onClick={onRegister}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-blue-900 rounded-lg text-sm font-bold hover:bg-blue-50 transition">
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition hover:opacity-90"
+              style={{ background: SNH_GOLD, color: '#1a1a1a' }}>
               <UserPlus size={15} /> Créer un compte
             </button>
           </div>
@@ -469,12 +481,13 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
 
         {/* Hero content */}
         <div className="relative max-w-5xl mx-auto px-6 py-12 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs font-semibold text-white/80 mb-5">
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5"
+            style={{ background: `${SNH_GOLD}22`, color: SNH_GOLD, border: `1px solid ${SNH_GOLD}44` }}>
             <Sparkles size={12} /> {openJobs.length} offre{openJobs.length !== 1 ? 's' : ''} disponible{openJobs.length !== 1 ? 's' : ''}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-4">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight mb-4 tracking-tight">
             Rejoignez la SNH<br />
-            <span className="text-white/80 font-normal text-2xl">et participez à l'avenir énergétique du Cameroun</span>
+            <span className="font-light text-2xl" style={{ color: `${SNH_GOLD}CC` }}>et participez à l'avenir énergétique du Cameroun</span>
           </h1>
           <p className="text-white/70 text-base max-w-2xl mx-auto mb-8">
             Découvrez nos opportunités de carrière, de stage et déposez votre candidature en quelques étapes.
@@ -485,7 +498,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
               <input
                 value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Poste, mot-clé, lieu..."
-                className="w-full pl-9 pr-4 py-3 rounded-xl text-gray-900 text-sm outline-none shadow-sm focus:ring-2 focus:ring-white/50"
+                className="w-full pl-9 pr-4 py-3 rounded-xl text-gray-900 text-sm outline-none shadow-sm focus:ring-2 focus:ring-green-400"
               />
             </div>
             <select value={filterContract} onChange={e => setFilterContract(e.target.value)}
@@ -506,13 +519,13 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
             { label: 'Localisation', value: 'Cameroun' },
           ].map(s => (
             <div key={s.label} className="flex items-center gap-2 text-sm text-gray-600">
-              <CheckCircle size={14} className="text-green-500" />
+              <CheckCircle size={14} style={{ color: SNH_GREEN }} />
               <span><strong className="text-gray-900">{s.value}</strong> {s.label}</span>
             </div>
           ))}
           <div className="ml-auto flex items-center gap-2 text-sm text-gray-500">
             <span>Déjà candidat ?</span>
-            <button onClick={onLogin} className="font-semibold hover:underline" style={{ color: SNH_BLUE }}>
+            <button onClick={onLogin} className="font-bold hover:underline" style={{ color: SNH_GREEN }}>
               Accéder à mon espace
             </button>
           </div>
@@ -529,13 +542,13 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
 
         {loadingJobs ? (
           <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: SNH_BLUE }} />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: SNH_GREEN }} />
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-gray-200">
             <Briefcase size={40} className="mx-auto text-gray-300 mb-3" />
             <p className="text-gray-500 font-medium">Aucune offre ne correspond à votre recherche</p>
-            <button onClick={() => { setSearch(''); setFilterContract(''); }} className="mt-3 text-sm font-semibold hover:underline" style={{ color: SNH_BLUE }}>
+            <button onClick={() => { setSearch(''); setFilterContract(''); }} className="mt-3 text-sm font-semibold hover:underline" style={{ color: SNH_GREEN }}>
               Réinitialiser
             </button>
           </div>
@@ -545,8 +558,8 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
               <div key={job.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                 <div className="p-5">
                   <div className="flex items-start gap-4">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${SNH_BLUE}15` }}>
-                      <Briefcase size={18} style={{ color: SNH_BLUE }} />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${SNH_GREEN}18` }}>
+                      <Briefcase size={18} style={{ color: SNH_GREEN }} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -555,7 +568,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
                           <div className="flex items-center gap-3 mt-1 flex-wrap">
                             <span className="text-xs text-gray-500 flex items-center gap-1"><MapPin size={11} />{job.location}</span>
                             <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={11} />Clôture : {fmtDate(job.closing_date)}</span>
-                            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: `${SNH_BLUE}12`, color: SNH_BLUE }}>{job.contract_type}</span>
+                            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: `${SNH_RED}12`, color: SNH_RED }}>{job.contract_type}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -567,7 +580,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
                           </button>
                           <button onClick={() => onApply(job.id)}
                             className="flex items-center gap-1.5 px-4 py-1.5 text-white rounded-lg text-xs font-bold transition hover:opacity-90"
-                            style={{ background: SNH_BLUE }}>
+                            style={{ background: SNH_GREEN }}>
                             <Send size={13} /> Postuler
                           </button>
                         </div>
@@ -623,7 +636,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
                     </div>
                     <button onClick={() => onApply(job.id)}
                       className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl text-sm font-bold transition hover:opacity-90"
-                      style={{ background: SNH_BLUE }}>
+                      style={{ background: SNH_GREEN }}>
                       <Send size={15} /> Postuler à cette offre
                     </button>
                   </div>
@@ -634,25 +647,34 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
         )}
 
         {/* Spontaneous CTA */}
-        <div className="mt-8 rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
-          <div className="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center" style={{ background: `${SNH_BLUE}15` }}>
-            <Send size={22} style={{ color: SNH_BLUE }} />
+        <div className="mt-8 rounded-2xl overflow-hidden border border-green-200 bg-white">
+          <div className="h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
+          <div className="p-8 text-center">
+            <div className="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center" style={{ background: `${SNH_GREEN}18` }}>
+              <Send size={22} style={{ color: SNH_GREEN }} />
+            </div>
+            <h3 className="font-bold text-gray-900 mb-1">Vous ne trouvez pas votre bonheur ?</h3>
+            <p className="text-gray-500 text-sm mb-5">Envoyez une candidature spontanée ou recommandée — nous la garderons dans notre vivier de talents.</p>
+            <button onClick={onRegister}
+              className="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl font-bold text-sm transition hover:opacity-90"
+              style={{ background: SNH_GREEN }}>
+              <UserPlus size={16} /> Déposer une candidature spontanée
+            </button>
           </div>
-          <h3 className="font-bold text-gray-900 mb-1">Vous ne trouvez pas votre bonheur ?</h3>
-          <p className="text-gray-500 text-sm mb-5">Envoyez une candidature spontanée ou recommandée — nous la garderons dans notre vivier de talents.</p>
-          <button onClick={onRegister}
-            className="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl font-bold text-sm transition hover:opacity-90"
-            style={{ background: SNH_BLUE }}>
-            <UserPlus size={16} /> Déposer une candidature spontanée
-          </button>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-8">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between text-xs text-gray-400 flex-wrap gap-2">
-          <p>© {new Date().getFullYear()} Société Nationale des Hydrocarbures — Tous droits réservés</p>
-          <p>Portail de recrutement officiel</p>
+      <footer className="mt-8 text-white" style={{ background: `linear-gradient(135deg, ${SNH_GREEN} 0%, #004d2b 100%)` }}>
+        <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
+        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between text-xs text-white/60 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center overflow-hidden">
+              <img src="/logoSNH.png" alt="SNH" className="h-5 w-auto" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+            </div>
+            <p>© {new Date().getFullYear()} Société Nationale des Hydrocarbures — Tous droits réservés</p>
+          </div>
+          <p className="text-white/40">Portail de recrutement officiel</p>
         </div>
       </footer>
     </div>
@@ -704,14 +726,22 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 animate-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
+        {/* Tricolor top bar */}
+        <div className="h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
         {/* Header */}
-        <div className="p-6 text-center relative" style={{ background: SNH_BLUE }}>
+        <div className="px-6 pt-6 pb-5 text-center relative" style={{ background: `linear-gradient(135deg, ${SNH_GREEN} 0%, #004d2b 100%)` }}>
           <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition">
             <X size={14} className="text-white" />
           </button>
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-3">
-            {authMode === 'login' ? <LogIn size={22} className="text-white" /> : <UserPlus size={22} className="text-white" />}
+          <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md overflow-hidden">
+            <img src="/logoSNH.png" alt="SNH" className="h-10 w-auto" onError={e => {
+              const el = e.target as HTMLImageElement;
+              el.style.display = 'none';
+              el.parentElement!.innerHTML = authMode === 'login'
+                ? '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#006B3C" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#006B3C" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>';
+            }} />
           </div>
           <h2 className="text-white text-base font-bold">{authMode === 'login' ? 'Connexion à mon espace' : 'Créer mon compte candidat'}</h2>
           <p className="text-white/60 text-xs mt-0.5">Portail Recrutement SNH Cameroun</p>
@@ -746,13 +776,13 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose }: {
           )}
           <button type="submit" disabled={loading}
             className="w-full py-3 text-white rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition text-sm"
-            style={{ background: SNH_BLUE }}>
+            style={{ background: SNH_GREEN }}>
             {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
               authMode === 'login' ? <><LogIn size={15} /> Se connecter</> : <><UserPlus size={15} /> Créer mon compte</>}
           </button>
           <div className="text-center">
             <button type="button" onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setError(''); }}
-              className="text-sm font-medium transition hover:underline" style={{ color: SNH_BLUE }}>
+              className="text-sm font-semibold transition hover:underline" style={{ color: SNH_GREEN }}>
               {authMode === 'login' ? 'Pas encore de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
             </button>
           </div>
@@ -832,7 +862,7 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
               </div>
             ))}
           </div>
-          <button onClick={() => onNav('profile')} className="mt-4 flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg text-white transition" style={{ background: SNH_BLUE }}>
+          <button onClick={() => onNav('profile')} className="mt-4 flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg text-white transition" style={{ background: SNH_GREEN }}>
             Compléter mon profil <ChevronRight size={14} />
           </button>
         </div>
@@ -846,7 +876,7 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
             <div className="relative border-l-2 border-gray-200 pl-4 ml-2 space-y-4">
               {recentActivities.map((a, i) => (
                 <div key={i} className="relative">
-                  <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-white" />
+                  <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full border-2 border-white" style={{ background: SNH_GREEN }} />
                   <p className="text-sm font-semibold text-gray-900">{a.title}</p>
                   <p className="text-xs text-gray-500">{a.sub}</p>
                   <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock size={10} />{a.date}</p>
@@ -861,7 +891,7 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
       {matches.filter(m => m.match_score >= 60).length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles size={16} className="text-blue-600" />
+            <Sparkles size={16} style={{ color: SNH_GOLD }} />
             <h3 className="text-sm font-semibold text-gray-900">Offres recommandées</h3>
           </div>
           <div className="space-y-3">
@@ -1075,7 +1105,7 @@ function FormationsTab({ items, setItems }: { items: Education[]; setItems: (v: 
         </div>
       ))}
       {items.length === 0 && (
-        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2 transition">
+        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-green-500 hover:text-green-700 flex items-center justify-center gap-2 transition">
           <Plus size={16} /> Ajouter une formation
         </button>
       )}
@@ -1124,7 +1154,7 @@ function ExperiencesTab({ items, setItems }: { items: Experience[]; setItems: (v
         </div>
       ))}
       {items.length === 0 && (
-        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2 transition">
+        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-green-500 hover:text-green-700 flex items-center justify-center gap-2 transition">
           <Plus size={16} /> Ajouter une expérience
         </button>
       )}
@@ -1185,7 +1215,7 @@ function CompetencesTab({ items, setItems }: { items: Skill[]; setItems: (v: Ski
             <div className="flex flex-wrap gap-2">
               {filtered.map(tag => (
                 <button key={tag} onClick={() => toggle(tag)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedNames.has(tag) ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'}`}>
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedNames.has(tag) ? 'bg-green-50 border-green-500 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-700'}`}>
                   {tag}
                 </button>
               ))}
@@ -1205,7 +1235,8 @@ function CompetencesTab({ items, setItems }: { items: Skill[]; setItems: (v: Ski
                 <div className="flex gap-1">
                   {SKILL_LEVELS.map(lv => (
                     <button key={lv.value} onClick={() => updateLevel(sk.name, lv.value as Skill['level'])}
-                      className={`px-2 py-1 text-xs rounded border transition ${sk.level === lv.value ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-500 hover:border-blue-300'}`}>
+                      className={`px-2 py-1 text-xs rounded border transition ${sk.level === lv.value ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:border-green-400'}`}
+                        style={sk.level === lv.value ? { background: SNH_GREEN } : {}}>
                       {lv.label.slice(0, 3)}.
                     </button>
                   ))}
@@ -1253,7 +1284,7 @@ function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Lang
         </div>
       ))}
       {items.length === 0 && (
-        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2 transition">
+        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-green-500 hover:text-green-700 flex items-center justify-center gap-2 transition">
           <Plus size={16} /> Ajouter une langue
         </button>
       )}
@@ -1342,14 +1373,14 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
           <div>
             {documents.map(doc => (
               <div key={doc.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 last:border-0">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <FileText size={16} className="text-blue-600" />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${SNH_GREEN}15` }}>
+                  <FileText size={16} style={{ color: SNH_GREEN }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{doc.file_name}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{DOC_TYPES.find(d => d.value === doc.type)?.label} · {fmtSize(doc.file_size)} · {fmtDate(doc.uploaded_at)}</p>
                 </div>
-                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 p-1.5 rounded hover:bg-blue-50 transition">
+                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded transition hover:bg-green-50" style={{ color: SNH_GREEN }}>
                   <Eye size={14} />
                 </a>
                 <button onClick={() => handleDelete(doc)} disabled={deleting === doc.id} className="text-red-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition disabled:opacity-50">
@@ -1391,11 +1422,11 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications }
 
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
-        <Building2 size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="rounded-xl p-4 flex items-start gap-3 border" style={{ background: `${SNH_GREEN}0D`, borderColor: `${SNH_GREEN}30` }}>
+        <Building2 size={16} className="flex-shrink-0 mt-0.5" style={{ color: SNH_GREEN }} />
         <div>
-          <p className="text-sm font-semibold text-blue-800">Offres de la Société Nationale des Hydrocarbures</p>
-          <p className="text-xs text-blue-600 mt-0.5">Toutes les offres ci-dessous sont publiées exclusivement par la SNH. Assurez-vous que votre profil est complet avant de postuler.</p>
+          <p className="text-sm font-semibold" style={{ color: SNH_GREEN }}>Offres de la Société Nationale des Hydrocarbures</p>
+          <p className="text-xs mt-0.5" style={{ color: `${SNH_GREEN}CC` }}>Toutes les offres ci-dessous sont publiées exclusivement par la SNH. Assurez-vous que votre profil est complet avant de postuler.</p>
         </div>
       </div>
 
@@ -1419,7 +1450,8 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications }
             const isStage = job.contract_type?.toLowerCase().includes('stage');
             return (
               <div key={job.id} className={`bg-white rounded-xl border p-4 shadow-sm flex gap-4 items-start transition hover:shadow-md ${isStage ? 'border-l-4 border-l-green-400 border-gray-200' : 'border-l-4 border-l-blue-500 border-gray-200'}`}>
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${isStage ? 'bg-green-50' : 'bg-blue-50'}`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${isStage ? 'bg-amber-50' : ''}`}
+                  style={!isStage ? { background: `${SNH_GREEN}15` } : {}}>
                   {isStage ? '🎓' : '💼'}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1508,11 +1540,11 @@ function SpontaneousSection({ candidateId, profile, onApplied }: {
 
   return (
     <div className="max-w-2xl">
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3 mb-5">
-        <Send size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
+      <div className="rounded-xl p-4 flex items-start gap-3 mb-5 border" style={{ background: `${SNH_GREEN}0D`, borderColor: `${SNH_GREEN}30` }}>
+        <Send size={16} className="flex-shrink-0 mt-0.5" style={{ color: SNH_GREEN }} />
         <div>
-          <p className="text-sm font-semibold text-blue-800">Candidature spontanée à la SNH</p>
-          <p className="text-xs text-blue-600 mt-0.5">Soumettez votre dossier directement même en l'absence d'une offre publiée. Précisez le type de candidature et la direction que vous visez.</p>
+          <p className="text-sm font-semibold" style={{ color: SNH_GREEN }}>Candidature spontanée à la SNH</p>
+          <p className="text-xs mt-0.5" style={{ color: `${SNH_GREEN}CC` }}>Soumettez votre dossier directement même en l'absence d'une offre publiée. Précisez le type de candidature et la direction que vous visez.</p>
         </div>
       </div>
 
@@ -1527,7 +1559,8 @@ function SpontaneousSection({ candidateId, profile, onApplied }: {
               { value: 'stage_professionnel', icon: '🔄', label: 'Stage professionnel', sub: 'Perfectionnement / insertion pro' },
             ].map(t => (
               <button key={t.value} type="button" onClick={() => setType(t.value as any)}
-                className={`p-4 rounded-xl border-2 text-center transition cursor-pointer ${type === t.value ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300'}`}>
+                className={`p-4 rounded-xl border-2 text-center transition cursor-pointer ${type === t.value ? 'bg-green-50' : 'border-gray-200 bg-white hover:border-green-400'}`}
+                style={type === t.value ? { borderColor: SNH_GREEN } : {}}>
                 <div className="text-2xl mb-1">{t.icon}</div>
                 <p className="text-xs font-semibold text-gray-900">{t.label}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{t.sub}</p>
@@ -1672,7 +1705,7 @@ function NotificationsSection({ notifications }: { notifications: Notification[]
         ) : (
           <div>
             {notifications.map(n => (
-              <div key={n.id} className={`flex items-start gap-3 px-5 py-4 border-b border-gray-50 last:border-0 ${n.read ? '' : 'bg-blue-50/40'}`}>
+              <div key={n.id} className={`flex items-start gap-3 px-5 py-4 border-b border-gray-50 last:border-0 ${n.read ? '' : 'bg-green-50/40'}`}>
                 <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${n.read ? 'bg-gray-300' : 'bg-red-500'}`} />
                 <div className="flex-1">
                   <p className={`text-sm ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}`}><span className="font-semibold">{n.title}</span> — {n.body}</p>

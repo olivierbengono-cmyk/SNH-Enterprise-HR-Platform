@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, ChevronRight, ChevronLeft, Plus, Trash2 } from 'lucide-react';
+import { X, AlertCircle, ChevronRight, ChevronLeft, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+
+interface MasterSkill { id: string; name: string; category: string; }
+const CAT_LABEL: Record<string, string> = {
+  technical: 'Technique', soft: 'Soft Skills', language: 'Langues', certification: 'Certifications', other: 'Autres',
+};
+const CAT_ORDER = ['technical', 'soft', 'language', 'certification', 'other'];
 
 interface JobOpeningFormProps {
   onClose: () => void;
@@ -63,8 +69,8 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
   // ── Tab 3: Compétences ────────────────────────────────────────────────────
   const [requiredSkills, setRequiredSkills] = useState<string[]>([]);
   const [niceToHaveSkills, setNiceToHaveSkills] = useState<string[]>([]);
-  const [newReqSkill, setNewReqSkill] = useState('');
-  const [newNiceSkill, setNewNiceSkill] = useState('');
+  const [masterSkills, setMasterSkills] = useState<MasterSkill[]>([]);
+  const [skillSearch, setSkillSearch] = useState('');
 
   // ── Tab 4: Langues & Conditions ───────────────────────────────────────────
   const [salaryRange, setSalaryRange] = useState('');
@@ -73,14 +79,22 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
     supabase.from('departments').select('id, name').order('name').then(({ data }) => {
       if (data) setDepartments(data);
     });
+    supabase.from('skills').select('id, name, category').order('category').order('name').then(({ data }) => {
+      if (data) setMasterSkills(data as MasterSkill[]);
+    });
   }, []);
 
-  const addSkill = (list: string[], set: (v: string[]) => void, val: string, reset: () => void) => {
-    const v = val.trim();
-    if (v && !list.includes(v)) { set([...list, v]); reset(); }
+  const toggleSkill = (name: string, required: boolean) => {
+    if (required) {
+      setRequiredSkills(prev =>
+        prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
+      );
+    } else {
+      setNiceToHaveSkills(prev =>
+        prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
+      );
+    }
   };
-  const removeSkill = (list: string[], set: (v: string[]) => void, idx: number) =>
-    set(list.filter((_, i) => i !== idx));
 
   const tabIdx = TABS.findIndex(t => t.value === tab);
   const isLast = tabIdx === TABS.length - 1;
@@ -259,60 +273,108 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
 
           {/* ── Tab 3: Compétences ──────────────────────────────────────── */}
           {tab === 'competences' && (
-            <div className="space-y-6">
-              {/* Required skills */}
-              <div>
-                <Lbl>Compétences obligatoires</Lbl>
-                <div className="flex gap-2 mb-3">
-                  <input value={newReqSkill} onChange={e => setNewReqSkill(e.target.value)}
-                    className={inp() + ' flex-1'} placeholder="Ex: Python, Gestion de projet, AutoCAD..."
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill(requiredSkills, setRequiredSkills, newReqSkill, () => setNewReqSkill('')); } }} />
-                  <button type="button" onClick={() => addSkill(requiredSkills, setRequiredSkills, newReqSkill, () => setNewReqSkill(''))}
-                    className="px-3 py-2.5 rounded-lg bg-snh-green text-white hover:bg-snh-green-dark transition">
-                    <Plus size={16} />
-                  </button>
+            <div className="space-y-5">
+              {/* Legend */}
+              <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
+                  <span className="text-slate-600 font-medium">Obligatoire</span>
                 </div>
-                {requiredSkills.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {requiredSkills.map((s, i) => (
-                      <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 text-green-800 rounded-full text-xs font-medium">
-                        {s}
-                        <button onClick={() => removeSkill(requiredSkills, setRequiredSkills, i)} className="text-green-600 hover:text-red-500 transition">
-                          <X size={11} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {requiredSkills.length === 0 && <p className="text-xs text-slate-400 italic">Aucune compétence obligatoire ajoutée</p>}
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-amber-400 inline-block" />
+                  <span className="text-slate-600 font-medium">Appréciée (bonus)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-slate-200 inline-block" />
+                  <span className="text-slate-500">Non sélectionnée</span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">Cliquez une fois pour marquer <strong>obligatoire</strong>, deux fois pour <strong>appréciée</strong>, trois fois pour désélectionner.</p>
+
+              {/* Search */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input value={skillSearch} onChange={e => setSkillSearch(e.target.value)}
+                  className={inp() + ' pl-9'} placeholder="Rechercher dans le référentiel de compétences..." />
               </div>
 
-              {/* Nice-to-have skills */}
-              <div>
-                <Lbl>Compétences appréciées (bonus)</Lbl>
-                <div className="flex gap-2 mb-3">
-                  <input value={newNiceSkill} onChange={e => setNewNiceSkill(e.target.value)}
-                    className={inp() + ' flex-1'} placeholder="Ex: Bilinguisme, SAP, Lean Six Sigma..."
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill(niceToHaveSkills, setNiceToHaveSkills, newNiceSkill, () => setNewNiceSkill('')); } }} />
-                  <button type="button" onClick={() => addSkill(niceToHaveSkills, setNiceToHaveSkills, newNiceSkill, () => setNewNiceSkill(''))}
-                    className="px-3 py-2.5 rounded-lg bg-slate-600 text-white hover:bg-slate-700 transition">
-                    <Plus size={16} />
-                  </button>
-                </div>
-                {niceToHaveSkills.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {niceToHaveSkills.map((s, i) => (
-                      <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-full text-xs font-medium">
-                        {s}
-                        <button onClick={() => removeSkill(niceToHaveSkills, setNiceToHaveSkills, i)} className="text-slate-400 hover:text-red-500 transition">
-                          <X size={11} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {niceToHaveSkills.length === 0 && <p className="text-xs text-slate-400 italic">Aucune compétence bonus ajoutée</p>}
+              {/* Skills grouped by category */}
+              <div className="space-y-4">
+                {CAT_ORDER.map(cat => {
+                  const f = skillSearch.toLowerCase();
+                  const list = masterSkills.filter(m => m.category === cat && (!f || m.name.toLowerCase().includes(f)));
+                  if (!list.length) return null;
+                  return (
+                    <div key={cat}>
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{CAT_LABEL[cat] ?? cat}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {list.map(ms => {
+                          const isRequired = requiredSkills.includes(ms.name);
+                          const isNice = niceToHaveSkills.includes(ms.name);
+                          const handleClick = () => {
+                            if (!isRequired && !isNice) {
+                              setRequiredSkills(p => [...p, ms.name]);
+                            } else if (isRequired) {
+                              setRequiredSkills(p => p.filter(s => s !== ms.name));
+                              setNiceToHaveSkills(p => [...p, ms.name]);
+                            } else {
+                              setNiceToHaveSkills(p => p.filter(s => s !== ms.name));
+                            }
+                          };
+                          return (
+                            <button key={ms.id} type="button" onClick={handleClick}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                                isRequired ? 'bg-green-50 border-green-500 text-green-800' :
+                                isNice    ? 'bg-amber-50 border-amber-400 text-amber-800' :
+                                'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-400'
+                              }`}>
+                              {ms.name}
+                              {isRequired && <span className="ml-1 text-green-600 font-bold">✓</span>}
+                              {isNice    && <span className="ml-1 text-amber-500 font-bold">+</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+
+              {/* Summary of selected */}
+              {(requiredSkills.length > 0 || niceToHaveSkills.length > 0) && (
+                <div className="border-t border-slate-100 pt-4 space-y-3">
+                  {requiredSkills.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-green-700 mb-1.5">Compétences obligatoires ({requiredSkills.length})</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {requiredSkills.map(s => (
+                          <span key={s} className="flex items-center gap-1 px-2.5 py-1 bg-green-50 border border-green-200 text-green-800 rounded-full text-xs font-medium">
+                            {s}
+                            <button type="button" onClick={() => setRequiredSkills(p => p.filter(x => x !== s))} className="text-green-500 hover:text-red-500 transition ml-0.5">
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {niceToHaveSkills.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-amber-700 mb-1.5">Compétences appréciées ({niceToHaveSkills.length})</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {niceToHaveSkills.map(s => (
+                          <span key={s} className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-full text-xs font-medium">
+                            {s}
+                            <button type="button" onClick={() => setNiceToHaveSkills(p => p.filter(x => x !== s))} className="text-amber-500 hover:text-red-500 transition ml-0.5">
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

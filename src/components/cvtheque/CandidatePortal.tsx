@@ -1760,15 +1760,13 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
                 <Lbl>Thème / Sujet du stage</Lbl>
                 <input value={stageTopic} onChange={e => setStageTopic(e.target.value)} className={inp()} placeholder="Ex: Optimisation de la récupération assistée du pétrole..." />
               </div>
-              {type === 'stage_academique' && (
-                <div className="col-span-2">
-                  <Lbl>Niveau d'études actuel</Lbl>
-                  <select value={stageEduLevel} onChange={e => setStageEduLevel(e.target.value)} className={inp()}>
-                    <option value="">— Sélectionner —</option>
-                    {EDU_LEVELS.map(l => <option key={l}>{l}</option>)}
-                  </select>
-                </div>
-              )}
+              <div className="col-span-2">
+                <Lbl>Niveau d'études actuel</Lbl>
+                <select value={stageEduLevel} onChange={e => setStageEduLevel(e.target.value)} className={inp()}>
+                  <option value="">— Sélectionner —</option>
+                  {EDU_LEVELS.map(l => <option key={l}>{l}</option>)}
+                </select>
+              </div>
               <div>
                 <Lbl>Durée souhaitée</Lbl>
                 <select value={stageDuration} onChange={e => setStageDuration(e.target.value)} className={inp()}>
@@ -1784,8 +1782,8 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
                 <input type="date" value={stageEnd} onChange={e => setStageEnd(e.target.value)} className={inp()} />
               </div>
               <div>
-                <Lbl>Encadreur académique</Lbl>
-                <input value={stageSupervisor} onChange={e => setStageSupervisor(e.target.value)} className={inp()} placeholder="Nom du professeur / maître de stage" />
+                <Lbl>Encadreur académique (nom et contact)</Lbl>
+                <input value={stageSupervisor} onChange={e => setStageSupervisor(e.target.value)} className={inp()} placeholder="Ex: Pr. Jean Dupont — 699 000 000" />
               </div>
               <div className="col-span-2">
                 <Lbl>École / Université actuelle</Lbl>

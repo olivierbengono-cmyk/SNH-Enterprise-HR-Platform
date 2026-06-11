@@ -998,8 +998,13 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
       // 1. Candidate profile info
       supabase.from('candidates').update({
         first_name: profile.first_name, last_name: profile.last_name,
-        phone: profile.phone || null, location: profile.location || null,
+        professional_title: profile.professional_title || null,
+        phone: profile.phone || null, phone2: profile.phone2 || null,
+        location: profile.location || null, region: profile.region || null,
+        nationality: profile.nationality || null, national_id: profile.national_id || null,
         linkedin_url: profile.linkedin_url || null, portfolio_url: profile.portfolio_url || null,
+        facebook_url: profile.facebook_url || null, twitter_url: profile.twitter_url || null,
+        instagram_url: profile.instagram_url || null,
         summary: profile.summary || null, desired_position: profile.desired_position || null,
         desired_salary_min: profile.desired_salary_min || null,
         desired_salary_max: profile.desired_salary_max || null,

@@ -242,10 +242,11 @@ export default function CandidatePortal() {
     setCandidateId(cand.id);
     setProfile(cand as CandidateProfile);
 
-    const [expRes, eduRes, skRes, docRes, appRes, matchRes, jobRes] = await Promise.all([
+    const [expRes, eduRes, skRes, langRes, docRes, appRes, matchRes, jobRes] = await Promise.all([
       supabase.from('candidate_experiences').select('*').eq('candidate_id', cand.id).order('start_date', { ascending: false }),
       supabase.from('candidate_educations').select('*').eq('candidate_id', cand.id).order('end_date', { ascending: false }),
       supabase.from('candidate_candidate_skills').select('*').eq('candidate_id', cand.id),
+      supabase.from('candidate_languages').select('*').eq('candidate_id', cand.id),
       supabase.from('candidate_documents').select('*').eq('candidate_id', cand.id).order('uploaded_at', { ascending: false }),
       supabase.from('candidate_applications').select('*,job_opening:job_openings(id,title)').eq('candidate_id', cand.id).order('created_at', { ascending: false }),
       supabase.from('candidate_job_matches').select('*, job_opening:job_openings(*)').eq('candidate_id', cand.id).order('match_score', { ascending: false }),
@@ -254,6 +255,7 @@ export default function CandidatePortal() {
     setExperiences((expRes.data || []) as Experience[]);
     setEducations((eduRes.data || []) as Education[]);
     setSkills((skRes.data || []) as Skill[]);
+    setLanguages((langRes.data || []) as Language[]);
     setDocuments((docRes.data || []) as CandidateDoc[]);
     setApplications((appRes.data || []) as Application[]);
     setMatches((matchRes.data || []) as unknown as JobMatch[]);
@@ -990,38 +992,54 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
-    await supabase.from('candidates').update({
-      first_name: profile.first_name, last_name: profile.last_name,
-      phone: profile.phone || null, location: profile.location || null,
-      linkedin_url: profile.linkedin_url || null, portfolio_url: profile.portfolio_url || null,
-      summary: profile.summary || null, desired_position: profile.desired_position || null,
-      desired_salary_min: profile.desired_salary_min || null,
-      desired_salary_max: profile.desired_salary_max || null,
-      availability_date: profile.availability_date || null,
-      mobility: profile.mobility || null, profile_completed: true,
-    }).eq('user_id', user.id);
 
-    if (tab === 'experiences') {
-      await supabase.from('candidate_experiences').delete().eq('candidate_id', candidateId);
-      const valid = experiences.filter(e => e.job_title && e.company && e.start_date);
-      if (valid.length) await supabase.from('candidate_experiences').insert(
-        valid.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
-      );
-    }
-    if (tab === 'formations') {
-      await supabase.from('candidate_educations').delete().eq('candidate_id', candidateId);
-      const valid = educations.filter(e => e.degree && e.institution);
-      if (valid.length) await supabase.from('candidate_educations').insert(
-        valid.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
-      );
-    }
-    if (tab === 'competences') {
-      await supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId);
-      const valid = skills.filter(s => s.name);
-      if (valid.length) await supabase.from('candidate_candidate_skills').insert(
-        valid.map(({ id: _id, ...s }) => ({ ...s, candidate_id: candidateId, skill_id: s.skill_id ?? null }))
-      );
-    }
+    // Always persist all sections — not just the active tab
+    await Promise.all([
+      // 1. Candidate profile info
+      supabase.from('candidates').update({
+        first_name: profile.first_name, last_name: profile.last_name,
+        phone: profile.phone || null, location: profile.location || null,
+        linkedin_url: profile.linkedin_url || null, portfolio_url: profile.portfolio_url || null,
+        summary: profile.summary || null, desired_position: profile.desired_position || null,
+        desired_salary_min: profile.desired_salary_min || null,
+        desired_salary_max: profile.desired_salary_max || null,
+        availability_date: profile.availability_date || null,
+        mobility: profile.mobility || null, profile_completed: true,
+      }).eq('user_id', user.id),
+
+      // 2. Experiences — delete + reinsert
+      supabase.from('candidate_experiences').delete().eq('candidate_id', candidateId).then(async () => {
+        const valid = experiences.filter(e => e.job_title && e.company && e.start_date);
+        if (valid.length) await supabase.from('candidate_experiences').insert(
+          valid.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+        );
+      }),
+
+      // 3. Educations — delete + reinsert
+      supabase.from('candidate_educations').delete().eq('candidate_id', candidateId).then(async () => {
+        const valid = educations.filter(e => e.degree && e.institution);
+        if (valid.length) await supabase.from('candidate_educations').insert(
+          valid.map(({ id: _id, ...e }) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+        );
+      }),
+
+      // 4. Skills — delete + reinsert
+      supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId).then(async () => {
+        const valid = skills.filter(s => s.name);
+        if (valid.length) await supabase.from('candidate_candidate_skills').insert(
+          valid.map(({ id: _id, ...s }) => ({ ...s, candidate_id: candidateId, skill_id: s.skill_id ?? null }))
+        );
+      }),
+
+      // 5. Languages — delete + reinsert
+      supabase.from('candidate_languages').delete().eq('candidate_id', candidateId).then(async () => {
+        const valid = languages.filter(l => l.name.trim());
+        if (valid.length) await supabase.from('candidate_languages').insert(
+          valid.map(({ id: _id, ...l }) => ({ ...l, candidate_id: candidateId }))
+        );
+      }),
+    ]);
+
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

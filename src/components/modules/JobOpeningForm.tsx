@@ -130,6 +130,7 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
         closing_date: closingDate || null,
         openings_count: openingsCount,
         is_internal: isInternal,
+        work_mode: workMode || null,
       });
       if (insertError) throw insertError;
       onSuccess();

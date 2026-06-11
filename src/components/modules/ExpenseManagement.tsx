@@ -159,11 +159,9 @@ export default function ExpenseManagement() {
 
       if (error) throw error;
 
-      const newTotal = selectedReport.total_amount + parseFloat(itemForm.amount);
-      await supabase
-        .from('expense_reports')
-        .update({ total_amount: newTotal })
-        .eq('id', selectedReport.id);
+      const { data: allItems } = await supabase.from('expense_items').select('amount').eq('expense_report_id', selectedReport.id);
+      const newTotal = (allItems || []).reduce((s: number, i: { amount: number }) => s + (i.amount || 0), 0);
+      await supabase.from('expense_reports').update({ total_amount: newTotal }).eq('id', selectedReport.id);
 
       setShowAddItem(false);
       setItemForm({

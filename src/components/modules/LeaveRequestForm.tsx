@@ -179,7 +179,13 @@ export function LeaveRequestForm({ onClose, onSuccess }: LeaveRequestFormProps) 
         medical_certificate_name: certificateData?.name || null,
       });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        // Clean up orphaned file if insert failed
+        if (certificateData?.url) {
+          await supabase.storage.from('medical-certificates').remove([certificateData.url]);
+        }
+        throw insertError;
+      }
 
       onSuccess();
       onClose();

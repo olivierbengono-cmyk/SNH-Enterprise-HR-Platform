@@ -104,13 +104,20 @@ function fmtSize(bytes: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
 }
 const DOC_TYPES = [
-  { value: 'cv', label: 'CV' },
-  { value: 'cover_letter', label: 'Lettre de motivation' },
-  { value: 'id', label: 'CNI / Passeport' },
-  { value: 'diploma', label: 'Diplôme' },
-  { value: 'certificate', label: 'Attestation de travail' },
-  { value: 'recommendation', label: 'Lettre de recommandation' },
-  { value: 'other', label: 'Autre document' },
+  { value: 'cv',              label: 'CV / Curriculum Vitae' },
+  { value: 'cover_letter',    label: 'Lettre de motivation' },
+  { value: 'diploma',         label: 'Diplôme / Attestation de diplôme' },
+  { value: 'cni_passport',    label: 'CNI / Passeport' },
+  { value: 'employment_cert', label: "Attestation d'emploi" },
+  { value: 'work_cert',       label: 'Certificat de travail' },
+  { value: 'criminal_record', label: 'Extrait de casier judiciaire (n°3)' },
+  { value: 'birth_cert',      label: 'Acte de naissance' },
+  { value: 'residence_cert',  label: 'Certificat de résidence' },
+  { value: 'medical_cert',    label: "Certificat médical d'aptitude" },
+  { value: 'tax_cert',        label: 'Attestation de régularité fiscale' },
+  { value: 'cnps_cert',       label: 'Attestation CNPS' },
+  { value: 'reference',       label: 'Lettre de recommandation' },
+  { value: 'other',           label: 'Autre document' },
 ];
 function docExpiryStatus(expDate: string | null | undefined): 'expired' | 'soon' | 'ok' | null {
   if (!expDate) return null;
@@ -1268,6 +1275,15 @@ function AdminDocumentsTab({ candidateId, initialDocs, onRefresh }: {
           <p className="text-xs text-amber-700"><span className="font-semibold">Expirent bientôt : </span>{soonDocs.map(d => DOC_TYPES.find(t => t.value === d.type)?.label ?? d.type).join(', ')}</p>
         </div>
       )}
+
+      {/* Required docs banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+        <AlertCircle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-xs font-semibold text-amber-800">Documents requis par la SNH</p>
+          <p className="text-xs text-amber-700 mt-0.5">Documents minimum requis : CV, diplômes, CNI ou Passeport, attestations d'emploi, certificat de travail, extrait de casier judiciaire.</p>
+        </div>
+      </div>
 
       {/* Upload form */}
       <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">

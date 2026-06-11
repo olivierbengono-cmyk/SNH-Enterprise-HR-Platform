@@ -489,6 +489,8 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
                       ['Localisation', location || '—'],
                       ['Mode de travail', workMode],
                       ['Statut', status === 'open' ? 'Publiée' : status === 'draft' ? 'Brouillon' : 'Fermée'],
+                      ['Publication', publicationDate || '—'],
+                      ['Clôture', closingDate || 'Non définie'],
                       ['Postes', String(openingsCount)],
                       ['Niveau requis', educationLevel || 'Indifférent'],
                       ['Expérience min.', `${minExperienceYears} an${minExperienceYears > 1 ? 's' : ''}`],

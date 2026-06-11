@@ -435,14 +435,17 @@ export default function CandidatePortal() {
           )}
           {section === 'jobs' && (
             <JobsSection openJobs={openJobs} matches={matches} candidateId={candidateId!}
-              onApplied={(app) => setApplications(prev => [app, ...prev])} applications={applications} />
+              onApplied={(app) => setApplications(prev => [app, ...prev])} applications={applications}
+              documents={documents} />
           )}
           {section === 'spontaneous' && profile && candidateId && (
             <SpontaneousSection candidateId={candidateId} profile={profile} documents={documents}
               onApplied={(app) => { setApplications(prev => [app, ...prev]); setSection('applications'); }} />
           )}
           {section === 'applications' && (
-            <ApplicationsSection applications={applications} />
+            <ApplicationsSection applications={applications} openJobs={openJobs}
+              documents={documents} candidateId={candidateId!}
+              onApplied={(app) => setApplications(prev => [app, ...prev])} />
           )}
           {section === 'notifications' && (
             <NotificationsSection notifications={notifications} />
@@ -1590,14 +1593,209 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
   );
 }
 
+// ── Job Detail Modal ──────────────────────────────────────────────────────────
+function JobDetailModal({ job, match, isApplied, documents, candidateId, onApplied, onClose, readOnly }: {
+  job: JobOpening; match?: JobMatch; isApplied: boolean;
+  documents: CandidateDoc[]; candidateId: string;
+  onApplied: (app: Application) => void; onClose: () => void; readOnly?: boolean;
+}) {
+  const [applying, setApplying] = useState(false);
+  const [showMissingWarning, setShowMissingWarning] = useState(false);
+
+  const isStage = job.contract_type?.toLowerCase().includes('stage');
+  const docKey = job.contract_type?.toLowerCase().includes('académique') ? 'stage_academique'
+    : job.contract_type?.toLowerCase().includes('professionnel') ? 'stage_professionnel'
+    : 'emploi';
+  const uploadedTypes = new Set(documents.map(d => d.type));
+  const requiredDocs = REQUIRED_DOCS_BY_TYPE[docKey] ?? [];
+  const missingDocs = requiredDocs.filter(d => !uploadedTypes.has(d.value));
+
+  const doApply = async () => {
+    setApplying(true);
+    const { data } = await supabase.from('candidate_applications').insert({
+      candidate_id: candidateId, job_opening_id: job.id,
+      desired_position: job.title, status: 'new',
+    }).select().maybeSingle();
+    if (data) { onApplied(data as Application); onClose(); }
+    setApplying(false);
+  };
+
+  const handleApplyClick = () => {
+    if (missingDocs.length > 0) { setShowMissingWarning(true); } else { doApply(); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl w-full max-w-2xl my-6 shadow-2xl flex flex-col">
+        {/* Header */}
+        <div className={`px-6 pt-6 pb-4 rounded-t-2xl border-b border-gray-100 ${isStage ? 'bg-amber-50' : ''}`}
+          style={!isStage ? { background: `${SNH_GREEN}08` } : {}}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex gap-3 items-start">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${isStage ? 'bg-amber-100' : ''}`}
+                style={!isStage ? { background: `${SNH_GREEN}20` } : {}}>
+                {isStage ? '🎓' : '💼'}
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">{job.title}</h2>
+                <p className="text-sm text-gray-500 mt-0.5">SNH · {job.location}</p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <Tag variant={isStage ? 'amber' : 'green'}>{job.contract_type}</Tag>
+                  {job.reference && <Tag variant="gray">Réf. {job.reference}</Tag>}
+                  {match && <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${match.match_score >= 80 ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>Compatibilité {match.match_score}%</span>}
+                </div>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-1"><X size={20} /></button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
+          {/* Key info grid */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Type de contrat', value: job.contract_type },
+              { label: 'Lieu', value: job.location },
+              { label: 'Expérience min.', value: job.min_experience_years ? `${job.min_experience_years} an(s)` : 'Non précisé' },
+              { label: 'Niveau d\'études', value: job.education_level || 'Non précisé' },
+            ].map(item => (
+              <div key={item.label} className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-500 mb-0.5">{item.label}</p>
+                <p className="text-sm font-semibold text-gray-800">{item.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Dates */}
+          <div className="flex gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1"><Calendar size={12} />Publiée le {fmtDate(job.publication_date)}</span>
+            <span className={`flex items-center gap-1 font-semibold ${new Date(job.closing_date) < new Date() ? 'text-red-600' : 'text-amber-600'}`}>
+              <Clock size={12} />Clôture le {fmtDate(job.closing_date)}
+            </span>
+          </div>
+
+          {/* Description */}
+          {job.description && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Description du poste</p>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{job.description}</p>
+            </div>
+          )}
+
+          {/* Requirements */}
+          {job.requirements && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Profil recherché</p>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{job.requirements}</p>
+            </div>
+          )}
+
+          {/* Required skills */}
+          {job.required_skills?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Compétences requises</p>
+              <div className="flex flex-wrap gap-2">
+                {job.required_skills.map(s => <Tag key={s} variant="blue">{s}</Tag>)}
+              </div>
+            </div>
+          )}
+
+          {/* Nice-to-have skills */}
+          {job.nice_to_have_skills?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Compétences appréciées</p>
+              <div className="flex flex-wrap gap-2">
+                {job.nice_to_have_skills.map(s => <Tag key={s} variant="gray">{s}</Tag>)}
+              </div>
+            </div>
+          )}
+
+          {/* Required documents checklist */}
+          {!readOnly && requiredDocs.length > 0 && (
+            <div className={`rounded-xl border p-4 ${missingDocs.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${missingDocs.length > 0 ? 'text-amber-700' : 'text-green-700'}`}>
+                Documents requis pour postuler
+              </p>
+              <div className="space-y-1.5">
+                {requiredDocs.map(doc => {
+                  const ok = uploadedTypes.has(doc.value);
+                  return (
+                    <div key={doc.value} className="flex items-center gap-2 text-sm">
+                      {ok
+                        ? <CheckCircle size={14} className="text-green-600 flex-shrink-0" />
+                        : <AlertCircle size={14} className="text-amber-500 flex-shrink-0" />}
+                      <span className={ok ? 'text-green-700' : 'text-amber-700 font-medium'}>{doc.label}</span>
+                      {!ok && <span className="text-xs text-amber-500">(manquant)</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              {missingDocs.length > 0 && (
+                <p className="text-xs text-amber-600 mt-3">Vous pouvez quand même postuler, mais votre dossier sera incomplet.</p>
+              )}
+            </div>
+          )}
+
+          {/* Missing docs confirmation */}
+          {showMissingWarning && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <div className="flex items-start gap-2 mb-3">
+                <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-800">Dossier incomplet</p>
+                  <p className="text-xs text-red-700 mt-1">Il vous manque {missingDocs.length} document(s) requis :</p>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {missingDocs.map(d => <li key={d.value} className="text-xs text-red-700 flex items-center gap-1"><X size={10} />{d.label}</li>)}
+                  </ul>
+                  <p className="text-xs text-red-600 mt-2 font-medium">Souhaitez-vous tout de même soumettre votre candidature ?</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowMissingWarning(false)} className="flex-1 px-3 py-2 text-xs border border-red-200 text-red-700 rounded-lg hover:bg-red-100 transition">Annuler</button>
+                <button onClick={doApply} disabled={applying} className="flex-1 px-3 py-2 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60 transition font-semibold">
+                  {applying ? 'Envoi...' : 'Postuler quand même'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {!readOnly && (
+          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
+            <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition">Fermer</button>
+            {isApplied ? (
+              <span className="flex items-center gap-1.5 text-sm text-green-700 font-semibold"><CheckCircle size={15} />Candidature soumise</span>
+            ) : (
+              <button onClick={handleApplyClick} disabled={applying}
+                className="flex items-center gap-2 px-5 py-2 text-sm rounded-xl text-white font-semibold disabled:opacity-60 transition hover:opacity-90"
+                style={{ background: SNH_BLUE }}>
+                {applying ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={14} />}
+                Postuler à cette offre
+              </button>
+            )}
+          </div>
+        )}
+        {readOnly && (
+          <div className="px-6 py-4 border-t border-gray-100">
+            <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition">Fermer</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Jobs ──────────────────────────────────────────────────────────────────────
-function JobsSection({ openJobs, matches, candidateId, onApplied, applications }: {
+function JobsSection({ openJobs, matches, candidateId, onApplied, applications, documents }: {
   openJobs: JobOpening[]; matches: JobMatch[]; candidateId: string;
   onApplied: (app: Application) => void; applications: Application[];
+  documents: CandidateDoc[];
 }) {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [applying, setApplying] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<JobOpening | null>(null);
   const applied = new Set(applications.map(a => a.job_opening_id || '').filter(Boolean));
 
   const filtered = openJobs.filter(j => {
@@ -1605,83 +1803,82 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications }
     return (!search || txt.includes(search.toLowerCase())) && (filterType === 'all' || j.contract_type === filterType);
   });
 
-  const handleApply = async (job: JobOpening) => {
-    setApplying(job.id);
-    const { data } = await supabase.from('candidate_applications').insert({
-      candidate_id: candidateId, job_opening_id: job.id,
-      desired_position: job.title, status: 'new',
-    }).select().maybeSingle();
-    if (data) onApplied(data as Application);
-    setApplying(null);
-  };
-
   return (
-    <div className="space-y-4">
-      <div className="rounded-xl p-4 flex items-start gap-3 border" style={{ background: `${SNH_GREEN}0D`, borderColor: `${SNH_GREEN}30` }}>
-        <Building2 size={16} className="flex-shrink-0 mt-0.5" style={{ color: SNH_GREEN }} />
-        <div>
-          <p className="text-sm font-semibold" style={{ color: SNH_GREEN }}>Offres de la Société Nationale des Hydrocarbures</p>
-          <p className="text-xs mt-0.5" style={{ color: `${SNH_GREEN}CC` }}>Toutes les offres ci-dessous sont publiées exclusivement par la SNH. Assurez-vous que votre profil est complet avant de postuler.</p>
+    <>
+      <div className="space-y-4">
+        <div className="rounded-xl p-4 flex items-start gap-3 border" style={{ background: `${SNH_GREEN}0D`, borderColor: `${SNH_GREEN}30` }}>
+          <Building2 size={16} className="flex-shrink-0 mt-0.5" style={{ color: SNH_GREEN }} />
+          <div>
+            <p className="text-sm font-semibold" style={{ color: SNH_GREEN }}>Offres de la Société Nationale des Hydrocarbures</p>
+            <p className="text-xs mt-0.5" style={{ color: `${SNH_GREEN}CC` }}>Cliquez sur une offre pour voir le détail. Assurez-vous que votre profil est complet avant de postuler.</p>
+          </div>
         </div>
-      </div>
 
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-40">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} className={inp() + ' pl-9'} placeholder="Rechercher un poste..." />
+        <div className="flex gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-40">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)} className={inp() + ' pl-9'} placeholder="Rechercher un poste..." />
+          </div>
+          <select value={filterType} onChange={e => setFilterType(e.target.value)} className={`${inp()} w-48`}>
+            <option value="all">Tous types de contrat</option>
+            {['CDI','CDD','Stage académique','Stage professionnel'].map(t => <option key={t}>{t}</option>)}
+          </select>
         </div>
-        <select value={filterType} onChange={e => setFilterType(e.target.value)} className={`${inp()} w-48`}>
-          <option value="all">Tous types de contrat</option>
-          {['CDI','CDD','Stage académique','Stage professionnel'].map(t => <option key={t}>{t}</option>)}
-        </select>
-      </div>
 
-      {filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-400"><Briefcase size={40} className="mx-auto mb-2 opacity-20" />Aucune offre trouvée</div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map(job => {
-            const m = matches.find(x => x.job_opening_id === job.id);
-            const isStage = job.contract_type?.toLowerCase().includes('stage');
-            return (
-              <div key={job.id} className={`bg-white rounded-xl border p-4 shadow-sm flex gap-4 items-start transition hover:shadow-md ${isStage ? 'border-l-4 border-l-green-400 border-gray-200' : 'border-l-4 border-l-blue-500 border-gray-200'}`}>
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${isStage ? 'bg-amber-50' : ''}`}
-                  style={!isStage ? { background: `${SNH_GREEN}15` } : {}}>
-                  {isStage ? '🎓' : '💼'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900">{job.title}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">SNH · {job.location}</p>
+        {filtered.length === 0 ? (
+          <div className="text-center py-12 text-gray-400"><Briefcase size={40} className="mx-auto mb-2 opacity-20" />Aucune offre trouvée</div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map(job => {
+              const m = matches.find(x => x.job_opening_id === job.id);
+              const isStage = job.contract_type?.toLowerCase().includes('stage');
+              const isApplied = applied.has(job.id);
+              return (
+                <div key={job.id} onClick={() => setSelectedJob(job)} className={`bg-white rounded-xl border p-4 shadow-sm flex gap-4 items-start transition hover:shadow-md cursor-pointer ${isStage ? 'border-l-4 border-l-amber-400 border-gray-200' : 'border-l-4 border-l-blue-500 border-gray-200'}`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${isStage ? 'bg-amber-50' : ''}`}
+                    style={!isStage ? { background: `${SNH_GREEN}15` } : {}}>
+                    {isStage ? '🎓' : '💼'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900 hover:underline">{job.title}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">SNH · {job.location}</p>
+                      </div>
+                      {m && <span className={`text-sm font-black ${m.match_score >= 80 ? 'text-green-600' : 'text-amber-600'}`}>{m.match_score}%</span>}
                     </div>
-                    {m && <span className={`text-sm font-black ${m.match_score >= 80 ? 'text-green-600' : 'text-amber-600'}`}>{m.match_score}%</span>}
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      <Tag variant={isStage ? 'amber' : 'green'}>{job.contract_type}</Tag>
+                      {job.required_skills?.slice(0, 3).map(s => <Tag key={s} variant="blue">{s}</Tag>)}
+                      {(job.required_skills?.length || 0) > 3 && <Tag variant="gray">+{job.required_skills.length - 3}</Tag>}
+                      <Tag variant="gray"><Clock size={10} className="mr-1" />Clôture {fmtDate(job.closing_date)}</Tag>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    <Tag variant={isStage ? 'amber' : 'green'}>{job.contract_type}</Tag>
-                    {job.required_skills?.slice(0, 3).map(s => <Tag key={s} variant="blue">{s}</Tag>)}
-                    {(job.required_skills?.length || 0) > 3 && <Tag variant="gray">+{job.required_skills.length - 3}</Tag>}
-                    <Tag variant="gray"><Clock size={10} className="mr-1" />Clôture {fmtDate(job.closing_date)}</Tag>
+                  <div className="flex flex-col gap-2 flex-shrink-0 items-end">
+                    {isApplied
+                      ? <span className="flex items-center gap-1 text-xs text-green-700 font-medium"><CheckCircle size={12} />Postulé</span>
+                      : <span className="flex items-center gap-1 text-xs text-blue-600 font-medium">Voir l'offre →</span>
+                    }
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 flex-shrink-0">
-                  {applied.has(job.id) ? (
-                    <span className="flex items-center gap-1 text-xs text-green-700 font-medium"><CheckCircle size={12} />Postulé</span>
-                  ) : (
-                    <button onClick={() => handleApply(job)} disabled={applying === job.id}
-                      className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg text-white font-semibold disabled:opacity-60 transition"
-                      style={{ background: SNH_BLUE }}>
-                      {applying === job.id ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={12} />}
-                      Postuler
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selectedJob && (
+        <JobDetailModal
+          job={selectedJob}
+          match={matches.find(x => x.job_opening_id === selectedJob.id)}
+          isApplied={applied.has(selectedJob.id)}
+          documents={documents}
+          candidateId={candidateId}
+          onApplied={(app) => { onApplied(app); }}
+          onClose={() => setSelectedJob(null)}
+        />
       )}
-    </div>
+    </>
   );
 }
 
@@ -1943,50 +2140,82 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
 }
 
 // ── Applications ──────────────────────────────────────────────────────────────
-function ApplicationsSection({ applications }: { applications: Application[] }) {
+function ApplicationsSection({ applications, openJobs, documents, candidateId, onApplied }: {
+  applications: Application[]; openJobs: JobOpening[];
+  documents: CandidateDoc[]; candidateId: string;
+  onApplied: (app: Application) => void;
+}) {
   const [filter, setFilter] = useState('all');
+  const [selectedJob, setSelectedJob] = useState<JobOpening | null>(null);
   const filtered = filter === 'all' ? applications : applications.filter(a => a.status === filter);
+  const applied = new Set(applications.map(a => a.job_opening_id || '').filter(Boolean));
+
+  const STATUS_LABELS: Record<string, string> = {
+    new: 'Soumis', reviewing: 'En examen', interview: 'Entretien',
+    offer: 'Offre', integrated: 'Intégré(e)', rejected: 'Refusé(e)', withdrawn: 'Retiré(e)',
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <select value={filter} onChange={e => setFilter(e.target.value)} className={`${inp()} w-52`}>
-          <option value="all">Tous les statuts</option>
-          {['new','reviewing','interview','offer','integrated','rejected','withdrawn'].map(s => (
-            <option key={s} value={s}>{['Soumis','En examen','Entretien','Offre','Intégré(e)','Refusé(e)','Retiré(e)'][['new','reviewing','interview','offer','integrated','rejected','withdrawn'].indexOf(s)]}</option>
-          ))}
-        </select>
+    <>
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <select value={filter} onChange={e => setFilter(e.target.value)} className={`${inp()} w-52`}>
+            <option value="all">Tous les statuts</option>
+            {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-900">Mes candidatures SNH ({filtered.length})</h3>
+          </div>
+          {filtered.length === 0 ? (
+            <div className="py-12 text-center text-gray-400"><FileText size={36} className="mx-auto mb-2 opacity-20" />Aucune candidature</div>
+          ) : (
+            <div>
+              {filtered.map(app => {
+                const job = openJobs.find(j => j.id === app.job_opening_id);
+                const isStage = job?.contract_type?.toLowerCase().includes('stage');
+                return (
+                  <div key={app.id}
+                    onClick={() => job && setSelectedJob(job)}
+                    className={`flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0 ${job ? 'cursor-pointer hover:bg-gray-50 transition' : ''}`}>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0 ${isStage ? 'bg-amber-50' : ''}`}
+                      style={!isStage ? { background: `${SNH_GREEN}10` } : {}}>
+                      {isStage ? '🎓' : '💼'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900">{app.desired_position || app.job_opening?.title || '—'}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={10} />SNH</span>
+                        {app.job_opening_id ? <Tag variant="blue">Offre publiée</Tag> : <Tag variant="purple">Candidature spontanée</Tag>}
+                        <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={10} />{fmtDate(app.created_at)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <AppStatus status={app.status} />
+                      {job && <ChevronRight size={14} className="text-gray-300" />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Mes candidatures SNH ({filtered.length})</h3>
-        </div>
-        {filtered.length === 0 ? (
-          <div className="py-12 text-center text-gray-400"><FileText size={36} className="mx-auto mb-2 opacity-20" />Aucune candidature</div>
-        ) : (
-          <div>
-            {filtered.map(app => (
-              <div key={app.id} className="flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">{app.desired_position || app.job_opening?.title || '—'}</p>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={10} />SNH</span>
-                    {app.job_opening_id ? (
-                      <Tag variant="blue">Offre publiée</Tag>
-                    ) : (
-                      <Tag variant="purple">Candidature spontanée</Tag>
-                    )}
-                    <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={10} />{fmtDate(app.created_at)}</span>
-                  </div>
-                </div>
-                <AppStatus status={app.status} />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      {selectedJob && (
+        <JobDetailModal
+          job={selectedJob}
+          isApplied={applied.has(selectedJob.id)}
+          documents={documents}
+          candidateId={candidateId}
+          onApplied={onApplied}
+          onClose={() => setSelectedJob(null)}
+          readOnly
+        />
+      )}
+    </>
   );
 }
 

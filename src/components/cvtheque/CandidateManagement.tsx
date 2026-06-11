@@ -150,7 +150,6 @@ export default function CandidateManagement() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
-  const [showPortalInfo, setShowPortalInfo] = useState(false);
   const [computingMatch, setComputingMatch] = useState(false);
   const [showSpontaneousModal, setShowSpontaneousModal] = useState(false);
 
@@ -261,8 +260,6 @@ export default function CandidateManagement() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   };
 
-  const portalUrl = `${window.location.origin}?view=candidature`;
-
   const filteredCandidates = candidates.filter(c => {
     const txt = `${c.first_name} ${c.last_name} ${c.email} ${c.desired_position || ''}`.toLowerCase();
     const appStatus = c.candidate_applications?.[0]?.status || 'new';
@@ -291,10 +288,6 @@ export default function CandidateManagement() {
           <button onClick={() => setShowSpontaneousModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition text-sm font-medium">
             <UserPlus size={15} /> Candidature spontanée
-          </button>
-          <button onClick={() => setShowPortalInfo(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-700 text-white rounded-xl hover:bg-teal-800 transition text-sm font-medium">
-            <Globe size={15} /> Portail candidats
           </button>
         </div>
       </div>
@@ -495,33 +488,6 @@ export default function CandidateManagement() {
         />
       )}
 
-      {/* Portal info modal */}
-      {showPortalInfo && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-slate-900">Portail candidats</h3>
-              <button onClick={() => setShowPortalInfo(false)} className="text-slate-400 hover:text-slate-600"><X size={22} /></button>
-            </div>
-            <div className="space-y-4">
-              <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
-                <p className="text-xs font-semibold text-teal-700 uppercase mb-2">Lien public</p>
-                <p className="font-mono text-sm text-teal-900 break-all">{portalUrl}</p>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4 space-y-2 text-sm text-slate-600">
-                <p className="flex items-center gap-2"><CheckCircle size={14} className="text-green-600" /> Inscription avec email / mot de passe</p>
-                <p className="flex items-center gap-2"><CheckCircle size={14} className="text-green-600" /> Dashboard personnalisé avec offres recommandées par IA</p>
-                <p className="flex items-center gap-2"><CheckCircle size={14} className="text-green-600" /> Score d'adéquation en temps réel</p>
-                <p className="flex items-center gap-2"><CheckCircle size={14} className="text-green-600" /> Profil modifiable à tout moment</p>
-              </div>
-              <button onClick={() => window.open(portalUrl, '_blank', 'noopener,noreferrer')}
-                className="w-full py-2.5 bg-teal-700 text-white rounded-xl hover:bg-teal-800 transition text-sm font-medium">
-                Ouvrir le portail candidats
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

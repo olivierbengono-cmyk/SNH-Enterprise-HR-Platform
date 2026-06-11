@@ -6,7 +6,7 @@ import {
   FileText, CheckCircle, Clock, UserCheck, XCircle, MessageSquare,
   TrendingUp, Download, ChevronRight, AlertCircle, Sparkles,
   ChevronDown, ChevronUp, Building2, RefreshCw, ArrowRight,
-  ClipboardList, UserPlus, Award, Send, History, Plus, Filter
+  ClipboardList, UserPlus, Award, Send, History, Plus, Filter, Upload
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ interface Experience { id: string; job_title: string; company: string; location:
 interface Education { id: string; degree: string; field_of_study: string | null; institution: string; end_date: string | null; grade: string | null; }
 interface CandSkill { id: string; skill_id?: string | null; name: string; category: string; level: string; }
 interface MasterSkill { id: string; name: string; category: string; description?: string | null; }
-interface CandDoc { id: string; type: string; file_name: string; file_url: string; file_size: number | null; }
+interface CandDoc { id: string; type: string; file_name: string; file_url: string; file_size: number | null; uploaded_at: string; expiration_date?: string | null; }
 interface JobOpening { id: string; title: string; reference: string; contract_type: string; location: string; status: string; publication_date: string; closing_date: string; required_skills: string[]; nice_to_have_skills: string[]; min_experience_years: number; }
 interface JobMatch {
   id: string; candidate_id: string; job_opening_id: string; match_score: number;
@@ -96,6 +96,28 @@ const CAT_LABELS: Record<string, string> = {
 function fmtDate(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function fmtSize(bytes: number | null) {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+const DOC_TYPES = [
+  { value: 'cv', label: 'CV' },
+  { value: 'cover_letter', label: 'Lettre de motivation' },
+  { value: 'id', label: 'CNI / Passeport' },
+  { value: 'diploma', label: 'Diplôme' },
+  { value: 'certificate', label: 'Attestation de travail' },
+  { value: 'recommendation', label: 'Lettre de recommandation' },
+  { value: 'other', label: 'Autre document' },
+];
+function docExpiryStatus(expDate: string | null | undefined): 'expired' | 'soon' | 'ok' | null {
+  if (!expDate) return null;
+  const diffDays = Math.ceil((new Date(expDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return 'expired';
+  if (diffDays <= 30) return 'soon';
+  return 'ok';
 }
 function getStageInfo(value: string) {
   return ALL_STATUSES.find(s => s.value === value) || ALL_STATUSES[0];
@@ -1186,6 +1208,136 @@ function MatchCard({ match, candidate, onViewCandidate }: { match: JobMatch; can
   );
 }
 
+// ── Admin Documents Tab ───────────────────────────────────────────────────
+function AdminDocumentsTab({ candidateId, initialDocs, onRefresh }: {
+  candidateId: string;
+  initialDocs: CandDoc[];
+  onRefresh: (id: string) => Promise<void>;
+}) {
+  const [docs, setDocs] = useState<CandDoc[]>(initialDocs);
+  const [selectedType, setSelectedType] = useState('cv');
+  const [expirationDate, setExpirationDate] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const expiredDocs = docs.filter(d => docExpiryStatus(d.expiration_date) === 'expired');
+  const soonDocs = docs.filter(d => docExpiryStatus(d.expiration_date) === 'soon');
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError('Fichier trop volumineux (max 10 Mo)'); e.target.value = ''; return; }
+    setError(''); setUploading(true);
+    const ext = file.name.split('.').pop();
+    const path = `${candidateId}/${selectedType}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('candidates-documents').upload(path, file, { upsert: false });
+    if (upErr) { setError('Erreur upload : ' + upErr.message); setUploading(false); e.target.value = ''; return; }
+    const { data: urlData } = supabase.storage.from('candidates-documents').getPublicUrl(path);
+    const { data: docData } = await supabase.from('candidate_documents').insert({
+      candidate_id: candidateId, type: selectedType, file_name: file.name,
+      file_url: urlData.publicUrl, file_size: file.size,
+      expiration_date: expirationDate || null,
+    }).select().maybeSingle();
+    if (docData) setDocs([docData as CandDoc, ...docs]);
+    setUploading(false); setExpirationDate(''); e.target.value = '';
+    await onRefresh(candidateId);
+  };
+
+  const handleDelete = async (doc: CandDoc) => {
+    setDeleting(doc.id);
+    const parts = doc.file_url.split('/candidates-documents/');
+    if (parts[1]) await supabase.storage.from('candidates-documents').remove([decodeURIComponent(parts[1])]);
+    await supabase.from('candidate_documents').delete().eq('id', doc.id);
+    setDocs(docs.filter(d => d.id !== doc.id));
+    setDeleting(null);
+    await onRefresh(candidateId);
+  };
+
+  return (
+    <div className="space-y-4">
+      {expiredDocs.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2">
+          <AlertCircle size={14} className="text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700"><span className="font-semibold">Documents expirés : </span>{expiredDocs.map(d => DOC_TYPES.find(t => t.value === d.type)?.label ?? d.type).join(', ')}</p>
+        </div>
+      )}
+      {soonDocs.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+          <AlertCircle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700"><span className="font-semibold">Expirent bientôt : </span>{soonDocs.map(d => DOC_TYPES.find(t => t.value === d.type)?.label ?? d.type).join(', ')}</p>
+        </div>
+      )}
+
+      {/* Upload form */}
+      <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Ajouter un document</p>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Type *</label>
+            <select value={selectedType} onChange={e => setSelectedType(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+              {DOC_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Date d'expiration</label>
+            <input type="date" value={expirationDate} onChange={e => setExpirationDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none" />
+          </div>
+        </div>
+        <label className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer transition bg-teal-700 hover:bg-teal-800 ${uploading ? 'opacity-60 cursor-not-allowed' : ''}`}>
+          {uploading
+            ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Envoi en cours...</>
+            : <><Upload size={14} />Choisir un fichier et téléverser</>}
+          <input type="file" className="hidden" disabled={uploading} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleFile} />
+        </label>
+        <p className="text-xs text-slate-400 mt-1.5 text-center">PDF, Word, JPG, PNG — max 10 Mo</p>
+        {error && <p className="text-red-600 text-xs mt-2">{error}</p>}
+      </div>
+
+      {/* Document list */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100">
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Documents ({docs.length})</p>
+        </div>
+        {docs.length === 0 ? (
+          <div className="py-8 text-center text-slate-400 text-sm">
+            <FileText size={28} className="mx-auto mb-2 opacity-30" />Aucun document
+          </div>
+        ) : (
+          docs.map(doc => {
+            const expStatus = docExpiryStatus(doc.expiration_date);
+            return (
+              <div key={doc.id} className={`flex items-center gap-3 px-4 py-3 border-b border-slate-50 last:border-0 ${expStatus === 'expired' ? 'bg-red-50' : expStatus === 'soon' ? 'bg-amber-50' : ''}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${expStatus === 'expired' ? 'bg-red-100' : expStatus === 'soon' ? 'bg-amber-100' : 'bg-teal-50'}`}>
+                  <FileText size={14} className={expStatus === 'expired' ? 'text-red-600' : expStatus === 'soon' ? 'text-amber-600' : 'text-teal-600'} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-700 truncate">{doc.file_name}</p>
+                  <p className="text-xs text-slate-400">{DOC_TYPES.find(d => d.value === doc.type)?.label ?? doc.type}{doc.file_size ? ` · ${fmtSize(doc.file_size)}` : ''} · {fmtDate(doc.uploaded_at)}</p>
+                  {doc.expiration_date && (
+                    <p className={`text-xs font-semibold ${expStatus === 'expired' ? 'text-red-600' : expStatus === 'soon' ? 'text-amber-600' : 'text-slate-400'}`}>
+                      {expStatus === 'expired' ? '⚠ Expiré le ' : expStatus === 'soon' ? '⚠ Expire le ' : 'Expire le '}{fmtDate(doc.expiration_date)}
+                    </p>
+                  )}
+                </div>
+                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition">
+                  <Eye size={14} />
+                </a>
+                <button onClick={() => handleDelete(doc)} disabled={deleting === doc.id} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50">
+                  {deleting === doc.id ? <div className="w-3.5 h-3.5 border border-red-300 border-t-red-500 rounded-full animate-spin" /> : <Trash2 size={14} />}
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Candidate Detail Modal ────────────────────────────────────────────────
 function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDownloadDoc }: {
   candidate: Candidate; onClose: () => void;
@@ -1566,21 +1718,7 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
 
           {/* Documents tab */}
           {tab === 'documents' && (
-            <div className="space-y-2">
-              {!c.candidate_documents?.length ? <EmptyState label="Aucun document" /> :
-                c.candidate_documents.map(doc => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 border border-slate-100 rounded-xl hover:bg-slate-50">
-                    <div className="flex items-center gap-3">
-                      <FileText size={16} className="text-teal-600" />
-                      <div>
-                        <p className="text-sm font-medium text-slate-700">{doc.file_name}</p>
-                        <p className="text-xs text-slate-400">{doc.type}{doc.file_size ? ` · ${(doc.file_size / 1024).toFixed(0)} KB` : ''}</p>
-                      </div>
-                    </div>
-                    <button onClick={() => onDownloadDoc(doc)} className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition"><Download size={14} /></button>
-                  </div>
-                ))}
-            </div>
+            <AdminDocumentsTab candidateId={c.id} initialDocs={c.candidate_documents ?? []} onRefresh={onRefresh} />
           )}
         </div>
 

@@ -622,7 +622,7 @@ export default function CandidateManagement() {
 }
 
 // ── Add Candidate Modal (multi-tab, aligns with portal profile) ──────────────
-type AddTab = 'infos' | 'experiences' | 'formations' | 'competences' | 'langues' | 'candidature';
+type AddTab = 'infos' | 'experiences' | 'formations' | 'competences' | 'langues' | 'candidature' | 'documents';
 
 function fi(err = false) {
   return `w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${err ? 'border-red-300 bg-red-50' : 'border-slate-300 bg-white'}`;
@@ -638,6 +638,7 @@ const ADD_TABS: { value: AddTab; label: string }[] = [
   { value: 'competences',  label: 'Compétences' },
   { value: 'langues',      label: 'Langues' },
   { value: 'candidature',  label: 'Candidature' },
+  { value: 'documents',    label: 'Documents' },
 ];
 
 interface NewExp { job_title: string; company: string; location: string; start_date: string; end_date: string; is_current: boolean; description: string; contract_type: string; sector: string; }
@@ -717,6 +718,57 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
   const [internalNotes, setInternalNotes] = useState('');
   const [source, setSource] = useState('spontaneous');
 
+  // Documents — requires candidateId to exist first
+  const [savedCandidateId, setSavedCandidateId] = useState<string | null>(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+
+  const ensureCandidateSaved = async (): Promise<string | null> => {
+    if (savedCandidateId) return savedCandidateId;
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+      setError('Remplissez prénom, nom et email avant d\'accéder aux documents.');
+      setTab('infos');
+      return null;
+    }
+    setAutoSaving(true); setError('');
+    try {
+      const { data: existing } = await supabase.from('candidates').select('id').eq('email', email.trim().toLowerCase()).maybeSingle();
+      if (existing) { setSavedCandidateId(existing.id); return existing.id; }
+      const { data: newCand, error: candErr } = await supabase.from('candidates').insert({
+        first_name: firstName.trim(), last_name: lastName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim() || null, phone2: phone2.trim() || null,
+        birth_date: birthDate || null, gender: gender || null,
+        nationality: nationality.trim() || null, national_id: nationalId.trim() || null,
+        location: location.trim() || null, region: region || null,
+        professional_title: professionalTitle.trim() || null,
+        desired_position: desiredPosition.trim() || null,
+        linkedin_url: linkedinUrl.trim() || null, portfolio_url: portfolioUrl.trim() || null,
+        summary: summary.trim() || null,
+        desired_salary_min: desiredSalaryMin ? Number(desiredSalaryMin) : null,
+        desired_salary_max: desiredSalaryMax ? Number(desiredSalaryMax) : null,
+        availability_date: availabilityDate || null,
+        source: source || 'spontaneous', status: 'active', profile_completed: false,
+      }).select('id').maybeSingle();
+      if (candErr) throw new Error(candErr.message);
+      const id = newCand?.id ?? null;
+      if (id) setSavedCandidateId(id);
+      return id;
+    } catch (e: any) {
+      setError(e.message);
+      return null;
+    } finally {
+      setAutoSaving(false);
+    }
+  };
+
+  const handleTabClick = async (tabValue: AddTab) => {
+    if (tabValue === 'documents') {
+      const id = await ensureCandidateSaved();
+      if (!id) return;
+    }
+    setTab(tabValue);
+  };
+
   const tabIdx = ADD_TABS.findIndex(t => t.value === tab);
 
   const handleSave = async () => {
@@ -725,30 +777,38 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
     }
     setSaving(true); setError('');
     try {
-      // 1. Check existing or create candidate
-      let candidateId: string | null = null;
-      const { data: existing } = await supabase.from('candidates').select('id').eq('email', email.trim().toLowerCase()).maybeSingle();
-      if (existing) {
-        candidateId = existing.id;
+      // 1. Create or update candidate
+      let candidateId: string | null = savedCandidateId;
+      const profileFields = {
+        first_name: firstName.trim(), last_name: lastName.trim(),
+        phone: phone.trim() || null, phone2: phone2.trim() || null,
+        birth_date: birthDate || null, gender: gender || null,
+        nationality: nationality.trim() || null, national_id: nationalId.trim() || null,
+        location: location.trim() || null, region: region || null,
+        professional_title: professionalTitle.trim() || null,
+        desired_position: desiredPosition.trim() || null,
+        linkedin_url: linkedinUrl.trim() || null, portfolio_url: portfolioUrl.trim() || null,
+        summary: summary.trim() || null,
+        desired_salary_min: desiredSalaryMin ? Number(desiredSalaryMin) : null,
+        desired_salary_max: desiredSalaryMax ? Number(desiredSalaryMax) : null,
+        availability_date: availabilityDate || null,
+        source: source || 'spontaneous',
+      };
+      if (candidateId) {
+        // Already auto-saved when Documents tab was opened — just update
+        await supabase.from('candidates').update(profileFields).eq('id', candidateId);
       } else {
-        const { data: newCand, error: candErr } = await supabase.from('candidates').insert({
-          first_name: firstName.trim(), last_name: lastName.trim(),
-          email: email.trim().toLowerCase(),
-          phone: phone.trim() || null, phone2: phone2.trim() || null,
-          birth_date: birthDate || null, gender: gender || null,
-          nationality: nationality.trim() || null, national_id: nationalId.trim() || null,
-          location: location.trim() || null, region: region || null,
-          professional_title: professionalTitle.trim() || null,
-          desired_position: desiredPosition.trim() || null,
-          linkedin_url: linkedinUrl.trim() || null, portfolio_url: portfolioUrl.trim() || null,
-          summary: summary.trim() || null,
-          desired_salary_min: desiredSalaryMin ? Number(desiredSalaryMin) : null,
-          desired_salary_max: desiredSalaryMax ? Number(desiredSalaryMax) : null,
-          availability_date: availabilityDate || null,
-          source: source || 'spontaneous', status: 'active', profile_completed: false,
-        }).select('id').maybeSingle();
-        if (candErr) throw new Error(candErr.message);
-        candidateId = newCand?.id ?? null;
+        const { data: existing } = await supabase.from('candidates').select('id').eq('email', email.trim().toLowerCase()).maybeSingle();
+        if (existing) {
+          candidateId = existing.id;
+          await supabase.from('candidates').update(profileFields).eq('id', candidateId);
+        } else {
+          const { data: newCand, error: candErr } = await supabase.from('candidates').insert({
+            ...profileFields, email: email.trim().toLowerCase(), status: 'active', profile_completed: false,
+          }).select('id').maybeSingle();
+          if (candErr) throw new Error(candErr.message);
+          candidateId = newCand?.id ?? null;
+        }
       }
       if (!candidateId) throw new Error('Impossible de créer le candidat.');
 
@@ -816,10 +876,12 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
           </div>
           {/* Tabs */}
           <div className="flex gap-0 overflow-x-auto -mb-px">
-            {ADD_TABS.map((t, i) => (
-              <button key={t.value} onClick={() => setTab(t.value)}
-                className={`flex-shrink-0 px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${tab === t.value ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
-                {t.label}
+            {ADD_TABS.map((t) => (
+              <button key={t.value} onClick={() => handleTabClick(t.value)}
+                disabled={autoSaving}
+                className={`flex-shrink-0 px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${tab === t.value ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'} ${t.value === 'documents' && !savedCandidateId ? 'opacity-60' : ''}`}>
+                {t.value === 'documents' && autoSaving ? '...' : t.label}
+                {t.value === 'documents' && savedCandidateId && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-teal-500 inline-block align-middle" />}
               </button>
             ))}
           </div>
@@ -1096,6 +1158,41 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
               </div>
             </div>
           )}
+
+          {/* ── Tab: Documents ─── */}
+          {tab === 'documents' && (
+            savedCandidateId ? (
+              <AdminDocumentsTab
+                candidateId={savedCandidateId}
+                initialDocs={[]}
+                onRefresh={async () => {}}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                {autoSaving ? (
+                  <>
+                    <div className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto" />
+                    <p className="text-sm text-slate-500">Enregistrement du profil en cours...</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center mx-auto">
+                      <FileText size={24} className="text-teal-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700">Enregistrement requis</p>
+                      <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Remplissez au minimum le prénom, le nom et l'email, puis cliquez ci-dessous pour activer l'onglet documents.</p>
+                    </div>
+                    <button onClick={async () => { const id = await ensureCandidateSaved(); if (id) setTab('documents'); }}
+                      disabled={autoSaving}
+                      className="flex items-center gap-2 px-5 py-2.5 text-sm rounded-lg bg-teal-700 text-white font-semibold hover:bg-teal-800 disabled:opacity-50 transition">
+                      <Upload size={14} /> Enregistrer le profil et accéder aux documents
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          )}
         </div>
 
         {/* Footer */}
@@ -1105,14 +1202,20 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
           </button>
           <div className="flex items-center gap-2">
             {tabIdx > 0 && (
-              <button onClick={()=>setTab(ADD_TABS[tabIdx-1].value)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition text-slate-600">
+              <button onClick={() => handleTabClick(ADD_TABS[tabIdx-1].value)} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition text-slate-600">
                 Précédent
               </button>
             )}
-            {tabIdx < ADD_TABS.length - 1 ? (
-              <button onClick={()=>setTab(ADD_TABS[tabIdx+1].value)}
-                className="flex items-center gap-1.5 px-5 py-2 text-sm rounded-lg bg-teal-700 text-white font-semibold hover:bg-teal-800 transition">
-                Suivant & Sauvegarder <ChevronRight size={15}/>
+            {tab === 'documents' ? (
+              <button onClick={handleSave} disabled={saving}
+                className="flex items-center gap-2 px-6 py-2 text-sm rounded-lg bg-teal-700 text-white font-semibold hover:bg-teal-800 disabled:opacity-50 transition">
+                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <CheckCircle size={15}/>}
+                {saving ? 'Finalisation...' : 'Finaliser la création'}
+              </button>
+            ) : tabIdx < ADD_TABS.length - 1 ? (
+              <button onClick={() => handleTabClick(ADD_TABS[tabIdx+1].value)} disabled={autoSaving}
+                className="flex items-center gap-1.5 px-5 py-2 text-sm rounded-lg bg-teal-700 text-white font-semibold hover:bg-teal-800 disabled:opacity-50 transition">
+                {autoSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <>Suivant <ChevronRight size={15}/></>}
               </button>
             ) : (
               <button onClick={handleSave} disabled={saving}

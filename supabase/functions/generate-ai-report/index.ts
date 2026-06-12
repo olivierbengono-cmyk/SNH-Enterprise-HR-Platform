@@ -17,8 +17,9 @@ interface ReportRequest {
     month?: string;
     year?: string;
   };
-  userId: string;
 }
+
+const HR_ROLES = ["admin", "drh", "director", "payroll_manager", "recruitment_manager", "career_manager", "qvct_manager"];
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -30,16 +31,42 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { reportType, parameters, userId }: ReportRequest = await req.json();
+    // ── JWT verification: only HR roles may generate reports ────────────────
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Non autorisé" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const token = authHeader.slice(7);
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) {
+      return new Response(JSON.stringify({ error: "Non autorisé" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!profile || !HR_ROLES.includes(profile.role)) {
+      return new Response(JSON.stringify({ error: "Accès refusé : rôle insuffisant" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
-    if (!reportType || !userId) {
+    const { reportType, parameters }: ReportRequest = await req.json();
+
+    if (!reportType) {
       return new Response(
-        JSON.stringify({ error: "Report type and userId are required" }),
+        JSON.stringify({ error: "Le type de rapport est requis" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const htmlContent = await generateReportHTML(supabase, reportType, parameters, userId);
+    const htmlContent = await generateReportHTML(supabase, reportType, parameters, user.id);
 
     return new Response(
       JSON.stringify({ success: true, html: htmlContent, reportType, generatedAt: new Date().toISOString() }),
@@ -48,11 +75,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("Report Generation Error:", error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        message: "Erreur lors de la génération du rapport",
-        error: error instanceof Error ? error.message : String(error),
-      }),
+      JSON.stringify({ success: false, message: "Erreur lors de la génération du rapport" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

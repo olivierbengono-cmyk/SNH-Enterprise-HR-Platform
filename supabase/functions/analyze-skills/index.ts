@@ -179,12 +179,14 @@ Deno.serve(async (req: Request) => {
     );
 
     const body = await req.json();
-    const { type, position_id, employee_id, top_n = 10 }: {
+    const { type, position_id, employee_id, top_n }: {
       type: AnalysisType;
       position_id?: string;
       employee_id?: string;
       top_n?: number;
     } = body;
+    // Cap top_n to prevent excessive memory use; default 10, max 100
+    const safeTopN = Math.min(100, Math.max(1, Number(top_n) || 10));
 
     // ── Position Matching ────────────────────────────────────────────────────
     if (type === "position_matching") {
@@ -264,7 +266,7 @@ Deno.serve(async (req: Request) => {
           };
         })
         .sort((a, b) => b.score - a.score || b.mandatory_score - a.mandatory_score)
-        .slice(0, top_n);
+        .slice(0, safeTopN);
 
       return new Response(JSON.stringify({
         position: { id: position_id, title: posData?.title, department: (posData as any)?.departments?.name },
@@ -377,7 +379,7 @@ Deno.serve(async (req: Request) => {
           };
         })
         .sort((a, b) => b.score - a.score)
-        .slice(0, top_n);
+        .slice(0, safeTopN);
 
       return new Response(JSON.stringify({
         departing_employee: {
@@ -484,7 +486,7 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     console.error("analyze-skills error:", error);
-    return new Response(JSON.stringify({ error: "Erreur interne du serveur", details: String(error) }), {
+    return new Response(JSON.stringify({ error: "Erreur interne du serveur" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }

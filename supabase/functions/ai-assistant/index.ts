@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -253,16 +254,38 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { message, userId, context }: AIRequest = await req.json();
+    // ── JWT verification ───────────────────────────────────────────────────
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Non autorisé" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const token = authHeader.slice(7);
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+    if (authErr || !user) {
+      return new Response(JSON.stringify({ error: "Non autorisé" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
-    if (!message || !userId) {
-      return new Response(JSON.stringify({ error: "Message and userId are required" }), {
+    const { message, context }: Omit<AIRequest, "userId"> = await req.json();
+
+    if (!message) {
+      return new Response(JSON.stringify({ error: "Le message est requis" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const result = await processAIRequest(message, userId, context);
+    // userId is always derived from the verified JWT, never from the request body
+    const result = await processAIRequest(message, user.id, context);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -273,7 +296,6 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         success: false,
         message: "Une erreur s'est produite lors du traitement de votre demande.",
-        error: String(error),
       }),
       {
         status: 500,

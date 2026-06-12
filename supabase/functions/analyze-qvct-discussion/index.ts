@@ -9,36 +9,49 @@ const corsHeaders = {
 
 interface AnalysisRequest {
   threadId: string;
-  employeeId: string;
 }
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    const { threadId, employeeId }: AnalysisRequest = await req.json();
-
-    if (!threadId || !employeeId) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "threadId et employeeId requis"
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // ── JWT verification ───────────────────────────────────────────────────
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ success: false, message: "Non autorisé" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const token = authHeader.slice(7);
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) {
+      return new Response(JSON.stringify({ success: false, message: "Non autorisé" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Resolve employee record for the authenticated user
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("employee_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    const employeeId = profile?.employee_id ?? user.id;
+    // ────────────────────────────────────────────────────────────────────────
+
+    const { threadId }: AnalysisRequest = await req.json();
+
+    if (!threadId) {
+      return new Response(
+        JSON.stringify({ success: false, message: "threadId requis" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const { data: thread, error: threadError } = await supabase
       .from("qvct_discussion_threads")
@@ -125,7 +138,6 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         success: false,
         message: "Erreur lors de l'analyse de la discussion",
-        error: error.message,
       }),
       {
         status: 500,

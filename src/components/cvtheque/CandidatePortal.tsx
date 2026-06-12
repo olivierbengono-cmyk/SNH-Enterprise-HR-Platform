@@ -242,7 +242,7 @@ export default function CandidatePortal() {
     setCandidateId(cand.id);
     setProfile(cand as CandidateProfile);
 
-    const [expRes, eduRes, skRes, langRes, docRes, appRes, matchRes, jobRes] = await Promise.all([
+    const [expRes, eduRes, skRes, langRes, docRes, appRes, matchRes, jobRes, notifRes] = await Promise.all([
       supabase.from('candidate_experiences').select('*').eq('candidate_id', cand.id).order('start_date', { ascending: false }),
       supabase.from('candidate_educations').select('*').eq('candidate_id', cand.id).order('end_date', { ascending: false }),
       supabase.from('candidate_candidate_skills').select('*').eq('candidate_id', cand.id),
@@ -251,6 +251,7 @@ export default function CandidatePortal() {
       supabase.from('candidate_applications').select('*,job_opening:job_openings(id,title)').eq('candidate_id', cand.id).order('created_at', { ascending: false }),
       supabase.from('candidate_job_matches').select('*, job_opening:job_openings(*)').eq('candidate_id', cand.id).order('match_score', { ascending: false }),
       supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false }),
+      supabase.from('notifications').select('*').eq('user_id', userId).eq('category', 'recruitment').order('created_at', { ascending: false }).limit(30),
     ]);
     setExperiences((expRes.data || []) as Experience[]);
     setEducations((eduRes.data || []) as Education[]);
@@ -261,21 +262,29 @@ export default function CandidatePortal() {
     setMatches((matchRes.data || []) as unknown as JobMatch[]);
     setOpenJobs((jobRes.data || []) as JobOpening[]);
 
-    // Notifications from application history
-    const notifs: Notification[] = (appRes.data || []).slice(0, 5).map((a: any, i: number) => ({
-      id: String(i),
-      title: i === 0 ? 'Candidature reçue' : 'Mise à jour de statut',
-      body: i === 0
-        ? `Votre candidature pour "${a.desired_position || a.job_opening?.title || 'ce poste'}" a bien été reçue.`
-        : `Le statut de votre candidature pour "${a.desired_position || a.job_opening?.title || 'ce poste'}" a été mis à jour.`,
-      read: i > 1,
-      created_at: a.created_at,
+    // Real notifications from DB (inserted by trigger on candidate_applications changes)
+    const notifs: Notification[] = (notifRes.data || []).map((n: any) => ({
+      id: n.id,
+      title: n.title,
+      body: n.message,
+      read: n.is_read,
+      created_at: n.created_at,
     }));
     setNotifications(notifs);
     setUnreadNotifs(notifs.filter(n => !n.read).length);
 
     setView('portal');
     setLoading(false);
+  };
+
+  const markNotificationsAsRead = async () => {
+    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    await supabase.from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .in('id', unreadIds);
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadNotifs(0);
   };
 
   const handleLogout = async () => {
@@ -446,7 +455,7 @@ export default function CandidatePortal() {
               onWithdrawn={(appId) => setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'withdrawn' } : a))} />
           )}
           {section === 'notifications' && (
-            <NotificationsSection notifications={notifications} />
+            <NotificationsSection notifications={notifications} onView={markNotificationsAsRead} />
           )}
         </div>
       </div>
@@ -2289,24 +2298,44 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────
-function NotificationsSection({ notifications }: { notifications: Notification[] }) {
+function NotificationsSection({ notifications, onView }: { notifications: Notification[]; onView: () => void }) {
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Mark all as read shortly after the section is opened
+  useEffect(() => {
+    if (unreadCount === 0) return;
+    const t = setTimeout(onView, 1500);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div>
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-gray-100">
+        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+          {unreadCount > 0 && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+              {unreadCount} nouvelle{unreadCount > 1 ? 's' : ''}
+            </span>
+          )}
         </div>
         {notifications.length === 0 ? (
           <div className="py-12 text-center text-gray-400"><Bell size={32} className="mx-auto mb-2 opacity-20" />Aucune notification</div>
         ) : (
           <div>
             {notifications.map(n => (
-              <div key={n.id} className={`flex items-start gap-3 px-5 py-4 border-b border-gray-50 last:border-0 ${n.read ? '' : 'bg-green-50/40'}`}>
-                <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${n.read ? 'bg-gray-300' : 'bg-red-500'}`} />
+              <div key={n.id} className={`flex items-start gap-3 px-5 py-4 border-b border-gray-50 last:border-0 transition-colors ${n.read ? 'bg-green-50/30' : 'bg-red-50/40'}`}>
+                <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${n.read ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
                 <div className="flex-1">
-                  <p className={`text-sm ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}`}><span className="font-semibold">{n.title}</span> — {n.body}</p>
+                  <p className={`text-sm ${n.read ? 'text-gray-600' : 'text-gray-900 font-semibold'}`}>
+                    {n.title}
+                  </p>
+                  <p className={`text-sm mt-0.5 ${n.read ? 'text-gray-500' : 'text-gray-700'}`}>{n.body}</p>
                   <p className="text-xs text-gray-400 mt-1 flex items-center gap-1"><Clock size={10} />{fmtDate(n.created_at)}</p>
                 </div>
+                {!n.read && (
+                  <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">Nouveau</span>
+                )}
               </div>
             ))}
           </div>

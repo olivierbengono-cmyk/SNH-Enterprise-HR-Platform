@@ -1629,6 +1629,7 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
   onApplied: (app: Application) => void; onClose: () => void; readOnly?: boolean;
 }) {
   const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState('');
   const [showMissingWarning, setShowMissingWarning] = useState(false);
 
   const isStage = job.contract_type?.toLowerCase().includes('stage');
@@ -1641,11 +1642,18 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
 
   const doApply = async () => {
     setApplying(true);
-    const { data } = await supabase.from('candidate_applications').insert({
+    setApplyError('');
+    setShowMissingWarning(false);
+    const { data, error } = await supabase.from('candidate_applications').insert({
       candidate_id: candidateId, job_opening_id: job.id,
       desired_position: job.title, status: 'new',
     }).select().maybeSingle();
-    if (data) { onApplied(data as Application); onClose(); }
+    if (error) {
+      setApplyError('Impossible de postuler : ' + error.message);
+    } else if (data) {
+      onApplied(data as Application);
+      onClose();
+    }
     setApplying(false);
   };
 
@@ -1788,6 +1796,13 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
             </div>
           )}
         </div>
+
+        {applyError && (
+          <div className="mx-6 mb-0 -mt-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-start gap-2">
+            <AlertCircle size={15} className="flex-shrink-0 mt-0.5 text-red-500" />
+            <span>{applyError}</span>
+          </div>
+        )}
 
         {/* Footer */}
         {!readOnly && (

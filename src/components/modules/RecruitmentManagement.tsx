@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Pagination, paginate, PageSize } from '../shared/Pagination';
 import {
   Briefcase, Plus, Users, Calendar, TrendingUp, X, MapPin, Mail, Phone,
   FileText, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle,
@@ -52,6 +53,8 @@ export function RecruitmentManagement() {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [candidateTotalApps, setCandidateTotalApps] = useState<number | null>(null);
+  const [jobsPage, setJobsPage] = useState(1);
+  const [jobsPageSize, setJobsPageSize] = useState<PageSize>(20);
 
   useEffect(() => { loadData(); }, []);
 
@@ -179,43 +182,52 @@ export function RecruitmentManagement() {
             <p className="text-sm">Aucune offre créée</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-50">
-            {jobOpenings.map(job => {
-              const isOpen = job.status === 'open';
-              const isDraft = job.status === 'draft';
-              return (
-                <div
-                  key={job.id}
-                  onClick={() => openJob(job)}
-                  className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 cursor-pointer transition group"
-                >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isOpen ? 'bg-green-50' : 'bg-slate-100'}`}>
-                    <Briefcase size={18} className={isOpen ? 'text-green-700' : 'text-slate-400'} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-slate-900">{job.title}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
-                        isOpen ? 'bg-green-50 text-green-700 border-green-200' :
-                        isDraft ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                        'bg-slate-100 text-slate-500 border-slate-200'
-                      }`}>
-                        {isOpen ? 'Publiée' : isDraft ? 'Brouillon' : 'Fermée'}
-                      </span>
+          <>
+            <div className="divide-y divide-slate-50">
+              {paginate(jobOpenings, jobsPage, jobsPageSize).map(job => {
+                const isOpen = job.status === 'open';
+                const isDraft = job.status === 'draft';
+                return (
+                  <div
+                    key={job.id}
+                    onClick={() => openJob(job)}
+                    className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 cursor-pointer transition group"
+                  >
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isOpen ? 'bg-green-50' : 'bg-slate-100'}`}>
+                      <Briefcase size={18} className={isOpen ? 'text-green-700' : 'text-slate-400'} />
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
-                      <span className="flex items-center gap-1"><MapPin size={10} />{job.location || 'Non précisé'}</span>
-                      <span className="flex items-center gap-1"><Building2 size={10} />{job.contract_type || '—'}</span>
-                      {job.closing_date && (
-                        <span className="flex items-center gap-1"><Clock size={10} />Clôture {fmtDate(job.closing_date)}</span>
-                      )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-slate-900">{job.title}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                          isOpen ? 'bg-green-50 text-green-700 border-green-200' :
+                          isDraft ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          'bg-slate-100 text-slate-500 border-slate-200'
+                        }`}>
+                          {isOpen ? 'Publiée' : isDraft ? 'Brouillon' : 'Fermée'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
+                        <span className="flex items-center gap-1"><MapPin size={10} />{job.location || 'Non précisé'}</span>
+                        <span className="flex items-center gap-1"><Building2 size={10} />{job.contract_type || '—'}</span>
+                        {job.closing_date && (
+                          <span className="flex items-center gap-1"><Clock size={10} />Clôture {fmtDate(job.closing_date)}</span>
+                        )}
+                      </div>
                     </div>
+                    <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500 transition flex-shrink-0" />
                   </div>
-                  <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500 transition flex-shrink-0" />
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+            <Pagination
+              total={jobOpenings.length}
+              page={jobsPage}
+              pageSize={jobsPageSize}
+              onPage={setJobsPage}
+              onPageSize={setJobsPageSize}
+            />
+          </>
         )}
       </div>
 

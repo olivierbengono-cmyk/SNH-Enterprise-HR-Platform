@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Pagination, paginate, PageSize } from '../shared/Pagination';
 import { supabase } from '../../lib/supabase';
 import {
   Users, Search, X, Eye, Star, Trash2, Briefcase, MapPin,
@@ -204,6 +205,14 @@ export default function CandidateManagement() {
   const [computingMatch, setComputingMatch] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  // ── Pagination state ───────────────────────────────────────────────────────
+  const [candidatesPage, setCandidatesPage] = useState(1);
+  const [candidatesPageSize, setCandidatesPageSize] = useState<PageSize>(20);
+  const [matchesPage, setMatchesPage] = useState(1);
+  const [matchesPageSize, setMatchesPageSize] = useState<PageSize>(20);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchPageSize, setSearchPageSize] = useState<PageSize>(20);
+
   // ── Search view state ──────────────────────────────────────────────────────
   const [srchSkills, setSrchSkills] = useState<string[]>([]);
   const [srchSkillInput, setSrchSkillInput] = useState('');
@@ -341,6 +350,13 @@ export default function CandidateManagement() {
     if (filterSource !== 'all' && c.source !== filterSource) return false;
     return true;
   });
+
+  // Reset pages when filtered results change
+  const _candidatesKey = `${search}|${filterStatus}|${filterType}|${filterJobId}|${filterYear}|${filterSource}`;
+  useEffect(() => { setCandidatesPage(1); }, [_candidatesKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const _resetSearchPage = useCallback(() => setSearchPage(1), []);
+  useEffect(() => { _resetSearchPage(); }, [srchSkills.join(','), srchMinExp, srchLocation, srchEduLevel, srchAvailBefore, srchStatus]);
 
   const availableYears = [...new Set(candidates.map(c => new Date(c.created_at).getFullYear()))].sort((a, b) => b - a);
 
@@ -576,7 +592,7 @@ export default function CandidateManagement() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {filteredCandidates.map(c => {
+                    {paginate(filteredCandidates, candidatesPage, candidatesPageSize).map(c => {
                       const app = c.candidate_applications?.[0];
                       const stageIdx = STAGE_ORDER.indexOf(app?.status || 'new');
                       const progress = stageIdx >= 0 ? Math.round(((stageIdx + 1) / STAGE_ORDER.length) * 100) : 0;
@@ -616,6 +632,13 @@ export default function CandidateManagement() {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                total={filteredCandidates.length}
+                page={candidatesPage}
+                pageSize={candidatesPageSize}
+                onPage={setCandidatesPage}
+                onPageSize={setCandidatesPageSize}
+              />
             </div>
           )}
         </>
@@ -660,16 +683,27 @@ export default function CandidateManagement() {
                     <p className="text-slate-400 text-sm mt-1">Cliquez sur "Calculer l'adéquation IA" pour analyser tous les candidats</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {jobMatches.map(match => {
-                      const cand = match.candidate;
-                      if (!cand) return null;
-                      return (
-                        <MatchCard key={match.id} match={match} candidate={cand}
-                          onViewCandidate={() => { setMainView('candidates'); openCandidate(cand); }} />
-                      );
-                    })}
-                  </div>
+                  <>
+                    <div className="space-y-3">
+                      {paginate(jobMatches, matchesPage, matchesPageSize).map(match => {
+                        const cand = match.candidate;
+                        if (!cand) return null;
+                        return (
+                          <MatchCard key={match.id} match={match} candidate={cand}
+                            onViewCandidate={() => { setMainView('candidates'); openCandidate(cand); }} />
+                        );
+                      })}
+                    </div>
+                    <div className="mt-2">
+                      <Pagination
+                        total={jobMatches.length}
+                        page={matchesPage}
+                        pageSize={matchesPageSize}
+                        onPage={setMatchesPage}
+                        onPageSize={setMatchesPageSize}
+                      />
+                    </div>
+                  </>
                 )}
               </>
             )}
@@ -812,8 +846,9 @@ export default function CandidateManagement() {
                 <p className="text-xs mt-1">Essayez d'assouplir les filtres</p>
               </div>
             ) : (
+              <>
               <div className="space-y-3">
-                {searchResults.map(c => {
+                {paginate(searchResults, searchPage, searchPageSize).map(c => {
                   const appStatus = c.candidate_applications?.[0]?.status || 'new';
                   const stage = getStageInfo(appStatus);
                   const hasSkillCriteria = srchSkills.length > 0;
@@ -889,6 +924,18 @@ export default function CandidateManagement() {
                   );
                 })}
               </div>
+              {searchResults.length > 0 && (
+                <div className="mt-2">
+                  <Pagination
+                    total={searchResults.length}
+                    page={searchPage}
+                    pageSize={searchPageSize}
+                    onPage={setSearchPage}
+                    onPageSize={setSearchPageSize}
+                  />
+                </div>
+              )}
+              </>
             )}
           </div>
         </div>

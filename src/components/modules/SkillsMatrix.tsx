@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Pagination, paginate, PageSize } from '../shared/Pagination';
 import { Award, Plus, TrendingUp, Target, Star, Filter } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -57,6 +58,8 @@ export default function SkillsMatrix() {
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
+  const [skillsPage, setSkillsPage] = useState(1);
+  const [skillsPageSize, setSkillsPageSize] = useState<PageSize>(20);
 
   const [formData, setFormData] = useState({
     employee_id: '',
@@ -344,7 +347,7 @@ export default function SkillsMatrix() {
                   </td>
                 </tr>
               ) : (
-                filteredSkills.map((skill) => {
+                paginate(filteredSkills, skillsPage, skillsPageSize).map((skill) => {
                   const levelInfo = getSkillLevelLabel(skill.skill_level);
                   return (
                     <tr key={skill.id} className="hover:bg-gray-50">
@@ -374,6 +377,13 @@ export default function SkillsMatrix() {
               )}
             </tbody>
           </table>
+          <Pagination
+            total={filteredSkills.length}
+            page={skillsPage}
+            pageSize={skillsPageSize}
+            onPage={setSkillsPage}
+            onPageSize={setSkillsPageSize}
+          />
         </div>
       </div>
 

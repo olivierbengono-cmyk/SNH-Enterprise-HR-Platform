@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Pagination, paginate, PageSize } from '../shared/Pagination';
 import { Search, Plus, Filter, Download, User, Briefcase, Calendar, MoreVertical, X, Mail, Phone, MapPin, Building, FileX, Camera, TableProperties } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Employee } from '../../lib/database.types';
@@ -17,6 +18,8 @@ export function EmployeeList() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterContract, setFilterContract] = useState('');
   const [loading, setLoading] = useState(true);
+  const [empPage, setEmpPage] = useState(1);
+  const [empPageSize, setEmpPageSize] = useState<PageSize>(20);
   const [showForm, setShowForm] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showTerminationForm, setShowTerminationForm] = useState(false);
@@ -234,7 +237,7 @@ export function EmployeeList() {
               </tr>
             </thead>
             <tbody>
-              {filteredEmployees.map((employee) => (
+              {paginate(filteredEmployees, empPage, empPageSize).map((employee) => (
                 <tr
                   key={employee.id}
                   className="border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer"
@@ -289,6 +292,13 @@ export function EmployeeList() {
               ))}
             </tbody>
           </table>
+          <Pagination
+            total={filteredEmployees.length}
+            page={empPage}
+            pageSize={empPageSize}
+            onPage={setEmpPage}
+            onPageSize={setEmpPageSize}
+          />
 
           {filteredEmployees.length === 0 && (
             <div className="text-center py-12">

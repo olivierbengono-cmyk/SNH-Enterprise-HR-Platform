@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Pagination, paginate, PageSize } from '../../shared/Pagination';
 import {
   BarChart2, Users, FolderOpen, Clock, TrendingUp, AlertCircle,
   CheckCircle2, RefreshCw, Calendar, Award, Filter, ChevronDown
@@ -65,6 +66,8 @@ export default function PerformanceDashboardHR() {
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [viewType, setViewType] = useState<'employees' | 'directions'>('employees');
+  const [statsPage, setStatsPage] = useState(1);
+  const [statsPageSize, setStatsPageSize] = useState<PageSize>(20);
 
   const years = Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - i);
 
@@ -246,7 +249,7 @@ export default function PerformanceDashboardHR() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {employeeStats.map(emp => (
+              {paginate(employeeStats, statsPage, statsPageSize).map(emp => (
                 <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-3 py-3">
                     <p className="text-sm font-semibold text-gray-900">{emp.name}</p>
@@ -312,6 +315,13 @@ export default function PerformanceDashboardHR() {
               ))}
             </tbody>
           </table>
+          <Pagination
+            total={employeeStats.length}
+            page={statsPage}
+            pageSize={statsPageSize}
+            onPage={setStatsPage}
+            onPageSize={setStatsPageSize}
+          />
         </div>
       )}
 

@@ -7,7 +7,7 @@ import {
   FileText, CheckCircle, Clock, UserCheck, XCircle, MessageSquare,
   TrendingUp, Download, ChevronRight, AlertCircle, Sparkles,
   ChevronDown, ChevronUp, Building2, RefreshCw, ArrowRight,
-  ClipboardList, UserPlus, Award, Send, History, Plus, Filter, Upload
+  ClipboardList, UserPlus, Award, Send, History, Plus, Filter, Upload, Pencil
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -204,6 +204,7 @@ export default function CandidateManagement() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [computingMatch, setComputingMatch] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
 
   // ── Pagination state ───────────────────────────────────────────────────────
   const [candidatesPage, setCandidatesPage] = useState(1);
@@ -1031,6 +1032,7 @@ export default function CandidateManagement() {
           onRefresh={refreshCandidate}
           onDelete={deleteCandidate}
           onDownloadDoc={downloadDoc}
+          onEdit={(c) => { setEditingCandidate(c); setSelectedCandidate(null); }}
         />
       )}
 
@@ -1040,6 +1042,16 @@ export default function CandidateManagement() {
           jobs={jobs}
           onClose={() => setShowAddModal(false)}
           onCreated={async () => { setShowAddModal(false); await loadAll(); }}
+        />
+      )}
+
+      {/* Edit candidate modal */}
+      {editingCandidate && (
+        <AddCandidateModal
+          jobs={jobs}
+          initialCandidate={editingCandidate}
+          onClose={() => setEditingCandidate(null)}
+          onCreated={async () => { setEditingCandidate(null); await loadAll(); }}
         />
       )}
 
@@ -1072,7 +1084,11 @@ interface NewEdu { degree: string; institution: string; field_of_study: string; 
 interface NewSkill { name: string; category: string; level: string; }
 interface NewLang { name: string; level: string; }
 
-function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; onClose: () => void; onCreated: () => Promise<void> }) {
+function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { jobs: JobOpening[]; onClose: () => void; onCreated: () => Promise<void>; initialCandidate?: Candidate }) {
+  const isEdit = !!initialCandidate?.id;
+  const ic = initialCandidate as any;
+  const initApp = (initialCandidate?.candidate_applications?.[0] as any) ?? null;
+
   const [tab, setTab] = useState<AddTab>('infos');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -1083,40 +1099,59 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
   }, []);
 
   // Infos personnelles
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [phone2, setPhone2] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [gender, setGender] = useState('');
-  const [nationality, setNationality] = useState('Camerounaise');
-  const [nationalId, setNationalId] = useState('');
-  const [location, setLocation] = useState('');
-  const [region, setRegion] = useState('');
-  const [professionalTitle, setProfessionalTitle] = useState('');
-  const [desiredPosition, setDesiredPosition] = useState('');
-  const [linkedinUrl, setLinkedinUrl] = useState('');
-  const [portfolioUrl, setPortfolioUrl] = useState('');
-  const [summary, setSummary] = useState('');
-  const [desiredSalaryMin, setDesiredSalaryMin] = useState('');
-  const [desiredSalaryMax, setDesiredSalaryMax] = useState('');
-  const [availabilityDate, setAvailabilityDate] = useState('');
+  const [firstName, setFirstName] = useState(() => ic?.first_name || '');
+  const [lastName, setLastName] = useState(() => ic?.last_name || '');
+  const [email, setEmail] = useState(() => ic?.email || '');
+  const [phone, setPhone] = useState(() => ic?.phone || '');
+  const [phone2, setPhone2] = useState(() => ic?.phone2 || '');
+  const [birthDate, setBirthDate] = useState(() => ic?.birth_date || '');
+  const [gender, setGender] = useState(() => ic?.gender || '');
+  const [nationality, setNationality] = useState(() => ic?.nationality || 'Camerounaise');
+  const [nationalId, setNationalId] = useState(() => ic?.national_id || '');
+  const [location, setLocation] = useState(() => ic?.location || '');
+  const [region, setRegion] = useState(() => ic?.region || '');
+  const [professionalTitle, setProfessionalTitle] = useState(() => ic?.professional_title || '');
+  const [desiredPosition, setDesiredPosition] = useState(() => ic?.desired_position || initApp?.desired_position || '');
+  const [linkedinUrl, setLinkedinUrl] = useState(() => ic?.linkedin_url || '');
+  const [portfolioUrl, setPortfolioUrl] = useState(() => ic?.portfolio_url || '');
+  const [summary, setSummary] = useState(() => ic?.summary || '');
+  const [desiredSalaryMin, setDesiredSalaryMin] = useState(() => ic?.desired_salary_min != null ? String(ic.desired_salary_min) : '');
+  const [desiredSalaryMax, setDesiredSalaryMax] = useState(() => ic?.desired_salary_max != null ? String(ic.desired_salary_max) : '');
+  const [availabilityDate, setAvailabilityDate] = useState(() => ic?.availability_date || '');
 
   // Expériences
-  const [experiences, setExperiences] = useState<NewExp[]>([]);
+  const [experiences, setExperiences] = useState<NewExp[]>(() =>
+    (initialCandidate?.candidate_experiences || []).map((e: Experience) => ({
+      job_title: e.job_title, company: e.company, location: e.location || '',
+      start_date: date2yr(e.start_date), end_date: date2yr(e.end_date),
+      is_current: e.is_current, description: e.description || '',
+      contract_type: (e as any).contract_type || 'CDI', sector: (e as any).sector || '',
+    }))
+  );
   const addExp = () => setExperiences(p => [...p, { job_title:'', company:'', location:'', start_date:'', end_date:'', is_current:false, description:'', contract_type:'CDI', sector:'' }]);
   const updExp = (i: number, k: keyof NewExp, v: any) => setExperiences(p => { const a=[...p]; (a[i] as any)[k]=v; return a; });
   const delExp = (i: number) => setExperiences(p => p.filter((_,j)=>j!==i));
 
   // Formations
-  const [educations, setEducations] = useState<NewEdu[]>([]);
+  const [educations, setEducations] = useState<NewEdu[]>(() =>
+    (initialCandidate?.candidate_educations || []).map((e: Education) => ({
+      degree: e.degree, institution: e.institution, field_of_study: e.field_of_study || '',
+      location: (e as any).location || '', country: (e as any).country || 'Cameroun',
+      start_date: date2yr((e as any).start_date), end_date: date2yr(e.end_date),
+      is_current: (e as any).is_current ?? false, grade: e.grade || '',
+      education_level: (e as any).education_level || '', description: (e as any).description || '',
+    }))
+  );
   const addEdu = () => setEducations(p => [...p, { degree:'', institution:'', field_of_study:'', location:'', country:'Cameroun', start_date:'', end_date:'', is_current:false, grade:'', education_level:'', description:'' }]);
   const updEdu = (i: number, k: keyof NewEdu, v: any) => setEducations(p => { const a=[...p]; (a[i] as any)[k]=v; return a; });
   const delEdu = (i: number) => setEducations(p => p.filter((_,j)=>j!==i));
 
   // Compétences
-  const [skills, setSkills] = useState<NewSkill[]>([]);
+  const [skills, setSkills] = useState<NewSkill[]>(() =>
+    (initialCandidate?.candidate_candidate_skills || []).map((s: CandSkill) => ({
+      name: s.name, category: s.category, level: s.level,
+    }))
+  );
   const [newSkillName, setNewSkillName] = useState('');
   const [skillSearch, setSkillSearch] = useState('');
   const selectedSkillNames = new Set(skills.map(s => s.name));
@@ -1133,19 +1168,25 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
 
   // Langues
   const [languages, setLanguages] = useState<NewLang[]>([]);
+  useEffect(() => {
+    if (isEdit && initialCandidate?.id) {
+      supabase.from('candidate_languages').select('name, level').eq('candidate_id', initialCandidate.id)
+        .then(({ data }) => { if (data) setLanguages(data as NewLang[]); });
+    }
+  }, []);
   const addLang = () => setLanguages(p => [...p, { name:'', level:'good' }]);
   const updLang = (i: number, k: keyof NewLang, v: string) => setLanguages(p => { const a=[...p]; (a[i] as any)[k]=v; return a; });
   const delLang = (i: number) => setLanguages(p => p.filter((_,j)=>j!==i));
 
   // Candidature
-  const [appType, setAppType] = useState<SpontaneousType>('emploi');
-  const [jobOpeningId, setJobOpeningId] = useState('');
-  const [coverLetter, setCoverLetter] = useState('');
-  const [internalNotes, setInternalNotes] = useState('');
-  const [source, setSource] = useState('spontaneous');
+  const [appType, setAppType] = useState<SpontaneousType>(() => initApp?.spontaneous_type || 'emploi');
+  const [jobOpeningId, setJobOpeningId] = useState(() => initApp?.job_opening?.id || '');
+  const [coverLetter, setCoverLetter] = useState(() => initApp?.cover_letter || '');
+  const [internalNotes, setInternalNotes] = useState(() => initApp?.internal_notes || '');
+  const [source, setSource] = useState(() => ic?.source || 'spontaneous');
 
   // Documents — requires candidateId to exist first
-  const [savedCandidateId, setSavedCandidateId] = useState<string | null>(null);
+  const [savedCandidateId, setSavedCandidateId] = useState<string | null>(() => initialCandidate?.id || null);
   const [autoSaving, setAutoSaving] = useState(false);
 
   const ensureCandidateSaved = async (): Promise<string | null> => {
@@ -1220,70 +1261,117 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
         availability_date: availabilityDate || null,
         source: source || 'spontaneous',
       };
-      if (candidateId) {
-        // Already auto-saved when Documents tab was opened — just update
+
+      if (isEdit && candidateId) {
+        // ── EDIT MODE ────────────────────────────────────────────────────────
         await supabase.from('candidates').update(profileFields).eq('id', candidateId);
+
+        // Replace experiences
+        await supabase.from('candidate_experiences').delete().eq('candidate_id', candidateId);
+        const validExp = experiences.filter(e => e.job_title && e.company);
+        if (validExp.length) await supabase.from('candidate_experiences').insert(
+          validExp.map(e => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+        );
+
+        // Replace educations
+        await supabase.from('candidate_educations').delete().eq('candidate_id', candidateId);
+        const validEdu = educations.filter(e => e.degree && e.institution);
+        if (validEdu.length) await supabase.from('candidate_educations').insert(
+          validEdu.map(e => ({ ...e, candidate_id: candidateId, start_date: yr2date(e.start_date), end_date: e.is_current ? null : yr2date(e.end_date) }))
+        );
+
+        // Replace skills
+        await supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId);
+        if (skills.length) {
+          const masterMap = Object.fromEntries(masterSkills.map(m => [m.name, m.id]));
+          await supabase.from('candidate_candidate_skills').insert(
+            skills.map(s => ({ ...s, candidate_id: candidateId, skill_id: masterMap[s.name] ?? null }))
+          );
+        }
+
+        // Replace languages
+        await supabase.from('candidate_languages').delete().eq('candidate_id', candidateId);
+        const validLangs = languages.filter(l => l.name.trim());
+        if (validLangs.length) await supabase.from('candidate_languages').insert(
+          validLangs.map(l => ({ ...l, candidate_id: candidateId }))
+        );
+
+        // Update application record if exists
+        if (initApp?.id) {
+          await supabase.from('candidate_applications').update({
+            job_opening_id: jobOpeningId || null,
+            desired_position: desiredPosition.trim() || null,
+            cover_letter: coverLetter.trim() || null,
+            internal_notes: internalNotes.trim() || null,
+            spontaneous_type: appType,
+          }).eq('id', initApp.id);
+        }
       } else {
-        const { data: existing } = await supabase.from('candidates').select('id').eq('email', email.trim().toLowerCase()).maybeSingle();
-        if (existing) {
-          candidateId = existing.id;
+        // ── CREATE MODE ──────────────────────────────────────────────────────
+        if (candidateId) {
           await supabase.from('candidates').update(profileFields).eq('id', candidateId);
         } else {
-          const { data: newCand, error: candErr } = await supabase.from('candidates').insert({
-            ...profileFields, email: email.trim().toLowerCase(), status: 'active', profile_completed: false,
-          }).select('id').maybeSingle();
-          if (candErr) throw new Error(candErr.message);
-          candidateId = newCand?.id ?? null;
+          const { data: existing } = await supabase.from('candidates').select('id').eq('email', email.trim().toLowerCase()).maybeSingle();
+          if (existing) {
+            candidateId = existing.id;
+            await supabase.from('candidates').update(profileFields).eq('id', candidateId);
+          } else {
+            const { data: newCand, error: candErr } = await supabase.from('candidates').insert({
+              ...profileFields, email: email.trim().toLowerCase(), status: 'active', profile_completed: false,
+            }).select('id').maybeSingle();
+            if (candErr) throw new Error(candErr.message);
+            candidateId = newCand?.id ?? null;
+          }
         }
-      }
-      if (!candidateId) throw new Error('Impossible de créer le candidat.');
+        if (!candidateId) throw new Error('Impossible de créer le candidat.');
 
-      // 2. Experiences
-      if (experiences.length > 0) {
-        const valid = experiences.filter(e => e.job_title && e.company);
-        if (valid.length) await supabase.from('candidate_experiences').insert(
-          valid.map(({...e}) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
-        );
-      }
+        // 2. Experiences
+        if (experiences.length > 0) {
+          const valid = experiences.filter(e => e.job_title && e.company);
+          if (valid.length) await supabase.from('candidate_experiences').insert(
+            valid.map(({...e}) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+          );
+        }
 
-      // 3. Educations
-      if (educations.length > 0) {
-        const valid = educations.filter(e => e.degree && e.institution);
-        if (valid.length) await supabase.from('candidate_educations').insert(
-          valid.map(({...e}) => ({
-            ...e,
-            candidate_id: candidateId,
-            start_date: yr2date(e.start_date),
-            end_date: e.is_current ? null : yr2date(e.end_date),
-          }))
-        );
-      }
+        // 3. Educations
+        if (educations.length > 0) {
+          const valid = educations.filter(e => e.degree && e.institution);
+          if (valid.length) await supabase.from('candidate_educations').insert(
+            valid.map(({...e}) => ({
+              ...e,
+              candidate_id: candidateId,
+              start_date: yr2date(e.start_date),
+              end_date: e.is_current ? null : yr2date(e.end_date),
+            }))
+          );
+        }
 
-      // 4. Skills
-      if (skills.length > 0) {
-        const masterMap = Object.fromEntries(masterSkills.map(m => [m.name, m.id]));
-        await supabase.from('candidate_candidate_skills').insert(
-          skills.map(s => ({ ...s, candidate_id: candidateId, skill_id: masterMap[s.name] ?? null }))
-        );
-      }
+        // 4. Skills
+        if (skills.length > 0) {
+          const masterMap = Object.fromEntries(masterSkills.map(m => [m.name, m.id]));
+          await supabase.from('candidate_candidate_skills').insert(
+            skills.map(s => ({ ...s, candidate_id: candidateId, skill_id: masterMap[s.name] ?? null }))
+          );
+        }
 
-      // 5. Languages
-      if (languages.filter(l => l.name.trim()).length > 0) {
-        await supabase.from('candidate_languages').insert(
-          languages.filter(l => l.name.trim()).map(l => ({ ...l, candidate_id: candidateId }))
-        );
-      }
+        // 5. Languages
+        if (languages.filter(l => l.name.trim()).length > 0) {
+          await supabase.from('candidate_languages').insert(
+            languages.filter(l => l.name.trim()).map(l => ({ ...l, candidate_id: candidateId }))
+          );
+        }
 
-      // 6. Application record
-      const { error: appErr } = await supabase.from('candidate_applications').insert({
-        candidate_id: candidateId,
-        job_opening_id: jobOpeningId || null,
-        desired_position: desiredPosition.trim() || null,
-        cover_letter: coverLetter.trim() || null,
-        internal_notes: internalNotes.trim() || null,
-        status: 'new', spontaneous_type: appType, onboarding_checklist: [],
-      });
-      if (appErr) throw new Error(appErr.message);
+        // 6. Application record
+        const { error: appErr } = await supabase.from('candidate_applications').insert({
+          candidate_id: candidateId,
+          job_opening_id: jobOpeningId || null,
+          desired_position: desiredPosition.trim() || null,
+          cover_letter: coverLetter.trim() || null,
+          internal_notes: internalNotes.trim() || null,
+          status: 'new', spontaneous_type: appType, onboarding_checklist: [],
+        });
+        if (appErr) throw new Error(appErr.message);
+      }
 
       await onCreated();
     } catch (e: any) {
@@ -1300,8 +1388,8 @@ function AddCandidateModal({ jobs, onClose, onCreated }: { jobs: JobOpening[]; o
         <div className="border-b border-slate-200 px-6 pt-5 pb-0">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2"><UserPlus size={18} /> Ajouter un candidat</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Saisie manuelle d'un nouveau candidat</p>
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2"><UserPlus size={18} />{isEdit ? 'Modifier le candidat' : 'Ajouter un candidat'}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{isEdit ? `${firstName} ${lastName}` : 'Saisie manuelle d\'un nouveau candidat'}</p>
             </div>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1"><X size={20} /></button>
           </div>
@@ -1889,10 +1977,11 @@ function AdminDocumentsTab({ candidateId, initialDocs, onRefresh }: {
 }
 
 // ── Candidate Detail Modal ────────────────────────────────────────────────
-function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDownloadDoc }: {
+function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDownloadDoc, onEdit }: {
   candidate: Candidate; onClose: () => void;
   onRefresh: (id: string) => Promise<void>;
   onDelete: (id: string) => void; onDownloadDoc: (doc: CandDoc) => void;
+  onEdit: (c: Candidate) => void;
 }) {
   type Tab = 'profile' | 'experiences' | 'education' | 'skills' | 'documents' | 'pipeline' | 'onboarding';
   const [tab, setTab] = useState<Tab>('pipeline');
@@ -1901,6 +1990,7 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
   const [pipelineEvents, setPipelineEvents] = useState<PipelineEvent[]>([]);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showHireModal, setShowHireModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const app = c.candidate_applications?.[0];
   const currentStageIdx = STAGE_ORDER.indexOf(app?.status || 'new');
@@ -1978,7 +2068,7 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-5xl my-4 shadow-2xl">
+      <div className="bg-white rounded-2xl w-full max-w-5xl my-4 shadow-2xl relative">
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-800 to-teal-800 rounded-t-2xl p-6 flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -1995,7 +2085,15 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white p-1"><X size={22} /></button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onEdit(c)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white/15 hover:bg-white/25 text-white border border-white/30 rounded-lg transition"
+            >
+              <Pencil size={12} /> Modifier
+            </button>
+            <button onClick={onClose} className="text-white/70 hover:text-white p-1"><X size={22} /></button>
+          </div>
         </div>
 
         {/* Visual pipeline stepper */}
@@ -2274,9 +2372,30 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
 
         {/* Footer */}
         <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-between">
-          <button onClick={() => onDelete(c.id)} className="flex items-center gap-2 text-red-500 hover:text-red-700 text-sm"><Trash2 size={14} />Supprimer le dossier</button>
+          <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 text-red-500 hover:text-red-700 text-sm"><Trash2 size={14} />Supprimer le dossier</button>
           <button onClick={onClose} className="px-5 py-2 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 text-sm">Fermer</button>
         </div>
+
+        {/* Delete confirmation */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center p-6 z-10">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0"><Trash2 size={18} className="text-red-600" /></div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Supprimer ce dossier ?</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    <span className="font-semibold">{c.first_name} {c.last_name}</span> et toutes ses données (candidatures, expériences, documents) seront définitivement supprimés.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">Annuler</button>
+                <button onClick={() => { setShowDeleteConfirm(false); onDelete(c.id); }} className="flex items-center gap-1.5 px-4 py-2 text-sm bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition"><Trash2 size={13} />Supprimer</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Offer modal */}

@@ -212,8 +212,11 @@ export default function CandidateManagement() {
   const [matchesPageSize, setMatchesPageSize] = useState<PageSize>(20);
   const [searchPage, setSearchPage] = useState(1);
   const [searchPageSize, setSearchPageSize] = useState<PageSize>(20);
+  // IA matching search
+  const [matchSearch, setMatchSearch] = useState('');
 
   // ── Search view state ──────────────────────────────────────────────────────
+  const [srchName, setSrchName] = useState('');
   const [srchSkills, setSrchSkills] = useState<string[]>([]);
   const [srchSkillInput, setSrchSkillInput] = useState('');
   const [srchShowSugg, setSrchShowSugg] = useState(false);
@@ -356,7 +359,8 @@ export default function CandidateManagement() {
   useEffect(() => { setCandidatesPage(1); }, [_candidatesKey]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const _resetSearchPage = useCallback(() => setSearchPage(1), []);
-  useEffect(() => { _resetSearchPage(); }, [srchSkills.join(','), srchMinExp, srchLocation, srchEduLevel, srchAvailBefore, srchStatus]);
+  useEffect(() => { _resetSearchPage(); }, [srchName, srchSkills.join(','), srchMinExp, srchLocation, srchEduLevel, srchAvailBefore, srchStatus]);
+  useEffect(() => { setMatchesPage(1); }, [matchSearch]);
 
   const availableYears = [...new Set(candidates.map(c => new Date(c.created_at).getFullYear()))].sort((a, b) => b - a);
 
@@ -385,9 +389,23 @@ export default function CandidateManagement() {
     [allSkillNames, srchSkillInput, srchSkills]
   );
 
+  const filteredMatches = useMemo(() => {
+    if (!matchSearch.trim()) return jobMatches;
+    const q = matchSearch.toLowerCase();
+    return jobMatches.filter(m => {
+      const c = m.candidate;
+      if (!c) return false;
+      return `${c.first_name} ${c.last_name} ${c.email || ''} ${c.desired_position || ''}`.toLowerCase().includes(q);
+    });
+  }, [jobMatches, matchSearch]);
+
   const searchResults = useMemo(() => {
     return candidates
       .filter(c => {
+        if (srchName.trim()) {
+          const q = srchName.toLowerCase();
+          if (!`${c.first_name} ${c.last_name} ${c.email || ''} ${c.desired_position || ''}`.toLowerCase().includes(q)) return false;
+        }
         const appStatus = c.candidate_applications?.[0]?.status || 'new';
         if (srchStatus === 'active' && ['rejected', 'withdrawn', 'integrated'].includes(appStatus)) return false;
         if (srchStatus !== 'all' && srchStatus !== 'active' && appStatus !== srchStatus) return false;
@@ -684,25 +702,51 @@ export default function CandidateManagement() {
                   </div>
                 ) : (
                   <>
-                    <div className="space-y-3">
-                      {paginate(jobMatches, matchesPage, matchesPageSize).map(match => {
-                        const cand = match.candidate;
-                        if (!cand) return null;
-                        return (
-                          <MatchCard key={match.id} match={match} candidate={cand}
-                            onViewCandidate={() => { setMainView('candidates'); openCandidate(cand); }} />
-                        );
-                      })}
+                    {/* Search bar for match results */}
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="relative flex-1">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          value={matchSearch}
+                          onChange={e => setMatchSearch(e.target.value)}
+                          placeholder="Rechercher un candidat dans les résultats..."
+                          className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                        />
+                        {matchSearch && (
+                          <button onClick={() => setMatchSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-500 whitespace-nowrap flex-shrink-0">
+                        {filteredMatches.length} / {jobMatches.length} candidat{jobMatches.length > 1 ? 's' : ''}
+                      </span>
                     </div>
-                    <div className="mt-2">
-                      <Pagination
-                        total={jobMatches.length}
-                        page={matchesPage}
-                        pageSize={matchesPageSize}
-                        onPage={setMatchesPage}
-                        onPageSize={setMatchesPageSize}
-                      />
-                    </div>
+                    {filteredMatches.length === 0 ? (
+                      <div className="text-center py-10 text-slate-400 text-sm">Aucun candidat ne correspond à cette recherche</div>
+                    ) : (
+                      <>
+                        <div className="space-y-3">
+                          {paginate(filteredMatches, matchesPage, matchesPageSize).map(match => {
+                            const cand = match.candidate;
+                            if (!cand) return null;
+                            return (
+                              <MatchCard key={match.id} match={match} candidate={cand}
+                                onViewCandidate={() => { setMainView('candidates'); openCandidate(cand); }} />
+                            );
+                          })}
+                        </div>
+                        <div className="mt-2">
+                          <Pagination
+                            total={filteredMatches.length}
+                            page={matchesPage}
+                            pageSize={matchesPageSize}
+                            onPage={setMatchesPage}
+                            onPageSize={setMatchesPageSize}
+                          />
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
               </>
@@ -832,10 +876,24 @@ export default function CandidateManagement() {
 
           {/* ── Results panel ── */}
           <div className="lg:col-span-2 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-500">
-                <span className="font-semibold text-slate-800">{searchResults.length}</span> candidat{searchResults.length > 1 ? 's' : ''} trouvé{searchResults.length > 1 ? 's' : ''}
-                {srchSkills.length > 0 && <span className="ml-1 text-teal-600">· {srchSkills.length} compétence{srchSkills.length > 1 ? 's' : ''} requise{srchSkills.length > 1 ? 's' : ''}</span>}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-44">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={srchName}
+                  onChange={e => setSrchName(e.target.value)}
+                  placeholder="Filtrer par nom, email..."
+                  className="w-full pl-8 pr-8 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                />
+                {srchName && (
+                  <button onClick={() => setSrchName('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+              <p className="text-sm text-slate-500 flex-shrink-0">
+                <span className="font-semibold text-slate-800">{searchResults.length}</span> résultat{searchResults.length > 1 ? 's' : ''}
+                {srchSkills.length > 0 && <span className="ml-1 text-teal-600">· {srchSkills.length} compétence{srchSkills.length > 1 ? 's' : ''}</span>}
               </p>
             </div>
 

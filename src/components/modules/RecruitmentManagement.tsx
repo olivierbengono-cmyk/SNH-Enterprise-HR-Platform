@@ -3,7 +3,7 @@ import { Pagination, paginate, PageSize } from '../shared/Pagination';
 import {
   Briefcase, Plus, Users, Calendar, TrendingUp, X, MapPin, Mail, Phone,
   FileText, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle,
-  Eye, Building2, GraduationCap, Star
+  Eye, Building2, GraduationCap, Star, Search, Filter
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { JobOpeningForm } from './JobOpeningForm';
@@ -55,6 +55,8 @@ export function RecruitmentManagement() {
   const [candidateTotalApps, setCandidateTotalApps] = useState<number | null>(null);
   const [jobsPage, setJobsPage] = useState(1);
   const [jobsPageSize, setJobsPageSize] = useState<PageSize>(20);
+  const [jobSearch, setJobSearch] = useState('');
+  const [jobFilterStatus, setJobFilterStatus] = useState('all');
 
   useEffect(() => { loadData(); }, []);
 
@@ -125,6 +127,15 @@ export function RecruitmentManagement() {
     ? jobApplications
     : jobApplications.filter(a => a.status === filterStatus);
 
+  const filteredJobs = jobOpenings.filter(j => {
+    if (jobFilterStatus !== 'all' && j.status !== jobFilterStatus) return false;
+    if (jobSearch.trim()) {
+      const q = jobSearch.toLowerCase();
+      if (!`${j.title} ${j.location || ''} ${j.contract_type || ''}`.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -172,19 +183,52 @@ export function RecruitmentManagement() {
 
       {/* Job list */}
       <div className="bg-white rounded-xl border border-slate-200">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">Toutes les offres</h2>
-          <span className="text-xs text-slate-400">{jobOpenings.length} offre{jobOpenings.length > 1 ? 's' : ''}</span>
+        <div className="px-4 py-3 border-b border-slate-100 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-slate-700">Toutes les offres</h2>
+            <span className="text-xs text-slate-400 flex-shrink-0">{filteredJobs.length}{filteredJobs.length !== jobOpenings.length ? `/${jobOpenings.length}` : ''} offre{jobOpenings.length > 1 ? 's' : ''}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={jobSearch}
+                onChange={e => { setJobSearch(e.target.value); setJobsPage(1); }}
+                placeholder="Rechercher une offre..."
+                className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+              />
+              {jobSearch && (
+                <button onClick={() => { setJobSearch(''); setJobsPage(1); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+            <select
+              value={jobFilterStatus}
+              onChange={e => { setJobFilterStatus(e.target.value); setJobsPage(1); }}
+              className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white text-slate-600 focus:ring-2 focus:ring-teal-500 outline-none"
+            >
+              <option value="all">Tous statuts</option>
+              <option value="open">Publiées</option>
+              <option value="draft">Brouillons</option>
+              <option value="closed">Fermées</option>
+            </select>
+          </div>
         </div>
         {jobOpenings.length === 0 ? (
           <div className="py-16 text-center text-slate-400">
             <Briefcase size={40} className="mx-auto mb-3 opacity-30" />
             <p className="text-sm">Aucune offre créée</p>
           </div>
+        ) : filteredJobs.length === 0 ? (
+          <div className="py-10 text-center text-slate-400">
+            <Search size={28} className="mx-auto mb-2 opacity-30" />
+            <p className="text-sm">Aucune offre ne correspond</p>
+          </div>
         ) : (
           <>
             <div className="divide-y divide-slate-50">
-              {paginate(jobOpenings, jobsPage, jobsPageSize).map(job => {
+              {paginate(filteredJobs, jobsPage, jobsPageSize).map(job => {
                 const isOpen = job.status === 'open';
                 const isDraft = job.status === 'draft';
                 return (
@@ -221,7 +265,7 @@ export function RecruitmentManagement() {
               })}
             </div>
             <Pagination
-              total={jobOpenings.length}
+              total={filteredJobs.length}
               page={jobsPage}
               pageSize={jobsPageSize}
               onPage={setJobsPage}

@@ -11,6 +11,15 @@ const CAT_ORDER = ['technical', 'soft', 'language', 'certification', 'other'];
 interface JobOpeningFormProps {
   onClose: () => void;
   onSuccess: () => void;
+  initialData?: any;
+}
+
+function parseLanguages(raw: string[] | null | undefined): { language: string; level: string }[] {
+  if (!raw?.length) return [];
+  return raw.map(s => {
+    const m = s.match(/^(.+)\s+\((.+)\)$/);
+    return m ? { language: m[1], level: m[2] } : { language: s, level: 'Courant' };
+  });
 }
 
 type Tab = 'infos' | 'candidat' | 'competences' | 'conditions';
@@ -41,42 +50,45 @@ function Lbl({ children, req }: { children: React.ReactNode; req?: boolean }) {
   return <label className="block text-sm font-medium text-slate-700 mb-1.5">{children}{req && <span className="text-red-500 ml-1">*</span>}</label>;
 }
 
-export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
+export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFormProps) {
+  const isEdit = !!initialData?.id;
   const [tab, setTab] = useState<Tab>('infos');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
 
   // ── Tab 1: Informations ───────────────────────────────────────────────────
-  const [title, setTitle] = useState('');
-  const [reference, setReference] = useState(genRef());
-  const [contractType, setContractType] = useState('CDI');
-  const [location, setLocation] = useState('Yaoundé');
-  const [status, setStatus] = useState('open');
-  const [workMode, setWorkMode] = useState('Présentiel uniquement');
-  const [publicationDate, setPublicationDate] = useState(new Date().toISOString().split('T')[0]);
-  const [closingDate, setClosingDate] = useState('');
-  const [description, setDescription] = useState('');
-  const [openingsCount, setOpeningsCount] = useState(1);
-  const [isInternal, setIsInternal] = useState(false);
-  const [departmentId, setDepartmentId] = useState('');
+  const [title, setTitle] = useState(() => initialData?.title || '');
+  const [reference, setReference] = useState(() => initialData?.reference || genRef());
+  const [contractType, setContractType] = useState(() => initialData?.contract_type || 'CDI');
+  const [location, setLocation] = useState(() => initialData?.location || 'Yaoundé');
+  const [status, setStatus] = useState(() => initialData?.status || 'open');
+  const [workMode, setWorkMode] = useState(() => initialData?.work_mode || 'Présentiel uniquement');
+  const [publicationDate, setPublicationDate] = useState(() => initialData?.publication_date || new Date().toISOString().split('T')[0]);
+  const [closingDate, setClosingDate] = useState(() => initialData?.closing_date || '');
+  const [description, setDescription] = useState(() => initialData?.description || '');
+  const [openingsCount, setOpeningsCount] = useState(() => initialData?.openings_count ?? 1);
+  const [isInternal, setIsInternal] = useState(() => initialData?.is_internal ?? false);
+  const [departmentId, setDepartmentId] = useState(() => initialData?.department_id || '');
 
   // ── Tab 2: Critères candidat ──────────────────────────────────────────────
-  const [educationLevel, setEducationLevel] = useState('');
-  const [minExperienceYears, setMinExperienceYears] = useState(0);
-  const [requirements, setRequirements] = useState('');
+  const [educationLevel, setEducationLevel] = useState(() => initialData?.education_level || '');
+  const [minExperienceYears, setMinExperienceYears] = useState(() => initialData?.min_experience_years ?? 0);
+  const [requirements, setRequirements] = useState(() => initialData?.requirements || '');
 
   // ── Tab 3: Compétences ────────────────────────────────────────────────────
-  const [requiredSkills, setRequiredSkills] = useState<string[]>([]);
-  const [niceToHaveSkills, setNiceToHaveSkills] = useState<string[]>([]);
+  const [requiredSkills, setRequiredSkills] = useState<string[]>(() => initialData?.required_skills || []);
+  const [niceToHaveSkills, setNiceToHaveSkills] = useState<string[]>(() => initialData?.nice_to_have_skills || []);
   const [masterSkills, setMasterSkills] = useState<MasterSkill[]>([]);
   const [skillSearch, setSkillSearch] = useState('');
 
   // ── Tab 4: Langues & Conditions ───────────────────────────────────────────
-  const [salaryRange, setSalaryRange] = useState('');
-  const [requiredLanguages, setRequiredLanguages] = useState<{ language: string; level: string }[]>([]);
-  const [benefits, setBenefits] = useState('');
-  const [otherConditions, setOtherConditions] = useState('');
+  const [salaryRange, setSalaryRange] = useState(() => initialData?.salary_range || '');
+  const [requiredLanguages, setRequiredLanguages] = useState<{ language: string; level: string }[]>(
+    () => parseLanguages(initialData?.required_languages)
+  );
+  const [benefits, setBenefits] = useState(() => initialData?.benefits || '');
+  const [otherConditions, setOtherConditions] = useState(() => initialData?.other_conditions || '');
 
   const addLanguage = () => setRequiredLanguages(p => [...p, { language: '', level: 'Courant' }]);
   const updLanguage = (i: number, k: 'language' | 'level', v: string) =>
@@ -121,33 +133,39 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
     if (!reference.trim()) { setTab('infos'); setError('La référence est obligatoire.'); return; }
     if (!description.trim()) { setTab('infos'); setError('La description du poste est obligatoire.'); return; }
     setError(''); setLoading(true);
+    const payload = {
+      title, reference, contract_type: contractType,
+      location: location || null,
+      status,
+      description,
+      requirements: requirements || null,
+      department_id: departmentId || null,
+      education_level: educationLevel || null,
+      min_experience_years: minExperienceYears,
+      required_skills: requiredSkills,
+      nice_to_have_skills: niceToHaveSkills,
+      salary_range: salaryRange || null,
+      publication_date: publicationDate || null,
+      closing_date: closingDate || null,
+      openings_count: openingsCount,
+      is_internal: isInternal,
+      work_mode: workMode || null,
+      required_languages: requiredLanguages.filter(l => l.language.trim()).map(l => `${l.language.trim()} (${l.level})`),
+      benefits: benefits.trim() || null,
+      other_conditions: otherConditions.trim() || null,
+    };
     try {
-      const { error: insertError } = await supabase.from('job_openings').insert({
-        title, reference, contract_type: contractType,
-        location: location || null,
-        status,
-        description,
-        requirements: requirements || null,
-        department_id: departmentId || null,
-        education_level: educationLevel || null,
-        min_experience_years: minExperienceYears,
-        required_skills: requiredSkills,
-        nice_to_have_skills: niceToHaveSkills,
-        salary_range: salaryRange || null,
-        publication_date: publicationDate || null,
-        closing_date: closingDate || null,
-        openings_count: openingsCount,
-        is_internal: isInternal,
-        work_mode: workMode || null,
-        required_languages: requiredLanguages.filter(l => l.language.trim()).map(l => `${l.language.trim()} (${l.level})`),
-        benefits: benefits.trim() || null,
-        other_conditions: otherConditions.trim() || null,
-      });
-      if (insertError) throw insertError;
+      if (isEdit) {
+        const { error: upErr } = await supabase.from('job_openings').update(payload).eq('id', initialData.id);
+        if (upErr) throw upErr;
+      } else {
+        const { error: insertError } = await supabase.from('job_openings').insert(payload);
+        if (insertError) throw insertError;
+      }
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de la création');
+      setError(err.message || (isEdit ? 'Erreur lors de la modification' : 'Erreur lors de la création'));
     } finally {
       setLoading(false);
     }
@@ -160,8 +178,8 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
         <div className="border-b border-slate-200 px-6 pt-5 pb-0">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Créer une offre d'emploi</h2>
-              <p className="text-xs text-slate-500 mt-0.5">SNH Cameroun — Portail Recrutement</p>
+              <h2 className="text-lg font-bold text-slate-900">{isEdit ? 'Modifier l\'offre' : 'Créer une offre d\'emploi'}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{isEdit ? initialData.title : 'SNH Cameroun — Portail Recrutement'}</p>
             </div>
             <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition text-slate-400 hover:text-slate-600">
               <X size={20} />
@@ -532,7 +550,10 @@ export function JobOpeningForm({ onClose, onSuccess }: JobOpeningFormProps) {
             ) : (
               <button onClick={handleSubmit} disabled={loading}
                 className="flex items-center gap-2 px-6 py-2 text-sm rounded-lg text-white font-semibold transition bg-snh-green hover:bg-snh-green-dark disabled:opacity-50">
-                {loading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Création...</> : 'Publier l\'offre'}
+                {loading
+                  ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{isEdit ? 'Enregistrement...' : 'Création...'}</>
+                  : isEdit ? 'Enregistrer les modifications' : 'Publier l\'offre'
+                }
               </button>
             )}
           </div>

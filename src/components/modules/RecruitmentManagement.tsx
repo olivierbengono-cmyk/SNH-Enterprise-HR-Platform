@@ -3,7 +3,7 @@ import { Pagination, paginate, PageSize } from '../shared/Pagination';
 import {
   Briefcase, Plus, Users, Calendar, TrendingUp, X, MapPin, Mail, Phone,
   FileText, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle,
-  Eye, Building2, GraduationCap, Star, Search, Filter
+  Eye, Building2, GraduationCap, Star, Search, Filter, Pencil, Trash2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { JobOpeningForm } from './JobOpeningForm';
@@ -57,6 +57,9 @@ export function RecruitmentManagement() {
   const [jobsPageSize, setJobsPageSize] = useState<PageSize>(20);
   const [jobSearch, setJobSearch] = useState('');
   const [jobFilterStatus, setJobFilterStatus] = useState('all');
+  const [editingJob, setEditingJob] = useState<any | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -122,6 +125,19 @@ export function RecruitmentManagement() {
   };
 
   const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await supabase.from('job_openings').delete().eq('id', deleteTarget.id);
+      setDeleteTarget(null);
+      setSelectedJob(null);
+      loadData();
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const filteredApps = filterStatus === 'all'
     ? jobApplications
@@ -298,9 +314,25 @@ export function RecruitmentManagement() {
                   {selectedJob.closing_date && <span className="flex items-center gap-1"><Clock size={11} />Clôture {fmtDate(selectedJob.closing_date)}</span>}
                 </p>
               </div>
-              <button onClick={() => setSelectedJob(null)} className="p-1.5 hover:bg-slate-100 rounded-lg transition flex-shrink-0">
-                <X size={18} className="text-slate-500" />
-              </button>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={() => setEditingJob(selectedJob)}
+                  title="Modifier l'offre"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-teal-300 hover:text-teal-700 transition"
+                >
+                  <Pencil size={13} /> Modifier
+                </button>
+                <button
+                  onClick={() => setDeleteTarget(selectedJob)}
+                  title="Supprimer l'offre"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition"
+                >
+                  <Trash2 size={13} /> Supprimer
+                </button>
+                <button onClick={() => setSelectedJob(null)} className="ml-1 p-1.5 hover:bg-slate-100 rounded-lg transition flex-shrink-0">
+                  <X size={18} className="text-slate-500" />
+                </button>
+              </div>
             </div>
 
             {/* Tabs */}
@@ -591,6 +623,61 @@ export function RecruitmentManagement() {
           onClose={() => setShowForm(false)}
           onSuccess={() => { loadData(); setShowForm(false); }}
         />
+      )}
+
+      {/* Edit job modal */}
+      {editingJob && (
+        <JobOpeningForm
+          initialData={editingJob}
+          onClose={() => setEditingJob(null)}
+          onSuccess={() => {
+            loadData();
+            setEditingJob(null);
+            // Refresh the selected job data in the detail modal
+            if (selectedJob?.id === editingJob.id) {
+              setSelectedJob(null);
+            }
+          }}
+        />
+      )}
+
+      {/* Delete confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Trash2 size={18} className="text-red-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-bold text-slate-900">Supprimer cette offre ?</h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  <span className="font-semibold text-slate-700">«{deleteTarget.title}»</span> sera définitivement supprimée,
+                  ainsi que toutes les candidatures associées. Cette action est irréversible.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6 justify-end">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition font-medium text-slate-600 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="flex items-center gap-2 px-5 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition disabled:opacity-50"
+              >
+                {deleting
+                  ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Suppression...</>
+                  : <><Trash2 size={14} />Supprimer définitivement</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

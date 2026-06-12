@@ -344,7 +344,7 @@ export default function CandidateManagement() {
     if (filterStatus !== 'all' && appStatus !== filterStatus) return false;
     if (filterType !== 'all') {
       if (filterType === 'offre' && !app?.job_opening) return false;
-      if (filterType === 'recommande' && appType !== 'recommande') return false;
+      if (filterType === 'recommande' && appType !== 'recommande' && c.source !== 'referral') return false;
       if (filterType === 'stage' && !['stage_academique','stage_professionnel'].includes(appType)) return false;
       if (filterType === 'emploi' && appType !== 'emploi' && !app?.job_opening) return false;
     }
@@ -517,6 +517,15 @@ export default function CandidateManagement() {
                 {REJECTED_STAGES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </optgroup>
             </select>
+            <button
+              onClick={() => setFilterType(f => f === 'recommande' ? 'all' : 'recommande')}
+              className={`flex items-center gap-1.5 px-3 py-2.5 border rounded-xl text-sm font-medium transition ${filterType === 'recommande' ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-slate-200 text-slate-600 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700'}`}
+              title="Afficher uniquement les candidats recommandés"
+            >
+              <UserPlus size={14} />
+              Recommandés
+              {filterType === 'recommande' && <X size={11} className="ml-0.5 opacity-70" />}
+            </button>
             <button onClick={() => setShowFilters(v => !v)}
               className={`flex items-center gap-2 px-3 py-2.5 border rounded-xl text-sm font-medium transition ${showFilters ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
               <Filter size={14} /> Filtres avancés
@@ -614,15 +623,30 @@ export default function CandidateManagement() {
                       const app = c.candidate_applications?.[0];
                       const stageIdx = STAGE_ORDER.indexOf(app?.status || 'new');
                       const progress = stageIdx >= 0 ? Math.round(((stageIdx + 1) / STAGE_ORDER.length) * 100) : 0;
+                      const isRecommended = app?.spontaneous_type === 'recommande' || c.source === 'referral';
                       return (
                         <tr key={c.id} className="hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => openCandidate(c)}>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-teal-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                                {c.first_name[0]}{c.last_name[0]}
+                              <div className="relative flex-shrink-0">
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-teal-700 flex items-center justify-center text-white font-bold text-sm">
+                                  {c.first_name[0]}{c.last_name[0]}
+                                </div>
+                                {isRecommended && (
+                                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 border-2 border-white flex items-center justify-center" title="Candidat recommandé">
+                                    <UserPlus size={8} className="text-white" />
+                                  </span>
+                                )}
                               </div>
                               <div>
-                                <p className="font-semibold text-slate-800 text-sm">{c.first_name} {c.last_name}</p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="font-semibold text-slate-800 text-sm">{c.first_name} {c.last_name}</p>
+                                  {isRecommended && (
+                                    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-medium leading-none">
+                                      <UserPlus size={9} />Recommandé
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-xs text-slate-500">{c.email}</p>
                               </div>
                             </div>

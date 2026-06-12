@@ -1495,11 +1495,15 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
     const { error: upErr } = await supabase.storage.from('candidates-documents').upload(path, file, { upsert: false });
     if (upErr) { setError('Erreur upload : ' + upErr.message); setUploading(false); e.target.value = ''; return; }
     const { data: urlData } = supabase.storage.from('candidates-documents').getPublicUrl(path);
-    const { data: docData } = await supabase.from('candidate_documents').insert({
+    const { data: docData, error: insertErr } = await supabase.from('candidate_documents').insert({
       candidate_id: candidateId, type: selectedType, file_name: file.name,
       file_url: urlData.publicUrl, file_size: file.size,
       expiration_date: expirationDate || null,
     }).select().maybeSingle();
+    if (insertErr) {
+      setError('Erreur lors de l\'enregistrement : ' + insertErr.message);
+      setUploading(false); e.target.value = ''; return;
+    }
     if (docData) setDocuments([docData as CandidateDoc, ...documents]);
     setUploading(false); setExpirationDate(''); e.target.value = '';
   };
@@ -2164,6 +2168,7 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
   const [selectedJob, setSelectedJob] = useState<JobOpening | null>(null);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [confirmWithdrawId, setConfirmWithdrawId] = useState<string | null>(null);
+  const [withdrawError, setWithdrawError] = useState('');
   const filtered = filter === 'all' ? applications : applications.filter(a => a.status === filter);
   const applied = new Set(applications.map(a => a.job_opening_id || '').filter(Boolean));
 
@@ -2176,7 +2181,16 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
 
   const handleWithdraw = async (appId: string) => {
     setWithdrawing(appId);
-    await supabase.from('candidate_applications').update({ status: 'withdrawn' }).eq('id', appId);
+    setWithdrawError('');
+    const { error } = await supabase
+      .from('candidate_applications')
+      .update({ status: 'withdrawn' })
+      .eq('id', appId);
+    if (error) {
+      setWithdrawError('Impossible de dépostuler : ' + error.message);
+      setWithdrawing(null);
+      return;
+    }
     onWithdrawn(appId);
     setWithdrawing(null);
     setConfirmWithdrawId(null);
@@ -2191,6 +2205,13 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
             {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
+
+        {withdrawError && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <span>{withdrawError}</span>
+            <button onClick={() => setWithdrawError('')} className="ml-auto text-red-400 hover:text-red-600">✕</button>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3.5 border-b border-gray-100">

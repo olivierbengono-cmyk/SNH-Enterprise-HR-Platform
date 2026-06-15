@@ -1088,10 +1088,10 @@ const ADD_TABS: { value: AddTab; label: string }[] = [
   { value: 'documents',    label: 'Documents' },
 ];
 
-interface NewExp { job_title: string; company: string; location: string; start_date: string; end_date: string; is_current: boolean; description: string; contract_type: string; sector: string; }
-interface NewEdu { degree: string; institution: string; field_of_study: string; location: string; country: string; start_date: string; end_date: string; is_current: boolean; grade: string; education_level: string; description: string; }
-interface NewSkill { name: string; category: string; level: string; }
-interface NewLang { name: string; level: string; }
+interface NewExp { _db_id?: string; job_title: string; company: string; location: string; start_date: string; end_date: string; is_current: boolean; description: string; contract_type: string; sector: string; }
+interface NewEdu { _db_id?: string; degree: string; institution: string; field_of_study: string; location: string; country: string; start_date: string; end_date: string; is_current: boolean; grade: string; education_level: string; description: string; }
+interface NewSkill { _db_id?: string; name: string; category: string; level: string; }
+interface NewLang { _db_id?: string; name: string; level: string; }
 
 function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { jobs: JobOpening[]; onClose: () => void; onCreated: () => Promise<void>; initialCandidate?: Candidate }) {
   const isEdit = !!initialCandidate?.id;
@@ -1130,11 +1130,12 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
 
   // Expériences
   const [experiences, setExperiences] = useState<NewExp[]>(() =>
-    (initialCandidate?.candidate_experiences || []).map((e: Experience) => ({
+    (initialCandidate?.candidate_experiences || []).map((e: any) => ({
+      _db_id: e.id,
       job_title: e.job_title, company: e.company, location: e.location || '',
       start_date: date2yr(e.start_date), end_date: date2yr(e.end_date),
       is_current: e.is_current, description: e.description || '',
-      contract_type: (e as any).contract_type || 'CDI', sector: (e as any).sector || '',
+      contract_type: e.contract_type || 'CDI', sector: e.sector || '',
     }))
   );
   const addExp = () => setExperiences(p => [...p, { job_title:'', company:'', location:'', start_date:'', end_date:'', is_current:false, description:'', contract_type:'CDI', sector:'' }]);
@@ -1143,12 +1144,13 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
 
   // Formations
   const [educations, setEducations] = useState<NewEdu[]>(() =>
-    (initialCandidate?.candidate_educations || []).map((e: Education) => ({
+    (initialCandidate?.candidate_educations || []).map((e: any) => ({
+      _db_id: e.id,
       degree: e.degree, institution: e.institution, field_of_study: e.field_of_study || '',
-      location: (e as any).location || '', country: (e as any).country || 'Cameroun',
-      start_date: date2yr((e as any).start_date), end_date: date2yr(e.end_date),
-      is_current: (e as any).is_current ?? false, grade: e.grade || '',
-      education_level: (e as any).education_level || '', description: (e as any).description || '',
+      location: e.location || '', country: e.country || 'Cameroun',
+      start_date: date2yr(e.start_date), end_date: date2yr(e.end_date),
+      is_current: e.is_current ?? false, grade: e.grade || '',
+      education_level: e.education_level || '', description: e.description || '',
     }))
   );
   const addEdu = () => setEducations(p => [...p, { degree:'', institution:'', field_of_study:'', location:'', country:'Cameroun', start_date:'', end_date:'', is_current:false, grade:'', education_level:'', description:'' }]);
@@ -1157,7 +1159,8 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
 
   // Compétences
   const [skills, setSkills] = useState<NewSkill[]>(() =>
-    (initialCandidate?.candidate_candidate_skills || []).map((s: CandSkill) => ({
+    (initialCandidate?.candidate_candidate_skills || []).map((s: any) => ({
+      _db_id: s.id,
       name: s.name, category: s.category, level: s.level,
     }))
   );
@@ -1179,8 +1182,8 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
   const [languages, setLanguages] = useState<NewLang[]>([]);
   useEffect(() => {
     if (isEdit && initialCandidate?.id) {
-      supabase.from('candidate_languages').select('name, level').eq('candidate_id', initialCandidate.id)
-        .then(({ data }) => { if (data) setLanguages(data as NewLang[]); });
+      supabase.from('candidate_languages').select('id, name, level').eq('candidate_id', initialCandidate.id)
+        .then(({ data }) => { if (data) setLanguages(data.map((l: any) => ({ _db_id: l.id, name: l.name, level: l.level }))); });
     }
   }, []);
   const addLang = () => setLanguages(p => [...p, { name:'', level:'good' }]);
@@ -1283,45 +1286,56 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
         const { error: candErr } = await supabase.from('candidates').update(profileFields).eq('id', candidateId);
         if (candErr) throw new Error('Mise à jour candidat : ' + candErr.message);
 
-        // Replace experiences
-        await supabase.from('candidate_experiences').delete().eq('candidate_id', candidateId);
+        // Safe replace pattern: INSERT new records FIRST, then DELETE old ones by ID.
+        // This prevents data loss if insert fails — old data remains intact until new data is confirmed.
+
+        // Experiences
+        const oldExpIds = experiences.map(e => e._db_id).filter(Boolean) as string[];
         const validExp = experiences.filter(e => e.job_title && e.company);
         if (validExp.length) {
           const { error: expErr } = await supabase.from('candidate_experiences').insert(
-            validExp.map(e => ({ ...e, candidate_id: candidateId, start_date: yr2date(e.start_date), end_date: e.is_current ? null : yr2date(e.end_date) }))
+            validExp.map(({ _db_id, ...e }) => ({ ...e, candidate_id: candidateId, start_date: yr2date(e.start_date), end_date: e.is_current ? null : yr2date(e.end_date) }))
           );
           if (expErr) throw new Error('Expériences : ' + expErr.message);
         }
+        if (oldExpIds.length) await supabase.from('candidate_experiences').delete().in('id', oldExpIds);
+        else if (!validExp.length) await supabase.from('candidate_experiences').delete().eq('candidate_id', candidateId);
 
-        // Replace educations
-        await supabase.from('candidate_educations').delete().eq('candidate_id', candidateId);
+        // Educations
+        const oldEduIds = educations.map(e => e._db_id).filter(Boolean) as string[];
         const validEdu = educations.filter(e => e.degree && e.institution);
         if (validEdu.length) {
           const { error: eduErr } = await supabase.from('candidate_educations').insert(
-            validEdu.map(e => ({ ...e, candidate_id: candidateId, start_date: yr2date(e.start_date), end_date: e.is_current ? null : yr2date(e.end_date) }))
+            validEdu.map(({ _db_id, ...e }) => ({ ...e, candidate_id: candidateId, start_date: yr2date(e.start_date), end_date: e.is_current ? null : yr2date(e.end_date) }))
           );
           if (eduErr) throw new Error('Formations : ' + eduErr.message);
         }
+        if (oldEduIds.length) await supabase.from('candidate_educations').delete().in('id', oldEduIds);
+        else if (!validEdu.length) await supabase.from('candidate_educations').delete().eq('candidate_id', candidateId);
 
-        // Replace skills
-        await supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId);
+        // Skills
+        const oldSkillIds = skills.map(s => s._db_id).filter(Boolean) as string[];
+        const masterMap = Object.fromEntries(masterSkills.map(m => [m.name, m.id]));
         if (skills.length) {
-          const masterMap = Object.fromEntries(masterSkills.map(m => [m.name, m.id]));
           const { error: skillErr } = await supabase.from('candidate_candidate_skills').insert(
-            skills.map(s => ({ ...s, candidate_id: candidateId, skill_id: masterMap[s.name] ?? null }))
+            skills.map(({ _db_id, ...s }) => ({ ...s, candidate_id: candidateId, skill_id: masterMap[s.name] ?? null }))
           );
           if (skillErr) throw new Error('Compétences : ' + skillErr.message);
         }
+        if (oldSkillIds.length) await supabase.from('candidate_candidate_skills').delete().in('id', oldSkillIds);
+        else if (!skills.length) await supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId);
 
-        // Replace languages
-        await supabase.from('candidate_languages').delete().eq('candidate_id', candidateId);
+        // Languages
+        const oldLangIds = languages.map(l => l._db_id).filter(Boolean) as string[];
         const validLangs = languages.filter(l => l.name.trim());
         if (validLangs.length) {
           const { error: langErr } = await supabase.from('candidate_languages').insert(
-            validLangs.map(l => ({ ...l, candidate_id: candidateId }))
+            validLangs.map(({ _db_id, ...l }) => ({ ...l, candidate_id: candidateId }))
           );
           if (langErr) throw new Error('Langues : ' + langErr.message);
         }
+        if (oldLangIds.length) await supabase.from('candidate_languages').delete().in('id', oldLangIds);
+        else if (!validLangs.length) await supabase.from('candidate_languages').delete().eq('candidate_id', candidateId);
 
         // Update or create application record
         const appPayload = {

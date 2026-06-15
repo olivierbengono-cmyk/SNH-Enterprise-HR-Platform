@@ -1166,12 +1166,7 @@ function FormationsTab({ items, setItems }: { items: Education[]; setItems: (v: 
   const del = (i: number) => setItems(items.filter((_, j) => j !== i));
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-900">Formations académiques</h3>
-        <button onClick={add} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
-          <Plus size={13} /> Ajouter une formation
-        </button>
-      </div>
+      <h3 className="text-sm font-semibold text-gray-900">Formations académiques</h3>
       {items.map((edu, i) => (
         <div key={i} className="border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
@@ -1203,11 +1198,9 @@ function FormationsTab({ items, setItems }: { items: Education[]; setItems: (v: 
           </label>
         </div>
       ))}
-      {items.length === 0 && (
-        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-green-500 hover:text-green-700 flex items-center justify-center gap-2 transition">
-          <Plus size={16} /> Ajouter une formation
-        </button>
-      )}
+      <button onClick={add} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-green-400 hover:text-green-700 transition">
+        <Plus size={15} /> Ajouter une formation
+      </button>
     </div>
   );
 }
@@ -1218,12 +1211,7 @@ function ExperiencesTab({ items, setItems }: { items: Experience[]; setItems: (v
   const del = (i: number) => setItems(items.filter((_, j) => j !== i));
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-900">Expériences professionnelles / Stages</h3>
-        <button onClick={add} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
-          <Plus size={13} /> Ajouter une expérience
-        </button>
-      </div>
+      <h3 className="text-sm font-semibold text-gray-900">Expériences professionnelles / Stages</h3>
       {items.map((exp, i) => (
         <div key={i} className="border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
@@ -1252,11 +1240,9 @@ function ExperiencesTab({ items, setItems }: { items: Experience[]; setItems: (v
           </div>
         </div>
       ))}
-      {items.length === 0 && (
-        <button onClick={add} className="w-full border-2 border-dashed border-gray-200 rounded-lg py-4 text-sm text-gray-400 hover:border-green-500 hover:text-green-700 flex items-center justify-center gap-2 transition">
-          <Plus size={16} /> Ajouter une expérience
-        </button>
-      )}
+      <button onClick={add} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-green-400 hover:text-green-700 transition">
+        <Plus size={15} /> Ajouter une expérience
+      </button>
     </div>
   );
 }
@@ -1265,11 +1251,35 @@ const CAT_LABEL: Record<string, string> = {
   technical: 'Technique', soft: 'Soft Skills', language: 'Langues', certification: 'Certifications', other: 'Autres',
 };
 
+function StarLevel({ value, onChange }: { value: Skill['level']; onChange: (v: Skill['level']) => void }) {
+  const map: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 };
+  const labels = ['Débutant', 'Intermédiaire', 'Avancé', 'Expert'];
+  const levels: Skill['level'][] = ['beginner', 'intermediate', 'advanced', 'expert'];
+  const filled = map[value] ?? 2;
+  return (
+    <div className="flex gap-0.5" title={labels[filled - 1]}>
+      {[1, 2, 3, 4].map(star => (
+        <button key={star} type="button" onClick={() => onChange(levels[star - 1])}
+          className="transition-transform hover:scale-110 focus:outline-none"
+          title={labels[star - 1]}>
+          <svg width="15" height="15" viewBox="0 0 24 24"
+            fill={star <= filled ? '#f59e0b' : 'none'}
+            stroke={star <= filled ? '#f59e0b' : '#d1d5db'}
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+          </svg>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function CompetencesTab({ items, setItems, masterSkills }: {
   items: Skill[]; setItems: (v: Skill[]) => void; masterSkills: MasterSkill[];
 }) {
   const [search, setSearch] = useState('');
   const [newName, setNewName] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const selectedNames = new Set(items.map(s => s.name));
 
@@ -1277,13 +1287,13 @@ function CompetencesTab({ items, setItems, masterSkills }: {
     if (selectedNames.has(ms.name)) {
       setItems(items.filter(s => s.name !== ms.name));
     } else {
-      setItems([...items, {
-        name: ms.name,
-        skill_id: ms.id,
-        category: (ms.category as Skill['category']) || 'technical',
-        level: 'intermediate',
-      }]);
+      setItems([...items, { name: ms.name, skill_id: ms.id, category: (ms.category as Skill['category']) || 'technical', level: 'intermediate' }]);
     }
+  };
+
+  const removeSkill = (name: string) => {
+    const ms = masterSkills.find(m => m.name === name);
+    if (ms) toggle(ms); else setItems(items.filter(s => s.name !== name));
   };
 
   const addCustom = () => {
@@ -1297,77 +1307,101 @@ function CompetencesTab({ items, setItems, masterSkills }: {
   };
 
   const f = search.toLowerCase();
-
-  // Group master skills by category
   const grouped = masterSkills.reduce<Record<string, MasterSkill[]>>((acc, ms) => {
     const cat = ms.category || 'other';
     if (!acc[cat]) acc[cat] = [];
     if (!f || ms.name.toLowerCase().includes(f)) acc[cat].push(ms);
     return acc;
   }, {});
-
   const catOrder = ['technical', 'soft', 'language', 'certification', 'other'];
+  const hasResults = catOrder.some(cat => grouped[cat]?.length > 0);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">Compétences</h3>
-        <span className="text-xs text-gray-500">{items.length} sélectionnée{items.length > 1 ? 's' : ''}</span>
+        <span className="text-xs text-gray-500">{items.length} sélectionnée{items.length !== 1 ? 's' : ''}</span>
       </div>
-      <input value={search} onChange={e => setSearch(e.target.value)} className={inp()} placeholder="Rechercher une compétence..." />
 
-      {catOrder.map(cat => {
-        const list = grouped[cat];
-        if (!list || list.length === 0) return null;
-        return (
-          <div key={cat}>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{CAT_LABEL[cat] ?? cat}</p>
-            <div className="flex flex-wrap gap-2">
-              {list.map(ms => (
-                <button key={ms.id} type="button" onClick={() => toggle(ms)}
-                  title={ms.description ?? ms.name}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedNames.has(ms.name) ? 'bg-green-50 border-green-500 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-700'}`}>
-                  {ms.name}
-                </button>
-              ))}
+      {/* Selected skills chips */}
+      {items.length > 0 && (
+        <div className="flex flex-wrap gap-2 p-3 bg-green-50 border border-green-100 rounded-xl min-h-[48px]">
+          {items.map(sk => (
+            <span key={sk.name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-green-300 text-green-800 shadow-sm">
+              {sk.name}
+              <button type="button" onClick={() => removeSkill(sk.name)} className="text-green-400 hover:text-red-500 transition ml-0.5 leading-none"><X size={11} /></button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Catalogue toggle button */}
+      <button type="button" onClick={() => setPickerOpen(v => !v)}
+        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-green-400 hover:text-green-700 transition">
+        <Plus size={15} className={`transition-transform ${pickerOpen ? 'rotate-45' : ''}`} />
+        {pickerOpen ? 'Fermer le catalogue' : 'Parcourir le catalogue de compétences'}
+      </button>
+
+      {/* Inline picker */}
+      {pickerOpen && (
+        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="p-3 bg-gray-50 border-b border-gray-200">
+            <input value={search} onChange={e => setSearch(e.target.value)} className={inp() + ' bg-white'} placeholder="Rechercher dans le catalogue..." autoFocus />
+          </div>
+          <div className="max-h-72 overflow-y-auto p-3 space-y-4">
+            {hasResults ? catOrder.map(cat => {
+              const list = grouped[cat];
+              if (!list || list.length === 0) return null;
+              return (
+                <div key={cat}>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">{CAT_LABEL[cat] ?? cat}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {list.map(ms => (
+                      <button key={ms.id} type="button" onClick={() => toggle(ms)}
+                        title={ms.description ?? ms.name}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${selectedNames.has(ms.name) ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-700'}`}>
+                        {selectedNames.has(ms.name) && '✓ '}{ms.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            }) : (
+              <p className="text-sm text-gray-400 text-center py-6">Aucun résultat pour « {search} »</p>
+            )}
+          </div>
+          <div className="flex gap-2 p-3 bg-gray-50 border-t border-gray-200">
+            <input value={newName} onChange={e => setNewName(e.target.value)} className={inp() + ' flex-1 bg-white text-sm'} placeholder="Compétence personnalisée non listée..." onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())} />
+            <button type="button" onClick={addCustom} className="px-4 py-2 rounded-lg text-white font-semibold text-sm flex items-center gap-1" style={{ background: SNH_BLUE }}>
+              <Plus size={14} /> Ajouter
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Selected skills with star levels */}
+      {items.length > 0 && (
+        <div className="border border-gray-100 rounded-xl overflow-hidden">
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+            <p className="text-xs font-semibold text-gray-500">Niveau par compétence</p>
+            <div className="flex items-center gap-1 text-[10px] text-gray-400">
+              <span className="text-amber-400">★</span> Déb &nbsp;
+              <span className="text-amber-400">★★</span> Int &nbsp;
+              <span className="text-amber-400">★★★</span> Av &nbsp;
+              <span className="text-amber-400">★★★★</span> Exp
             </div>
           </div>
-        );
-      })}
-
-      {/* Selected skills with levels */}
-      {items.length > 0 && (
-        <div className="pt-4 border-t border-gray-100">
-          <p className="text-xs font-semibold text-gray-500 mb-3">Niveaux des compétences sélectionnées</p>
-          <div className="space-y-2">
+          <div className="divide-y divide-gray-50">
             {items.map(sk => (
-              <div key={sk.name} className="flex items-center gap-3">
-                <span className="text-xs font-medium text-gray-700 flex-1 min-w-0 truncate">{sk.name}</span>
-                <div className="flex gap-1">
-                  {SKILL_LEVELS.map(lv => (
-                    <button key={lv.value} type="button" onClick={() => updateLevel(sk.name, lv.value as Skill['level'])}
-                      className={`px-2 py-1 text-xs rounded border transition ${sk.level === lv.value ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:border-green-400'}`}
-                        style={sk.level === lv.value ? { background: SNH_GREEN } : {}}>
-                      {lv.label.slice(0, 3)}.
-                    </button>
-                  ))}
-                </div>
-                <button type="button" onClick={() => {
-                  const ms = masterSkills.find(m => m.name === sk.name);
-                  if (ms) toggle(ms); else setItems(items.filter(s => s.name !== sk.name));
-                }} className="text-red-400 hover:text-red-600"><X size={13} /></button>
+              <div key={sk.name} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition group">
+                <span className="text-sm text-gray-800 flex-1 min-w-0 truncate">{sk.name}</span>
+                <StarLevel value={sk.level} onChange={lv => updateLevel(sk.name, lv)} />
+                <button type="button" onClick={() => removeSkill(sk.name)} className="text-gray-300 group-hover:text-red-400 hover:text-red-500 transition ml-1 flex-shrink-0"><X size={14} /></button>
               </div>
             ))}
           </div>
         </div>
       )}
-
-      <div className="flex gap-2 pt-3 border-t border-gray-100">
-        <input value={newName} onChange={e => setNewName(e.target.value)} className={inp() + ' flex-1'} placeholder="Ajouter une compétence personnalisée (non listée)..." onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())} />
-        <button type="button" onClick={addCustom} className="px-4 py-2 text-sm rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
-          <Plus size={14} />
-        </button>
-      </div>
     </div>
   );
 }

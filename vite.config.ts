@@ -14,6 +14,8 @@ function safePublicPlugin() {
       const srcDir = path.resolve(__dirname, 'public');
       const entries = fs.readdirSync(srcDir);
       for (const entry of entries) {
+        // Skip files with spaces in name (cause EAGAIN in sandbox)
+        if (entry.includes(' ')) continue;
         const src = path.join(srcDir, entry);
         const dest = path.join(tmpDir, entry);
         try { fs.copyFileSync(src, dest); } catch { /* skip locked files */ }
@@ -29,6 +31,7 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   build: {
+    emptyOutDir: false,
     rollupOptions: {
       input: {
         // Main SIRH application

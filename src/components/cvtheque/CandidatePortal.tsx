@@ -200,6 +200,7 @@ export default function CandidatePortal() {
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [section, setSection] = useState<Section>('dashboard');
   const [loading, setLoading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openJobs, setOpenJobs] = useState<JobOpening[]>([]);
   const [matches, setMatches] = useState<JobMatch[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -349,34 +350,53 @@ export default function CandidatePortal() {
     </>
   );
 
+  const navTo = (s: Section) => { setSection(s); setMobileMenuOpen(false); };
+
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans">
-      {/* ── Sidebar ── */}
-      <aside className="w-56 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 sticky top-0 h-screen">
+
+      {/* ── Mobile menu overlay ── */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
+      )}
+
+      {/* ── Sidebar (desktop) + Mobile drawer ── */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:relative md:translate-x-0 md:w-56 md:flex md:flex-shrink-0 md:sticky md:top-0 md:h-screen
+      `}>
         {/* Tricolor top accent */}
-        <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
+        <div className="h-0.5 flex-shrink-0" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
         {/* Logo */}
-        <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-100 shadow-sm">
-            <img src="/logoSNH.png" alt="SNH" className="h-7 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
-          </div>
-          <div>
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-100 shadow-sm">
+              <img src="/logoSNH.png" alt="SNH" className="h-7 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+            </div>
             <p className="text-sm font-bold text-gray-900 leading-tight">SNH Recrutement</p>
           </div>
+          {/* Close button (mobile only) */}
+          <button onClick={() => setMobileMenuOpen(false)} className="md:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition">
+            <X size={18} />
+          </button>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 p-3 overflow-y-auto">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2">Mon espace</p>
-          <NavItem icon={LayoutDashboard} label="Tableau de bord" active={section==='dashboard'} onClick={() => setSection('dashboard')} />
-          <NavItem icon={User} label="Mon profil" active={section==='profile'} onClick={() => setSection('profile')} />
-          <NavItem icon={Folder} label="Mes documents" active={section==='documents'} onClick={() => setSection('documents')} />
+          <NavItem icon={LayoutDashboard} label="Tableau de bord" active={section==='dashboard'} onClick={() => navTo('dashboard')} />
+          <NavItem icon={User} label="Mon profil" active={section==='profile'} onClick={() => navTo('profile')} />
+          <NavItem icon={Folder} label="Mes documents" active={section==='documents'} onClick={() => navTo('documents')} />
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">Recrutement SNH</p>
-          <NavItem icon={Briefcase} label="Offres d'emploi" active={section==='jobs'} onClick={() => setSection('jobs')} />
-          <NavItem icon={Send} label="Candidature spontanée" active={section==='spontaneous'} onClick={() => setSection('spontaneous')} />
-          <NavItem icon={FileText} label="Mes candidatures" active={section==='applications'} badge={applications.length} onClick={() => setSection('applications')} />
+          <NavItem icon={Briefcase} label="Offres d'emploi" active={section==='jobs'} onClick={() => navTo('jobs')} />
+          <NavItem icon={Send} label="Candidature spontanée" active={section==='spontaneous'} onClick={() => navTo('spontaneous')} />
+          <NavItem icon={FileText} label="Mes candidatures" active={section==='applications'} badge={applications.length} onClick={() => navTo('applications')} />
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">Compte</p>
-          <NavItem icon={Bell} label="Notifications" active={section==='notifications'} badge={unreadNotifs || undefined} onClick={() => { setSection('notifications'); setUnreadNotifs(0); }} />
+          <NavItem icon={Bell} label="Notifications" active={section==='notifications'} badge={unreadNotifs || undefined} onClick={() => { navTo('notifications'); setUnreadNotifs(0); }} />
           <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all mt-0.5">
             <LogOut size={16} /> Déconnexion
           </button>
@@ -384,7 +404,7 @@ export default function CandidatePortal() {
 
         {/* Footer user */}
         {profile && (
-          <div className="p-3 border-t border-gray-100 flex items-center gap-2.5">
+          <div className="p-3 border-t border-gray-100 flex items-center gap-2.5 flex-shrink-0">
             <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-xs font-bold text-green-800 flex-shrink-0">
               {initials(profile.first_name, profile.last_name)}
             </div>
@@ -399,15 +419,28 @@ export default function CandidatePortal() {
       {/* ── Main content ── */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between sticky top-0 z-10">
-          <p className="text-base font-semibold text-gray-900">{SECTION_TITLES[section]}</p>
+        <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-3.5 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
+            {/* Hamburger (mobile only) */}
+            <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 -ml-1 rounded-lg text-gray-500 hover:bg-gray-100 transition" aria-label="Menu">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <p className="text-base font-semibold text-gray-900">{SECTION_TITLES[section]}</p>
+          </div>
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="hidden sm:flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
               <BarChart3 size={13} className="text-green-700" />
               <span className="text-xs font-semibold text-green-800">Profil : {profilePct()}%</span>
             </div>
+            {/* Profile % compact on xs */}
+            <div className="sm:hidden flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">
+              <BarChart3 size={12} className="text-green-700" />
+              <span className="text-xs font-semibold text-green-800">{profilePct()}%</span>
+            </div>
             {profile && (
-              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-xs font-bold text-green-800">
+              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-xs font-bold text-green-800 flex-shrink-0">
                 {initials(profile.first_name, profile.last_name)}
               </div>
             )}
@@ -415,7 +448,7 @@ export default function CandidatePortal() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 p-4 md:p-6 overflow-y-auto pb-20 md:pb-6">
           {section === 'dashboard' && profile && (
             <DashboardSection
               profile={profile} experiences={experiences} educations={educations}
@@ -458,6 +491,40 @@ export default function CandidatePortal() {
             <NotificationsSection notifications={notifications} onView={markNotificationsAsRead} />
           )}
         </div>
+
+        {/* ── Mobile bottom navigation bar ── */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex items-stretch">
+          {([
+            { s: 'dashboard' as Section, icon: LayoutDashboard, label: 'Accueil' },
+            { s: 'profile'   as Section, icon: User,            label: 'Profil' },
+            { s: 'jobs'      as Section, icon: Briefcase,        label: 'Offres' },
+            { s: 'applications' as Section, icon: FileText,      label: 'Candidatures', badge: applications.filter(a => a.status !== 'withdrawn').length },
+            { s: 'notifications' as Section, icon: Bell,         label: 'Notifs', badge: unreadNotifs },
+          ] as { s: Section; icon: React.FC<any>; label: string; badge?: number }[]).map(({ s, icon: Icon, label, badge }) => (
+            <button key={s} onClick={() => { navTo(s); if (s === 'notifications') setUnreadNotifs(0); }}
+              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors relative
+                ${section === s ? 'text-green-700' : 'text-gray-500'}`}>
+              <div className="relative">
+                <Icon size={20} />
+                {badge ? (
+                  <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-bold min-w-[14px] h-[14px] rounded-full flex items-center justify-center px-0.5 leading-none">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                ) : null}
+              </div>
+              <span className="leading-tight">{label}</span>
+              {section === s && <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full" style={{ backgroundColor: SNH_GREEN }} />}
+            </button>
+          ))}
+          {/* More button */}
+          <button onClick={() => setMobileMenuOpen(true)}
+            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium text-gray-500 transition-colors">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+            </svg>
+            <span className="leading-tight">Menu</span>
+          </button>
+        </nav>
       </div>
     </div>
   );

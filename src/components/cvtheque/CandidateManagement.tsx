@@ -1943,6 +1943,17 @@ function AdminDocumentsTab({ candidateId, initialDocs, onRefresh }: {
   const expiredDocs = docs.filter(d => docExpiryStatus(d.expiration_date) === 'expired');
   const soonDocs = docs.filter(d => docExpiryStatus(d.expiration_date) === 'soon');
 
+  const getDocPath = (fileUrl: string) => {
+    const parts = fileUrl.split('/candidates-documents/');
+    return parts.length > 1 ? decodeURIComponent(parts[1]) : fileUrl;
+  };
+
+  const openDocPreview = async (fileUrl: string) => {
+    const path = getDocPath(fileUrl);
+    const { data } = await supabase.storage.from('candidates-documents').createSignedUrl(path, 3600);
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+  };
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;

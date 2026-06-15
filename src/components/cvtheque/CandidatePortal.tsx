@@ -1526,6 +1526,17 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
   const expiredDocs = documents.filter(d => docExpiryStatus(d.expiration_date) === 'expired');
   const soonDocs = documents.filter(d => docExpiryStatus(d.expiration_date) === 'soon');
 
+  const getDocPath = (fileUrl: string) => {
+    const parts = fileUrl.split('/candidates-documents/');
+    return parts.length > 1 ? decodeURIComponent(parts[1]) : fileUrl;
+  };
+
+  const openDocPreview = async (fileUrl: string) => {
+    const path = getDocPath(fileUrl);
+    const { data } = await supabase.storage.from('candidates-documents').createSignedUrl(path, 3600);
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+  };
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1638,9 +1649,9 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
                       </p>
                     )}
                   </div>
-                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded transition hover:bg-green-50" style={{ color: SNH_GREEN }}>
+                  <button type="button" onClick={() => openDocPreview(doc.file_url)} className="p-1.5 rounded transition hover:bg-green-50" style={{ color: SNH_GREEN }} title="Aperçu">
                     <Eye size={14} />
-                  </a>
+                  </button>
                   <button onClick={() => handleDelete(doc)} disabled={deleting === doc.id} className="text-red-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition disabled:opacity-50">
                     {deleting === doc.id ? <div className="w-3.5 h-3.5 border border-red-300 border-t-red-500 rounded-full animate-spin" /> : <Trash2 size={14} />}
                   </button>

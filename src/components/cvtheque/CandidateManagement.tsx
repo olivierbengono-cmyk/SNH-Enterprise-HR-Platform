@@ -327,8 +327,20 @@ export default function CandidateManagement() {
     await loadAll();
   };
 
+  const getDocPath = (fileUrl: string) => {
+    const parts = fileUrl.split('/candidates-documents/');
+    return parts.length > 1 ? decodeURIComponent(parts[1]) : fileUrl;
+  };
+
+  const openDocPreview = async (fileUrl: string) => {
+    const path = getDocPath(fileUrl);
+    const { data } = await supabase.storage.from('candidates-documents').createSignedUrl(path, 3600);
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+  };
+
   const downloadDoc = async (doc: CandDoc) => {
-    const { data } = await supabase.storage.from('candidate-documents').download(doc.file_url);
+    const path = getDocPath(doc.file_url);
+    const { data } = await supabase.storage.from('candidates-documents').download(path);
     if (!data) return;
     const url = URL.createObjectURL(data);
     const a = document.createElement('a'); a.href = url; a.download = doc.file_name;
@@ -2039,9 +2051,9 @@ function AdminDocumentsTab({ candidateId, initialDocs, onRefresh }: {
                     </p>
                   )}
                 </div>
-                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition">
+                <button type="button" onClick={() => openDocPreview(doc.file_url)} className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition" title="Aperçu">
                   <Eye size={14} />
-                </a>
+                </button>
                 <button onClick={() => handleDelete(doc)} disabled={deleting === doc.id} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50">
                   {deleting === doc.id ? <div className="w-3.5 h-3.5 border border-red-300 border-t-red-500 rounded-full animate-spin" /> : <Trash2 size={14} />}
                 </button>

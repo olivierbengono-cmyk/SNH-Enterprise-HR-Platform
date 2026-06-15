@@ -237,44 +237,45 @@ export default function CandidatePortal() {
 
   const loadPortal = async (userId: string, showSpinner = true) => {
     if (showSpinner) setLoading(true);
-    const { data: cand } = await supabase.from('candidates').select('*').eq('user_id', userId).maybeSingle();
-    if (!cand) { setLoading(false); setView('public'); return; }
-    setCandidateId(cand.id);
-    setProfile(cand as CandidateProfile);
+    try {
+      const { data: cand } = await supabase.from('candidates').select('*').eq('user_id', userId).maybeSingle();
+      if (!cand) { setView('public'); return; }
+      setCandidateId(cand.id);
+      setProfile(cand as CandidateProfile);
 
-    const [expRes, eduRes, skRes, langRes, docRes, appRes, matchRes, jobRes, notifRes] = await Promise.all([
-      supabase.from('candidate_experiences').select('*').eq('candidate_id', cand.id).order('start_date', { ascending: false }),
-      supabase.from('candidate_educations').select('*').eq('candidate_id', cand.id).order('end_date', { ascending: false }),
-      supabase.from('candidate_candidate_skills').select('*').eq('candidate_id', cand.id),
-      supabase.from('candidate_languages').select('*').eq('candidate_id', cand.id),
-      supabase.from('candidate_documents').select('*').eq('candidate_id', cand.id).order('uploaded_at', { ascending: false }),
-      supabase.from('candidate_applications').select('*,job_opening:job_openings(id,title)').eq('candidate_id', cand.id).order('created_at', { ascending: false }),
-      supabase.from('candidate_job_matches').select('*, job_opening:job_openings(*)').eq('candidate_id', cand.id).order('match_score', { ascending: false }),
-      supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false }),
-      supabase.from('notifications').select('*').eq('user_id', userId).eq('category', 'recruitment').order('created_at', { ascending: false }).limit(30),
-    ]);
-    setExperiences((expRes.data || []) as Experience[]);
-    setEducations((eduRes.data || []) as Education[]);
-    setSkills((skRes.data || []) as Skill[]);
-    setLanguages((langRes.data || []) as Language[]);
-    setDocuments((docRes.data || []) as CandidateDoc[]);
-    setApplications((appRes.data || []) as Application[]);
-    setMatches((matchRes.data || []) as unknown as JobMatch[]);
-    setOpenJobs((jobRes.data || []) as JobOpening[]);
+      const [expRes, eduRes, skRes, langRes, docRes, appRes, matchRes, jobRes, notifRes] = await Promise.all([
+        supabase.from('candidate_experiences').select('*').eq('candidate_id', cand.id).order('start_date', { ascending: false }),
+        supabase.from('candidate_educations').select('*').eq('candidate_id', cand.id).order('end_date', { ascending: false }),
+        supabase.from('candidate_candidate_skills').select('*').eq('candidate_id', cand.id),
+        supabase.from('candidate_languages').select('*').eq('candidate_id', cand.id),
+        supabase.from('candidate_documents').select('*').eq('candidate_id', cand.id).order('uploaded_at', { ascending: false }),
+        supabase.from('candidate_applications').select('*,job_opening:job_openings(id,title)').eq('candidate_id', cand.id).order('created_at', { ascending: false }),
+        supabase.from('candidate_job_matches').select('*, job_opening:job_openings(*)').eq('candidate_id', cand.id).order('match_score', { ascending: false }),
+        supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false }),
+        supabase.from('notifications').select('*').eq('user_id', userId).eq('category', 'recruitment').order('created_at', { ascending: false }).limit(30),
+      ]);
+      setExperiences((expRes.data || []) as Experience[]);
+      setEducations((eduRes.data || []) as Education[]);
+      setSkills((skRes.data || []) as Skill[]);
+      setLanguages((langRes.data || []) as Language[]);
+      setDocuments((docRes.data || []) as CandidateDoc[]);
+      setApplications((appRes.data || []) as Application[]);
+      setMatches((matchRes.data || []) as unknown as JobMatch[]);
+      setOpenJobs((jobRes.data || []) as JobOpening[]);
 
-    // Real notifications from DB (inserted by trigger on candidate_applications changes)
-    const notifs: Notification[] = (notifRes.data || []).map((n: any) => ({
-      id: n.id,
-      title: n.title,
-      body: n.message,
-      read: n.is_read,
-      created_at: n.created_at,
-    }));
-    setNotifications(notifs);
-    setUnreadNotifs(notifs.filter(n => !n.read).length);
+      const notifs: Notification[] = (notifRes.data || []).map((n: any) => ({
+        id: n.id, title: n.title, body: n.message, read: n.is_read, created_at: n.created_at,
+      }));
+      setNotifications(notifs);
+      setUnreadNotifs(notifs.filter(n => !n.read).length);
 
-    setView('portal');
-    setLoading(false);
+      setView('portal');
+    } catch {
+      // On error (network timeout, etc.) fall back to public view so the user isn't stuck
+      setView('public');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const markNotificationsAsRead = async () => {

@@ -360,8 +360,7 @@ export default function CandidatePortal() {
             <img src="/logoSNH.png" alt="SNH" className="h-7 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900 leading-tight">SNH Cameroun</p>
-            <p className="text-xs text-gray-400">Portail Recrutement</p>
+            <p className="text-sm font-bold text-gray-900 leading-tight">SNH Recrutement</p>
           </div>
         </div>
 
@@ -509,8 +508,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
               <img src="/logoSNH.png" alt="SNH" className="h-full w-auto object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
             </div>
             <div>
-              <p className="font-extrabold text-base leading-tight tracking-wide">SNH Cameroun</p>
-              <p className="text-white/60 text-xs">Société Nationale des Hydrocarbures</p>
+              <p className="font-extrabold text-base leading-tight tracking-wide">SNH Recrutement</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -791,7 +789,7 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose }: {
             }} />
           </div>
           <h2 className="text-white text-base font-bold">{authMode === 'login' ? 'Connexion à mon espace' : 'Créer mon compte candidat'}</h2>
-          <p className="text-white/60 text-xs mt-0.5">Portail Recrutement SNH Cameroun</p>
+          <p className="text-white/60 text-xs mt-0.5">SNH Recrutement</p>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (

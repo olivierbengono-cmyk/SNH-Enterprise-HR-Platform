@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { User, Briefcase, GraduationCap, FileText, CheckCircle, XCircle, Plus, Trash2, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, ArrowRight, X, LogIn, UserPlus, LogOut, Sparkles, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Bell, LayoutDashboard, Send, Search, Plane as PaperPlane, ChevronRight, Home, Folder, BarChart3, Settings } from 'lucide-react';
+import { User, Briefcase, GraduationCap, FileText, CheckCircle, XCircle, Plus, Trash2, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, ArrowRight, X, LogIn, UserPlus, LogOut, Sparkles, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Bell, LayoutDashboard, Send, Search, Plane as PaperPlane, ChevronRight, Home, Folder, BarChart3, Settings, Camera, Download } from 'lucide-react';
+import { generateCV, CVData } from '../../utils/cvPDF';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface CandidateProfile {
@@ -13,6 +14,7 @@ interface CandidateProfile {
   nationality?: string | null; region?: string | null; professional_title?: string | null;
   national_id?: string | null; phone2?: string | null;
   facebook_url?: string | null; twitter_url?: string | null; instagram_url?: string | null;
+  photo_url?: string | null;
 }
 interface JobOpening {
   id: string; title: string; reference: string; contract_type: string;
@@ -1051,7 +1053,7 @@ function dateToYear(v: string | null | undefined): string {
 }
 
 // ── Profile Section ───────────────────────────────────────────────────────────
-type ProfileTab = 'infos' | 'formations' | 'experiences' | 'competences' | 'langues';
+type ProfileTab = 'infos' | 'formations' | 'experiences' | 'competences' | 'langues' | 'cv';
 
 function ProfileSection({ profile, setProfile, experiences, setExperiences, educations, setEducations, skills, setSkills, languages, setLanguages, masterSkills, candidateId }: {
   profile: CandidateProfile; setProfile: (p: CandidateProfile) => void;
@@ -1072,6 +1074,7 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
     { value: 'experiences', label: 'Expériences', icon: Briefcase },
     { value: 'competences', label: 'Compétences', icon: Star },
     { value: 'langues', label: 'Langues', icon: Globe },
+    { value: 'cv', label: 'Générer CV', icon: Download },
   ];
 
   const save = async () => {
@@ -1164,15 +1167,159 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
         {tab === 'experiences' && <ExperiencesTab items={experiences} setItems={setExperiences} />}
         {tab === 'competences' && <CompetencesTab items={skills} setItems={setSkills} masterSkills={masterSkills} />}
         {tab === 'langues' && <LanguesTab items={languages} setItems={setLanguages} />}
+        {tab === 'cv' && (
+          <CVGeneratorPanel
+            profile={profile} experiences={experiences} educations={educations}
+            skills={skills} languages={languages} candidateId={candidateId}
+            onPhotoUpdate={(url) => setProfile({ ...profile, photo_url: url })}
+          />
+        )}
 
-        <div className="mt-5 pt-5 border-t border-gray-100 flex justify-end">
-          <button onClick={save} disabled={saving}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition disabled:opacity-60 ${saved ? 'bg-green-600' : ''}`}
-            style={!saved ? { background: SNH_BLUE } : {}}>
-            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
-              saved ? <><CheckCircle size={15} /> Sauvegardé</> : <><CheckCircle size={15} /> Sauvegarder</>}
-          </button>
+        {tab !== 'cv' && (
+          <div className="mt-5 pt-5 border-t border-gray-100 flex justify-end">
+            <button onClick={save} disabled={saving}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition disabled:opacity-60 ${saved ? 'bg-green-600' : ''}`}
+              style={!saved ? { background: SNH_BLUE } : {}}>
+              {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
+                saved ? <><CheckCircle size={15} /> Sauvegardé</> : <><CheckCircle size={15} /> Sauvegarder</>}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── CV Generator Panel ────────────────────────────────────────────────────────
+function CVGeneratorPanel({ profile, experiences, educations, skills, languages, candidateId, onPhotoUpdate }: {
+  profile: CandidateProfile;
+  experiences: any[]; educations: any[]; skills: any[]; languages: any[];
+  candidateId: string;
+  onPhotoUpdate: (url: string) => void;
+}) {
+  const [template, setTemplate] = useState<'classic' | 'modern'>('classic');
+  const [instructions, setInstructions] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiMsg, setAiMsg] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert('Photo trop volumineuse (max 5 Mo)'); return; }
+    setUploadingPhoto(true);
+    const ext = file.name.split('.').pop();
+    const path = `${candidateId}/profile.${ext}`;
+    const { error: upErr } = await supabase.storage.from('candidate-photos').upload(path, file, { upsert: true });
+    if (upErr) { alert('Erreur upload : ' + upErr.message); setUploadingPhoto(false); return; }
+    const { data: urlData } = supabase.storage.from('candidate-photos').getPublicUrl(path);
+    const photoUrl = urlData.publicUrl + '?t=' + Date.now();
+    await supabase.from('candidates').update({ photo_url: photoUrl }).eq('id', candidateId);
+    onPhotoUpdate(photoUrl);
+    setUploadingPhoto(false);
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true); setAiMsg(''); setAiSummary(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke('generate-cv-ai', {
+        body: { profile, experiences, educations, skills, languages, instructions },
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
+      if (res.data?.aiSummary) { setAiSummary(res.data.aiSummary); setAiMsg(res.data.message || ''); }
+      else setAiMsg(res.data?.message || 'Génération IA terminée.');
+    } catch { setAiMsg('Erreur lors de la génération IA.'); }
+    setGenerating(false);
+  };
+
+  const handleExport = () => {
+    const cvData: CVData = {
+      profile: { ...profile, photo_url: profile.photo_url || null },
+      experiences, educations, skills, languages,
+      aiSummary: aiSummary || undefined,
+    };
+    generateCV(cvData, template);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Photo upload */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2"><Camera size={15} /> Photo de profil (CV)</h3>
+        <div className="flex items-center gap-5">
+          <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-200 flex-shrink-0 bg-gray-50 flex items-center justify-center">
+            {profile.photo_url
+              ? <img src={profile.photo_url} alt="Photo" className="w-full h-full object-cover" />
+              : <Camera size={28} className="text-gray-300" />}
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-2">Format : JPG, PNG, WEBP — max 5 Mo<br />Privilégiez une photo professionnelle (fond neutre, tenue formelle)</p>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
+            <button onClick={() => fileRef.current?.click()} disabled={uploadingPhoto}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-50">
+              {uploadingPhoto ? <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" /> : <Upload size={14} />}
+              {uploadingPhoto ? 'Téléversement...' : 'Choisir une photo'}
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* Template choice */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2"><FileText size={15} /> Modèle de CV</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {([
+            { value: 'classic', label: 'SNH Classique', desc: 'Colonne latérale marine, photo, style institutionnel' },
+            { value: 'modern', label: 'Moderne', desc: 'En-tête plein, bicolonne, épuré et contemporain' },
+          ] as const).map(t => (
+            <button key={t.value} onClick={() => setTemplate(t.value)}
+              className={`p-3 rounded-xl border-2 text-left transition ${template === t.value ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${template === t.value ? 'border-green-600 bg-green-600' : 'border-gray-300'}`} />
+                <span className="text-sm font-semibold text-gray-900">{t.label}</span>
+              </div>
+              <p className="text-xs text-gray-500 ml-5">{t.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* AI instructions */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-800 mb-1 flex items-center gap-2"><Sparkles size={15} className="text-amber-500" /> Amélioration IA (optionnel)</h3>
+        <p className="text-xs text-gray-500 mb-2">Décrivez le style souhaité, le poste visé ou les points à mettre en avant. L'IA améliorera votre résumé professionnel.</p>
+        <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+          placeholder="Ex : Mets en avant mes compétences en forage et production pétrolière. Rédige un résumé percutant orienté SNH, en 4 phrases, style professionnel et formel..." />
+        <div className="flex items-center gap-3 mt-2">
+          <button onClick={handleGenerate} disabled={generating}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50"
+            style={{ background: '#f59e0b' }}>
+            {generating ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Sparkles size={14} />}
+            {generating ? 'Génération IA...' : 'Améliorer avec l\'IA'}
+          </button>
+          {aiSummary && <span className="text-xs text-green-600 font-medium flex items-center gap-1"><CheckCircle size={12} /> Résumé IA généré</span>}
+        </div>
+        {aiMsg && <p className="text-xs text-gray-500 mt-1">{aiMsg}</p>}
+        {aiSummary && (
+          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-xs font-semibold text-amber-800 mb-1">Résumé IA :</p>
+            <p className="text-sm text-gray-700 leading-relaxed">{aiSummary}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Export */}
+      <div className="pt-4 border-t border-gray-100">
+        <button onClick={handleExport}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition hover:opacity-90"
+          style={{ background: 'linear-gradient(135deg, #0f2d52, #1e4a7a)' }}>
+          <Download size={16} /> Générer et télécharger le CV (PDF)
+        </button>
+        <p className="text-xs text-center text-gray-400 mt-2">Le CV s'ouvre dans un nouvel onglet — utilisez "Imprimer" → "Enregistrer en PDF"</p>
       </div>
     </div>
   );

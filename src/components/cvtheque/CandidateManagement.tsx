@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Pagination, paginate, PageSize } from '../shared/Pagination';
 import { supabase } from '../../lib/supabase';
 import {
@@ -7,8 +7,9 @@ import {
   FileText, CheckCircle, Clock, UserCheck, XCircle, MessageSquare,
   TrendingUp, Download, ChevronRight, AlertCircle, Sparkles,
   ChevronDown, ChevronUp, Building2, RefreshCw, ArrowRight,
-  ClipboardList, UserPlus, Award, Send, History, Plus, Filter, Upload, Pencil
+  ClipboardList, UserPlus, Award, Send, History, Plus, Filter, Upload, Pencil, Camera
 } from 'lucide-react';
+import { generateCV, CVData } from '../../utils/cvPDF';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Candidate {
@@ -19,9 +20,13 @@ interface Candidate {
   availability_date: string | null; mobility: string | null; status: string;
   source: string; created_at: string; profile_completed: boolean;
   recommender_type?: string | null; recommender_name?: string | null; recommender_contact?: string | null;
+  photo_url?: string | null; professional_title?: string | null;
+  birth_date?: string | null; gender?: string | null; nationality?: string | null; national_id?: string | null;
+  phone2?: string | null; region?: string | null;
   candidate_applications?: Application[]; candidate_experiences?: Experience[];
   candidate_educations?: Education[]; candidate_candidate_skills?: CandSkill[];
   candidate_documents?: CandDoc[];
+  candidate_languages?: { id: string; name: string; level: string }[];
 }
 interface Application {
   id: string; desired_position: string | null; cover_letter: string | null;
@@ -2077,6 +2082,156 @@ function AdminDocumentsTab({ candidateId, initialDocs, onRefresh }: {
   );
 }
 
+// ── Admin CV Generator Tab ─────────────────────────────────────────────────
+function AdminCVGeneratorTab({ candidate: c }: { candidate: Candidate }) {
+  const [template, setTemplate] = useState<'classic' | 'modern'>('classic');
+  const [instructions, setInstructions] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiMsg, setAiMsg] = useState('');
+  const [photoUrl, setPhotoUrl] = useState(c.photo_url || '');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert('Photo trop volumineuse (max 5 Mo)'); return; }
+    setUploadingPhoto(true);
+    const ext = file.name.split('.').pop();
+    const path = `${c.id}/profile.${ext}`;
+    const { error: upErr } = await supabase.storage.from('candidate-photos').upload(path, file, { upsert: true });
+    if (upErr) { alert('Erreur upload : ' + upErr.message); setUploadingPhoto(false); return; }
+    const { data: urlData } = supabase.storage.from('candidate-photos').getPublicUrl(path);
+    const url = urlData.publicUrl + '?t=' + Date.now();
+    await supabase.from('candidates').update({ photo_url: url }).eq('id', c.id);
+    setPhotoUrl(url);
+    setUploadingPhoto(false);
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true); setAiMsg(''); setAiSummary(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke('generate-cv-ai', {
+        body: {
+          profile: c, instructions,
+          experiences: c.candidate_experiences || [],
+          educations: c.candidate_educations || [],
+          skills: c.candidate_candidate_skills || [],
+          languages: c.candidate_languages || [],
+        },
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
+      if (res.data?.aiSummary) { setAiSummary(res.data.aiSummary); setAiMsg(res.data.message || ''); }
+      else setAiMsg(res.data?.message || 'Génération IA terminée.');
+    } catch { setAiMsg('Erreur lors de la génération IA.'); }
+    setGenerating(false);
+  };
+
+  const handleExport = () => {
+    const cvData: CVData = {
+      profile: {
+        first_name: c.first_name, last_name: c.last_name, email: c.email,
+        phone: c.phone, phone2: c.phone2, location: c.location, region: c.region,
+        linkedin_url: c.linkedin_url, portfolio_url: c.portfolio_url,
+        summary: c.summary, desired_position: c.desired_position,
+        professional_title: c.professional_title, birth_date: c.birth_date,
+        gender: c.gender, nationality: c.nationality, national_id: c.national_id,
+        availability_date: c.availability_date, mobility: c.mobility,
+        photo_url: photoUrl || null,
+      },
+      experiences: (c.candidate_experiences || []).map(e => ({
+        ...e, location: e.location || '', description: e.description || '',
+        start_date: e.start_date, end_date: e.end_date || undefined,
+      })),
+      educations: (c.candidate_educations || []).map(e => ({
+        ...e, field_of_study: e.field_of_study || '', grade: e.grade || '',
+      })),
+      skills: (c.candidate_candidate_skills || []).map(s => ({
+        name: s.name, category: s.category, level: s.level,
+      })),
+      languages: (c.candidate_languages || []),
+      aiSummary: aiSummary || undefined,
+    };
+    generateCV(cvData, template);
+  };
+
+  return (
+    <div className="space-y-6 p-2">
+      {/* Photo */}
+      <div>
+        <p className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><Camera size={14} /> Photo de profil</p>
+        <div className="flex items-center gap-5">
+          <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-slate-200 flex-shrink-0 bg-slate-50 flex items-center justify-center">
+            {photoUrl ? <img src={photoUrl} alt="Photo" className="w-full h-full object-cover" /> : <Camera size={24} className="text-slate-300" />}
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 mb-2">JPG, PNG, WEBP — max 5 Mo</p>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
+            <button onClick={() => fileRef.current?.click()} disabled={uploadingPhoto}
+              className="flex items-center gap-2 px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition disabled:opacity-50">
+              {uploadingPhoto ? <div className="w-3.5 h-3.5 border border-slate-300 border-t-slate-600 rounded-full animate-spin" /> : <Upload size={13} />}
+              {uploadingPhoto ? 'Téléversement...' : 'Choisir photo'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Template */}
+      <div>
+        <p className="text-sm font-semibold text-slate-700 mb-3">Modèle de CV</p>
+        <div className="grid grid-cols-2 gap-3">
+          {([
+            { value: 'classic' as const, label: 'SNH Classique', desc: 'Colonne marine, photo, institutionnel' },
+            { value: 'modern' as const, label: 'Moderne', desc: 'En-tête plein, bicolonne, épuré' },
+          ]).map(t => (
+            <button key={t.value} onClick={() => setTemplate(t.value)}
+              className={`p-3 rounded-xl border-2 text-left transition ${template === t.value ? 'border-teal-600 bg-teal-50' : 'border-slate-200 hover:border-slate-300'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${template === t.value ? 'border-teal-600 bg-teal-600' : 'border-slate-300'}`} />
+                <span className="text-sm font-semibold text-slate-800">{t.label}</span>
+              </div>
+              <p className="text-xs text-slate-500 ml-5">{t.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* AI */}
+      <div>
+        <p className="text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2"><Sparkles size={13} className="text-amber-500" /> Amélioration IA</p>
+        <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none mb-2"
+          placeholder="Ex : Mets en avant les compétences en exploration pétrolière et la connaissance des normes HSE..." />
+        <div className="flex items-center gap-3">
+          <button onClick={handleGenerate} disabled={generating}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 transition disabled:opacity-50">
+            {generating ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Sparkles size={13} />}
+            {generating ? 'Génération...' : 'Améliorer avec l\'IA'}
+          </button>
+          {aiSummary && <span className="text-xs text-green-600 font-medium flex items-center gap-1"><CheckCircle size={11} />Résumé IA prêt</span>}
+        </div>
+        {aiMsg && <p className="text-xs text-slate-500 mt-1">{aiMsg}</p>}
+        {aiSummary && (
+          <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-xs font-semibold text-amber-800 mb-1">Résumé IA :</p>
+            <p className="text-sm text-slate-700 leading-relaxed">{aiSummary}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Export */}
+      <button onClick={handleExport}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition hover:opacity-90"
+        style={{ background: 'linear-gradient(135deg, #0f2d52, #1e4a7a)' }}>
+        <Download size={15} /> Générer le CV (PDF)
+      </button>
+      <p className="text-xs text-center text-slate-400">Le CV s'ouvre dans un nouvel onglet — Imprimer → Enregistrer en PDF</p>
+    </div>
+  );
+}
+
 // ── Candidate Detail Modal ────────────────────────────────────────────────
 function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDownloadDoc, onEdit }: {
   candidate: Candidate; onClose: () => void;
@@ -2084,7 +2239,7 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
   onDelete: (id: string) => void; onDownloadDoc: (doc: CandDoc) => void;
   onEdit: (c: Candidate) => void;
 }) {
-  type Tab = 'profile' | 'experiences' | 'education' | 'skills' | 'documents' | 'pipeline' | 'onboarding';
+  type Tab = 'profile' | 'experiences' | 'education' | 'skills' | 'documents' | 'pipeline' | 'onboarding' | 'cv';
   const [tab, setTab] = useState<Tab>('pipeline');
   const [saving, setSaving] = useState(false);
   const [noteText, setNoteText] = useState('');
@@ -2165,6 +2320,7 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
     { id: 'education', label: 'Formations', icon: GraduationCap },
     { id: 'skills', label: 'Compétences', icon: Zap },
     { id: 'documents', label: 'Documents', icon: FileText },
+    { id: 'cv', label: 'Générer CV', icon: Download },
   ];
 
   return (
@@ -2485,6 +2641,11 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
           {/* Documents tab */}
           {tab === 'documents' && (
             <AdminDocumentsTab candidateId={c.id} initialDocs={c.candidate_documents ?? []} onRefresh={onRefresh} />
+          )}
+
+          {/* CV Generator tab */}
+          {tab === 'cv' && (
+            <AdminCVGeneratorTab candidate={c} />
           )}
         </div>
 

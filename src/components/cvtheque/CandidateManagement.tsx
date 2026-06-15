@@ -1288,7 +1288,7 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
         const validExp = experiences.filter(e => e.job_title && e.company);
         if (validExp.length) {
           const { error: expErr } = await supabase.from('candidate_experiences').insert(
-            validExp.map(e => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+            validExp.map(e => ({ ...e, candidate_id: candidateId, start_date: yr2date(e.start_date), end_date: e.is_current ? null : yr2date(e.end_date) }))
           );
           if (expErr) throw new Error('Expériences : ' + expErr.message);
         }
@@ -1363,7 +1363,7 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
         if (experiences.length > 0) {
           const valid = experiences.filter(e => e.job_title && e.company);
           if (valid.length) await supabase.from('candidate_experiences').insert(
-            valid.map(({...e}) => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+            valid.map(({...e}) => ({ ...e, candidate_id: candidateId, start_date: yr2date(e.start_date), end_date: e.is_current ? null : yr2date(e.end_date) }))
           );
         }
 

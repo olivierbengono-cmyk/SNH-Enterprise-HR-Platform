@@ -26,7 +26,9 @@ type NavItem =
 export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps) {
   const { profile, signOut } = useAuth();
   const { navigate, goBack, canGoBack, recents } = useNavigation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth >= 1024
+  );
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -85,6 +87,15 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
       .eq('is_read', false);
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   };
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setSidebarOpen(true);
+      else setSidebarOpen(false);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     if (profile?.id) loadUserPhoto();
@@ -437,12 +448,12 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
               href="/candidature/"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition hover:opacity-90"
+              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold border transition hover:opacity-90"
               style={{ background: '#006B3C', color: 'white', borderColor: '#006B3C' }}
               title="Ouvrir le portail de recrutement"
             >
-              <ExternalLink className="w-3 h-3" />
-              Portail candidats
+              <ExternalLink className="w-3 h-3 flex-shrink-0" />
+              <span className="hidden sm:inline">Portail candidats</span>
             </a>
 
             {canGoBack && (
@@ -573,8 +584,8 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
       <div className="flex">
         <aside className={`
           fixed lg:sticky top-14 left-0 h-[calc(100vh-3.5rem)] bg-white border-r border-slate-200
-          transition-all duration-300 z-30 flex flex-col overflow-hidden
-          ${sidebarOpen ? 'w-60 translate-x-0' : 'w-0 -translate-x-full lg:w-0 lg:translate-x-0'}
+          transition-all duration-300 z-30 flex flex-col overflow-hidden flex-shrink-0
+          ${sidebarOpen ? 'w-60 translate-x-0 shadow-xl lg:shadow-none' : 'w-0 -translate-x-full'}
         `}>
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {recents.filter((r) => r.id !== activeTab && r.id !== 'dashboard').length > 0 && (
@@ -709,7 +720,7 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0 p-5 lg:p-7 min-h-[calc(100vh-3.5rem)]">
+        <main className="flex-1 min-w-0 w-full p-4 sm:p-5 lg:p-7 min-h-[calc(100vh-3.5rem)]">
           <Breadcrumb current={currentEntry} onNavigate={handleTabChange} />
           {children}
         </main>
@@ -717,7 +728,7 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
 
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/20 z-20 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-20 lg:hidden backdrop-blur-[1px]"
           onClick={() => setSidebarOpen(false)}
         />
       )}

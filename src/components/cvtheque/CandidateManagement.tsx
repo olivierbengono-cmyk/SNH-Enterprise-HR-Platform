@@ -18,6 +18,7 @@ interface Candidate {
   desired_salary_min: number | null; desired_salary_max: number | null;
   availability_date: string | null; mobility: string | null; status: string;
   source: string; created_at: string; profile_completed: boolean;
+  recommender_type?: string | null; recommender_name?: string | null; recommender_contact?: string | null;
   candidate_applications?: Application[]; candidate_experiences?: Experience[];
   candidate_educations?: Education[]; candidate_candidate_skills?: CandSkill[];
   candidate_documents?: CandDoc[];
@@ -625,6 +626,14 @@ export default function CandidateManagement() {
                       const stageIdx = STAGE_ORDER.indexOf(app?.status || 'new');
                       const progress = stageIdx >= 0 ? Math.round(((stageIdx + 1) / STAGE_ORDER.length) * 100) : 0;
                       const isRecommended = app?.spontaneous_type === 'recommande' || c.source === 'referral';
+                      const recType = c.recommender_type; // 'internal' | 'external' | null
+                      const recBadge = isRecommended
+                        ? recType === 'internal'
+                          ? { label: 'Recommandé (SNH)', cls: 'bg-teal-50 text-teal-700 border-teal-200', dot: 'bg-teal-500' }
+                          : recType === 'external'
+                          ? { label: 'Recommandé (ext.)', cls: 'bg-orange-50 text-orange-700 border-orange-200', dot: 'bg-orange-500' }
+                          : { label: 'Recommandé', cls: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-400' }
+                        : null;
                       return (
                         <tr key={c.id} className="hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => openCandidate(c)}>
                           <td className="py-3 px-4">
@@ -633,8 +642,8 @@ export default function CandidateManagement() {
                                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-teal-700 flex items-center justify-center text-white font-bold text-sm">
                                   {c.first_name[0]}{c.last_name[0]}
                                 </div>
-                                {isRecommended && (
-                                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 border-2 border-white flex items-center justify-center" title="Candidat recommandé">
+                                {recBadge && (
+                                  <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full ${recBadge.dot} border-2 border-white flex items-center justify-center`} title={recBadge.label}>
                                     <UserPlus size={8} className="text-white" />
                                   </span>
                                 )}
@@ -642,9 +651,9 @@ export default function CandidateManagement() {
                               <div>
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <p className="font-semibold text-slate-800 text-sm">{c.first_name} {c.last_name}</p>
-                                  {isRecommended && (
-                                    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-medium leading-none">
-                                      <UserPlus size={9} />Recommandé
+                                  {recBadge && (
+                                    <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md border font-medium leading-none ${recBadge.cls}`}>
+                                      <UserPlus size={9} />{recBadge.label}
                                     </span>
                                   )}
                                 </div>
@@ -1184,6 +1193,10 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
   const [coverLetter, setCoverLetter] = useState(() => initApp?.cover_letter || '');
   const [internalNotes, setInternalNotes] = useState(() => initApp?.internal_notes || '');
   const [source, setSource] = useState(() => ic?.source || 'spontaneous');
+  // Recommandeur
+  const [recommenderType, setRecommenderType] = useState<'internal' | 'external'>(() => (ic?.recommender_type as 'internal' | 'external') || 'internal');
+  const [recommenderName, setRecommenderName] = useState(() => ic?.recommender_name || '');
+  const [recommenderContact, setRecommenderContact] = useState(() => ic?.recommender_contact || '');
 
   // Documents — requires candidateId to exist first
   const [savedCandidateId, setSavedCandidateId] = useState<string | null>(() => initialCandidate?.id || null);
@@ -1260,51 +1273,72 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
         desired_salary_max: desiredSalaryMax ? Number(desiredSalaryMax) : null,
         availability_date: availabilityDate || null,
         source: source || 'spontaneous',
+        recommender_type: appType === 'recommande' ? recommenderType : null,
+        recommender_name: appType === 'recommande' && recommenderName.trim() ? recommenderName.trim() : null,
+        recommender_contact: appType === 'recommande' && recommenderContact.trim() ? recommenderContact.trim() : null,
       };
 
       if (isEdit && candidateId) {
         // ── EDIT MODE ────────────────────────────────────────────────────────
-        await supabase.from('candidates').update(profileFields).eq('id', candidateId);
+        const { error: candErr } = await supabase.from('candidates').update(profileFields).eq('id', candidateId);
+        if (candErr) throw new Error('Mise à jour candidat : ' + candErr.message);
 
         // Replace experiences
         await supabase.from('candidate_experiences').delete().eq('candidate_id', candidateId);
         const validExp = experiences.filter(e => e.job_title && e.company);
-        if (validExp.length) await supabase.from('candidate_experiences').insert(
-          validExp.map(e => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
-        );
+        if (validExp.length) {
+          const { error: expErr } = await supabase.from('candidate_experiences').insert(
+            validExp.map(e => ({ ...e, candidate_id: candidateId, end_date: e.is_current ? null : (e.end_date || null) }))
+          );
+          if (expErr) throw new Error('Expériences : ' + expErr.message);
+        }
 
         // Replace educations
         await supabase.from('candidate_educations').delete().eq('candidate_id', candidateId);
         const validEdu = educations.filter(e => e.degree && e.institution);
-        if (validEdu.length) await supabase.from('candidate_educations').insert(
-          validEdu.map(e => ({ ...e, candidate_id: candidateId, start_date: yr2date(e.start_date), end_date: e.is_current ? null : yr2date(e.end_date) }))
-        );
+        if (validEdu.length) {
+          const { error: eduErr } = await supabase.from('candidate_educations').insert(
+            validEdu.map(e => ({ ...e, candidate_id: candidateId, start_date: yr2date(e.start_date), end_date: e.is_current ? null : yr2date(e.end_date) }))
+          );
+          if (eduErr) throw new Error('Formations : ' + eduErr.message);
+        }
 
         // Replace skills
         await supabase.from('candidate_candidate_skills').delete().eq('candidate_id', candidateId);
         if (skills.length) {
           const masterMap = Object.fromEntries(masterSkills.map(m => [m.name, m.id]));
-          await supabase.from('candidate_candidate_skills').insert(
+          const { error: skillErr } = await supabase.from('candidate_candidate_skills').insert(
             skills.map(s => ({ ...s, candidate_id: candidateId, skill_id: masterMap[s.name] ?? null }))
           );
+          if (skillErr) throw new Error('Compétences : ' + skillErr.message);
         }
 
         // Replace languages
         await supabase.from('candidate_languages').delete().eq('candidate_id', candidateId);
         const validLangs = languages.filter(l => l.name.trim());
-        if (validLangs.length) await supabase.from('candidate_languages').insert(
-          validLangs.map(l => ({ ...l, candidate_id: candidateId }))
-        );
+        if (validLangs.length) {
+          const { error: langErr } = await supabase.from('candidate_languages').insert(
+            validLangs.map(l => ({ ...l, candidate_id: candidateId }))
+          );
+          if (langErr) throw new Error('Langues : ' + langErr.message);
+        }
 
-        // Update application record if exists
+        // Update or create application record
+        const appPayload = {
+          job_opening_id: jobOpeningId || null,
+          desired_position: desiredPosition.trim() || null,
+          cover_letter: coverLetter.trim() || null,
+          internal_notes: internalNotes.trim() || null,
+          spontaneous_type: appType,
+        };
         if (initApp?.id) {
-          await supabase.from('candidate_applications').update({
-            job_opening_id: jobOpeningId || null,
-            desired_position: desiredPosition.trim() || null,
-            cover_letter: coverLetter.trim() || null,
-            internal_notes: internalNotes.trim() || null,
-            spontaneous_type: appType,
-          }).eq('id', initApp.id);
+          const { error: appErr } = await supabase.from('candidate_applications').update(appPayload).eq('id', initApp.id);
+          if (appErr) throw new Error('Application : ' + appErr.message);
+        } else {
+          const { error: appErr } = await supabase.from('candidate_applications').insert({
+            ...appPayload, candidate_id: candidateId, status: 'new', onboarding_checklist: [],
+          });
+          if (appErr) throw new Error('Application : ' + appErr.message);
         }
       } else {
         // ── CREATE MODE ──────────────────────────────────────────────────────
@@ -1648,6 +1682,36 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
                   ))}
                 </div>
               </div>
+              {/* ── Recommandeur (visible seulement si type = recommande) ── */}
+              {appType === 'recommande' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                  <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <UserPlus size={13} /> Informations du recommandeur
+                  </p>
+                  <div>
+                    <FL>Type de recommandeur</FL>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setRecommenderType('internal')}
+                        className={`flex-1 py-2 px-3 rounded-lg border text-xs font-semibold transition ${recommenderType === 'internal' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200 hover:border-teal-300'}`}>
+                        Agent SNH (interne)
+                      </button>
+                      <button type="button" onClick={() => setRecommenderType('external')}
+                        className={`flex-1 py-2 px-3 rounded-lg border text-xs font-semibold transition ${recommenderType === 'external' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-slate-600 border-slate-200 hover:border-orange-300'}`}>
+                        Personnalité extérieure
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <FL>{recommenderType === 'internal' ? 'Nom de l\'agent SNH' : 'Nom du recommandeur'}</FL>
+                    <input value={recommenderName} onChange={e => setRecommenderName(e.target.value)} className={fi()} placeholder={recommenderType === 'internal' ? 'Ex : Jean MBELLA, Chef de service...' : 'Ex : Dr. Martin BIYA...'} />
+                  </div>
+                  <div>
+                    <FL>{recommenderType === 'internal' ? 'Contact (email / poste)' : 'Organisation / Contact'}</FL>
+                    <input value={recommenderContact} onChange={e => setRecommenderContact(e.target.value)} className={fi()} placeholder={recommenderType === 'internal' ? 'Email professionnel ou extension interne' : 'Société, titre ou téléphone'} />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <FL>Offre d'emploi associée (optionnel)</FL>
                 <select value={jobOpeningId} onChange={e=>setJobOpeningId(e.target.value)} className={fi()}>
@@ -2290,8 +2354,25 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
                 {c.availability_date && <InfoItem icon={<Calendar size={13} />} label="Disponible" value={fmtDate(c.availability_date)} />}
                 {c.desired_salary_min && <InfoItem icon={<TrendingUp size={13} />} label="Prétentions" value={`${c.desired_salary_min?.toLocaleString()} — ${c.desired_salary_max?.toLocaleString() || '?'} XAF`} />}
                 {c.mobility && <InfoItem icon={<MapPin size={13} />} label="Mobilité" value={{ local: 'Local', regional: 'Régional', national: 'National', international: 'International' }[c.mobility] || c.mobility} />}
-                {c.source && <InfoItem icon={<Globe size={13} />} label="Source" value={c.source} />}
+                {c.source && <InfoItem icon={<Globe size={13} />} label="Source" value={
+                  { spontaneous: 'Spontanée', referral: 'Recommandation', linkedin: 'LinkedIn',
+                    job_board: 'Job board', school: 'École partenaire', portal: 'Portail candidats', other: 'Autre' }[c.source] || c.source
+                } />}
               </div>
+              {/* Bloc recommandeur */}
+              {(app?.spontaneous_type === 'recommande' || c.source === 'referral') && (
+                <div className={`rounded-xl border p-4 ${c.recommender_type === 'internal' ? 'bg-teal-50 border-teal-200' : c.recommender_type === 'external' ? 'bg-orange-50 border-orange-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <UserPlus size={14} className={c.recommender_type === 'internal' ? 'text-teal-600' : c.recommender_type === 'external' ? 'text-orange-600' : 'text-amber-600'} />
+                    <span className={`text-xs font-semibold uppercase tracking-wider ${c.recommender_type === 'internal' ? 'text-teal-700' : c.recommender_type === 'external' ? 'text-orange-700' : 'text-amber-700'}`}>
+                      {c.recommender_type === 'internal' ? 'Recommandé par un Agent SNH' : c.recommender_type === 'external' ? 'Recommandé par une personnalité extérieure' : 'Candidature recommandée'}
+                    </span>
+                  </div>
+                  {c.recommender_name && <p className="text-sm font-medium text-slate-800">{c.recommender_name}</p>}
+                  {c.recommender_contact && <p className="text-xs text-slate-500 mt-0.5">{c.recommender_contact}</p>}
+                  {!c.recommender_name && !c.recommender_contact && <p className="text-xs text-slate-400 italic">Aucun détail sur le recommandeur</p>}
+                </div>
+              )}
               <div className="flex gap-3 flex-wrap">
                 {c.linkedin_url && <a href={`https://${c.linkedin_url}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs hover:bg-blue-100"><Linkedin size={13} />LinkedIn</a>}
                 {c.portfolio_url && <a href={`https://${c.portfolio_url}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs hover:bg-slate-200"><Globe size={13} />Portfolio</a>}

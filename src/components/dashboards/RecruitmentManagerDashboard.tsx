@@ -9,13 +9,13 @@ interface RecruitmentManagerDashboardProps {
   onNavigate?: (tab: string) => void;
 }
 
-interface Candidate {
+interface RecentApplication {
   id: string;
-  first_name: string;
-  last_name: string;
   status: string;
-  applied_at: string;
-  job_opening?: { title: string } | null;
+  created_at: string;
+  desired_position: string | null;
+  candidate: { id: string; first_name: string; last_name: string } | null;
+  job_opening: { title: string } | null;
 }
 
 interface JobOpening {
@@ -27,21 +27,23 @@ interface JobOpening {
 }
 
 const CANDIDATE_STATUS_LABELS: Record<string, string> = {
-  applied: 'Candidature',
-  screening: 'Triage',
+  new: 'Soumise',
+  reviewing: 'En examen',
   interview: 'Entretien',
   offer: 'Offre',
-  hired: 'Embauche',
-  rejected: 'Rejete',
+  integrated: 'Intégré(e)',
+  rejected: 'Refusé(e)',
+  withdrawn: 'Retirée',
 };
 
 const CANDIDATE_STATUS_STYLES: Record<string, string> = {
-  applied: 'bg-blue-100 text-blue-700',
-  screening: 'bg-yellow-100 text-yellow-700',
+  new: 'bg-blue-100 text-blue-700',
+  reviewing: 'bg-amber-100 text-amber-700',
   interview: 'bg-orange-100 text-orange-700',
-  offer: 'bg-green-100 text-green-700',
-  hired: 'bg-emerald-100 text-emerald-700',
+  offer: 'bg-teal-100 text-teal-700',
+  integrated: 'bg-emerald-100 text-emerald-700',
   rejected: 'bg-red-100 text-red-700',
+  withdrawn: 'bg-gray-100 text-gray-600',
 };
 
 export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentManagerDashboardProps = {}) {
@@ -53,7 +55,7 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
     hiredThisMonth: 0,
     conversionRate: 0,
   });
-  const [recentCandidates, setRecentCandidates] = useState<Candidate[]>([]);
+  const [recentCandidates, setRecentCandidates] = useState<RecentApplication[]>([]);
   const [activeJobs, setActiveJobs] = useState<JobOpening[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,41 +67,45 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
     try {
       setLoading(true);
 
-      const [jobsResult, candidatesResult, interviewsResult, jobsDetailResult, recentCandidatesResult] = await Promise.all([
+      const [jobsResult, candidatesResult, jobsDetailResult, recentCandidatesResult] = await Promise.all([
         supabase.from('job_openings').select('id', { count: 'exact' }).eq('status', 'open'),
         supabase.from('candidates').select('id', { count: 'exact' }),
-        supabase.from('interviews').select('id', { count: 'exact' }).eq('status', 'scheduled'),
         supabase
           .from('job_openings')
           .select('id, title, status, department:departments(name)')
           .eq('status', 'open')
           .limit(5),
         supabase
-          .from('candidates')
-          .select('id, first_name, last_name, status, applied_at, job_opening:job_openings(title)')
-          .order('applied_at', { ascending: false })
-          .limit(6),
+          .from('candidate_applications')
+          .select('id, status, created_at, desired_position, candidate:candidates(id, first_name, last_name), job_opening:job_openings(title)')
+          .order('created_at', { ascending: false })
+          .limit(8),
       ]);
 
       const thisMonth = new Date();
       thisMonth.setDate(1);
       const { count: hiredCount } = await supabase
-        .from('candidates')
+        .from('candidate_applications')
         .select('id', { count: 'exact' })
-        .eq('status', 'hired')
-        .gte('applied_at', thisMonth.toISOString());
+        .eq('status', 'integrated')
+        .gte('created_at', thisMonth.toISOString());
+
+      const { count: interviewCount } = await supabase
+        .from('candidate_applications')
+        .select('id', { count: 'exact' })
+        .eq('status', 'interview');
 
       const totalCandidates = candidatesResult.count || 0;
       const hired = hiredCount || 0;
       const conversionRate = totalCandidates > 0 ? Math.round((hired / totalCandidates) * 100) : 0;
 
-      setRecentCandidates((recentCandidatesResult.data || []) as unknown as Candidate[]);
+      setRecentCandidates((recentCandidatesResult.data || []) as unknown as RecentApplication[]);
       setActiveJobs((jobsDetailResult.data || []) as unknown as JobOpening[]);
 
       setStats({
         openPositions: jobsResult.count || 0,
         totalCandidates,
-        pendingInterviews: interviewsResult.count || 0,
+        pendingInterviews: interviewCount || 0,
         offersExtended: 0,
         hiredThisMonth: hired,
         conversionRate,
@@ -236,26 +242,26 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
               </div>
             ) : (
               <div className="space-y-3">
-                {recentCandidates.map((candidate) => (
+                {recentCandidates.map((app) => (
                   <button
-                    key={candidate.id}
+                    key={app.id}
                     type="button"
                     onClick={() => onNavigate?.('recruitment')}
                     className="w-full flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition text-left"
                   >
                     <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-green-700 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                      {candidate.first_name?.[0]}{candidate.last_name?.[0]}
+                      {app.candidate?.first_name?.[0]}{app.candidate?.last_name?.[0]}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-900 truncate">
-                        {candidate.first_name} {candidate.last_name}
+                        {app.candidate?.first_name} {app.candidate?.last_name}
                       </p>
                       <p className="text-xs text-slate-500 truncate">
-                        {candidate.job_opening?.title || 'Poste non specifie'} · {formatDate(candidate.applied_at)}
+                        {app.job_opening?.title || app.desired_position || 'Candidature spontanée'} · {formatDate(app.created_at)}
                       </p>
                     </div>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${CANDIDATE_STATUS_STYLES[candidate.status] || 'bg-slate-100 text-slate-700'}`}>
-                      {CANDIDATE_STATUS_LABELS[candidate.status] || candidate.status}
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${CANDIDATE_STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-700'}`}>
+                      {CANDIDATE_STATUS_LABELS[app.status] || app.status}
                     </span>
                   </button>
                 ))}

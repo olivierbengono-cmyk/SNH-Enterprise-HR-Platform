@@ -144,6 +144,13 @@ function inp(err?: boolean) {
   return `w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition focus:ring-2 focus:ring-green-600 focus:border-green-600 bg-white ${err ? 'border-red-300 bg-red-50' : 'border-gray-300'}`;
 }
 function Lbl({ children }: { children: React.ReactNode }) {
+  if (typeof children === 'string' && children.endsWith(' *')) {
+    return (
+      <label className="block text-xs font-semibold text-gray-600 mb-1">
+        {children.slice(0, -2)}<span className="text-red-500"> *</span>
+      </label>
+    );
+  }
   return <label className="block text-xs font-semibold text-gray-600 mb-1">{children}</label>;
 }
 function Tag({ children, variant = 'blue' }: { children: React.ReactNode; variant?: 'blue'|'green'|'amber'|'purple'|'gray'|'red' }) {

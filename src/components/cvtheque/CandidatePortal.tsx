@@ -194,9 +194,57 @@ function ProgressBar({ pct, color = 'bg-blue-600' }: { pct: number; color?: stri
 
 type Section = 'dashboard' | 'profile' | 'documents' | 'jobs' | 'spontaneous' | 'applications' | 'notifications';
 
+// ── i18n ────────────────────────────────────────────────────────────────────────
+type Lang = 'fr' | 'en';
+const TR = {
+  fr: {
+    login: 'Connexion', signup: 'Créer un compte', loginTitle: 'Connexion à mon espace',
+    registerTitle: 'Créer mon compte candidat', snh: 'SNH Recrutement',
+    heroTitle: 'Rejoignez la SNH', heroSub: 'et participez à l\'avenir énergétique du Cameroun',
+    heroDesc: 'Découvrez nos opportunités de carrière, de stage et déposez votre candidature en quelques étapes.',
+    searchPlaceholder: 'Poste, mot-clé, lieu...', allContracts: 'Tous les contrats',
+    apply: 'Candidater', seeDetails: 'Voir détails', hideDetails: 'Masquer',
+    noJobs: 'Aucune offre ne correspond à votre recherche.', loadingJobs: 'Chargement des offres…',
+    spontTitle: 'Vous n\'êtes pas satisfait ?',
+    spontDesc: 'Envoyez une candidature spontanée — nous la garderons dans notre vivier de talents.',
+    spontBtn: 'Déposer une candidature spontanée',
+    available: 'offres disponibles', openUntil: 'Ouvert jusqu\'au',
+    firstName: 'Prénom', lastName: 'Nom', email: 'Email', password: 'Mot de passe',
+    firstNamePh: 'Olivier', lastNamePh: 'Kamdem',
+    alreadyAccount: 'Déjà un compte ? Se connecter', noAccount: 'Pas encore de compte ? S\'inscrire',
+    privacy: 'Vos données sont traitées de manière confidentielle conformément à la politique de recrutement SNH.',
+    dashboard: 'Tableau de bord', profile: 'Mon profil', documents: 'Mes documents',
+    jobs: 'Offres d\'emploi', spontaneous: 'Candidature spontanée', applications: 'Mes candidatures',
+    notifications: 'Notifications', logout: 'Déconnexion', menu: 'Menu',
+    home: 'Accueil', notifs: 'Notifs', more: 'Plus',
+  },
+  en: {
+    login: 'Log in', signup: 'Create account', loginTitle: 'Log in to my space',
+    registerTitle: 'Create candidate account', snh: 'SNH Recruitment',
+    heroTitle: 'Join the SNH', heroSub: 'and be part of Cameroon\'s energy future',
+    heroDesc: 'Discover our career and internship opportunities and submit your application in a few steps.',
+    searchPlaceholder: 'Position, keyword, location...', allContracts: 'All contracts',
+    apply: 'Apply', seeDetails: 'View details', hideDetails: 'Hide',
+    noJobs: 'No positions match your search.', loadingJobs: 'Loading positions…',
+    spontTitle: 'Not finding what you\'re looking for?',
+    spontDesc: 'Send a spontaneous application — we\'ll keep it in our talent pool.',
+    spontBtn: 'Submit a spontaneous application',
+    available: 'available positions', openUntil: 'Open until',
+    firstName: 'First name', lastName: 'Last name', email: 'Email', password: 'Password',
+    firstNamePh: 'Olivier', lastNamePh: 'Kamdem',
+    alreadyAccount: 'Already have an account? Log in', noAccount: 'No account yet? Sign up',
+    privacy: 'Your data is handled confidentially in accordance with SNH\'s recruitment policy.',
+    dashboard: 'Dashboard', profile: 'My profile', documents: 'My documents',
+    jobs: 'Job openings', spontaneous: 'Spontaneous', applications: 'My applications',
+    notifications: 'Notifications', logout: 'Log out', menu: 'Menu',
+    home: 'Home', notifs: 'Notifs', more: 'More',
+  },
+} as const;
+
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function CandidatePortal() {
   const [view, setView] = useState<'public' | 'auth' | 'portal'>('public');
+  const [lang, setLang] = useState<Lang>('fr');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [candidateId, setCandidateId] = useState<string | null>(null);
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
@@ -337,12 +385,14 @@ export default function CandidatePortal() {
         onRegister={() => openAuth('register')}
         onApply={(jobId) => openAuth('login', jobId)}
         loadingJobs={loading}
+        lang={lang} setLang={setLang}
       />
       {view === 'auth' && (
         <AuthModal
           authMode={authMode}
           setAuthMode={setAuthMode}
           onClose={() => setView('public')}
+          lang={lang}
           onAuth={async (uid) => {
             setPendingJobId(null);
             await loadPortal(uid);
@@ -379,7 +429,6 @@ export default function CandidatePortal() {
             <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-100 shadow-sm">
               <img src="/logoSNH.png" alt="SNH" className="h-7 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
             </div>
-            <p className="text-sm font-bold text-gray-900 leading-tight">SNH Recrutement</p>
           </div>
           {/* Close button (mobile only) */}
           <button onClick={() => setMobileMenuOpen(false)} className="md:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition">
@@ -389,18 +438,18 @@ export default function CandidatePortal() {
 
         {/* Nav */}
         <nav className="flex-1 p-3 overflow-y-auto">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2">Mon espace</p>
-          <NavItem icon={LayoutDashboard} label="Tableau de bord" active={section==='dashboard'} onClick={() => navTo('dashboard')} />
-          <NavItem icon={User} label="Mon profil" active={section==='profile'} onClick={() => navTo('profile')} />
-          <NavItem icon={Folder} label="Mes documents" active={section==='documents'} onClick={() => navTo('documents')} />
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">Recrutement SNH</p>
-          <NavItem icon={Briefcase} label="Offres d'emploi" active={section==='jobs'} onClick={() => navTo('jobs')} />
-          <NavItem icon={Send} label="Candidature spontanée" active={section==='spontaneous'} onClick={() => navTo('spontaneous')} />
-          <NavItem icon={FileText} label="Mes candidatures" active={section==='applications'} badge={applications.length} onClick={() => navTo('applications')} />
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">Compte</p>
-          <NavItem icon={Bell} label="Notifications" active={section==='notifications'} badge={unreadNotifs || undefined} onClick={() => { navTo('notifications'); setUnreadNotifs(0); }} />
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2">{lang === 'fr' ? 'Mon espace' : 'My space'}</p>
+          <NavItem icon={LayoutDashboard} label={TR[lang].dashboard} active={section==='dashboard'} onClick={() => navTo('dashboard')} />
+          <NavItem icon={User} label={TR[lang].profile} active={section==='profile'} onClick={() => navTo('profile')} />
+          <NavItem icon={Folder} label={TR[lang].documents} active={section==='documents'} onClick={() => navTo('documents')} />
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">{lang === 'fr' ? 'Recrutement SNH' : 'SNH Recruitment'}</p>
+          <NavItem icon={Briefcase} label={TR[lang].jobs} active={section==='jobs'} onClick={() => navTo('jobs')} />
+          <NavItem icon={Send} label={TR[lang].spontaneous} active={section==='spontaneous'} onClick={() => navTo('spontaneous')} />
+          <NavItem icon={FileText} label={TR[lang].applications} active={section==='applications'} badge={applications.length} onClick={() => navTo('applications')} />
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">{lang === 'fr' ? 'Compte' : 'Account'}</p>
+          <NavItem icon={Bell} label={TR[lang].notifications} active={section==='notifications'} badge={unreadNotifs || undefined} onClick={() => { navTo('notifications'); setUnreadNotifs(0); }} />
           <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all mt-0.5">
-            <LogOut size={16} /> Déconnexion
+            <LogOut size={16} /> {TR[lang].logout}
           </button>
         </nav>
 
@@ -429,12 +478,18 @@ export default function CandidatePortal() {
                 <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
               </svg>
             </button>
-            <p className="text-base font-semibold text-gray-900">{SECTION_TITLES[section]}</p>
+            <p className="text-base font-semibold text-gray-900">{SECTION_TITLES(lang)[section]}</p>
           </div>
           <div className="flex items-center gap-2 md:gap-3">
+            {/* Language toggle */}
+            <button onClick={() => setLang(l => l === 'fr' ? 'en' : 'fr')}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 transition flex-shrink-0">
+              <Globe size={12} />
+              <span>{lang === 'fr' ? 'EN' : 'FR'}</span>
+            </button>
             <div className="hidden sm:flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
               <BarChart3 size={13} className="text-green-700" />
-              <span className="text-xs font-semibold text-green-800">Profil : {profilePct()}%</span>
+              <span className="text-xs font-semibold text-green-800">{lang === 'fr' ? 'Profil' : 'Profile'} : {profilePct()}%</span>
             </div>
             {/* Profile % compact on xs */}
             <div className="sm:hidden flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">
@@ -497,11 +552,11 @@ export default function CandidatePortal() {
         {/* ── Mobile bottom navigation bar ── */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex items-stretch">
           {([
-            { s: 'dashboard' as Section, icon: LayoutDashboard, label: 'Accueil' },
-            { s: 'profile'   as Section, icon: User,            label: 'Profil' },
-            { s: 'jobs'      as Section, icon: Briefcase,        label: 'Offres' },
-            { s: 'applications' as Section, icon: FileText,      label: 'Candidatures', badge: applications.filter(a => a.status !== 'withdrawn').length },
-            { s: 'notifications' as Section, icon: Bell,         label: 'Notifs', badge: unreadNotifs },
+            { s: 'dashboard' as Section, icon: LayoutDashboard, label: TR[lang].home },
+            { s: 'profile'   as Section, icon: User,            label: TR[lang].profile },
+            { s: 'jobs'      as Section, icon: Briefcase,        label: TR[lang].jobs },
+            { s: 'applications' as Section, icon: FileText,      label: TR[lang].applications, badge: applications.filter(a => a.status !== 'withdrawn').length },
+            { s: 'notifications' as Section, icon: Bell,         label: TR[lang].notifs, badge: unreadNotifs },
           ] as { s: Section; icon: React.FC<any>; label: string; badge?: number }[]).map(({ s, icon: Icon, label, badge }) => (
             <button key={s} onClick={() => { navTo(s); if (s === 'notifications') setUnreadNotifs(0); }}
               className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors relative
@@ -524,7 +579,7 @@ export default function CandidatePortal() {
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
             </svg>
-            <span className="leading-tight">Menu</span>
+            <span className="leading-tight">{TR[lang].menu}</span>
           </button>
         </nav>
       </div>
@@ -532,23 +587,24 @@ export default function CandidatePortal() {
   );
 }
 
-const SECTION_TITLES: Record<Section, string> = {
-  dashboard: 'Tableau de bord',
-  profile: 'Mon profil',
-  documents: 'Mes documents',
-  jobs: 'Offres d\'emploi SNH',
-  spontaneous: 'Candidature spontanée',
-  applications: 'Mes candidatures',
-  notifications: 'Notifications',
-};
+const SECTION_TITLES = (l: Lang): Record<Section, string> => ({
+  dashboard: TR[l].dashboard,
+  profile: TR[l].profile,
+  documents: TR[l].documents,
+  jobs: TR[l].jobs,
+  spontaneous: TR[l].spontaneous,
+  applications: TR[l].applications,
+  notifications: TR[l].notifications,
+});
 
 // ── Public Landing ─────────────────────────────────────────────────────────────
-function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: {
+function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, lang, setLang }: {
   openJobs: JobOpening[];
   onLogin: () => void;
   onRegister: () => void;
   onApply: (jobId: string) => void;
   loadingJobs: boolean;
+  lang: Lang; setLang: (l: Lang) => void;
 }) {
   const [search, setSearch] = useState('');
   const [filterContract, setFilterContract] = useState('');
@@ -573,23 +629,23 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
 
         {/* Navbar */}
         <div className="relative max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden p-1">
-              <img src="/logoSNH.png" alt="SNH" className="h-full w-auto object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-            </div>
-            <div>
-              <p className="font-extrabold text-base leading-tight tracking-wide">SNH Recrutement</p>
-            </div>
+          <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden p-1">
+            <img src="/logoSNH.png" alt="SNH" className="h-full w-auto object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
           </div>
           <div className="flex items-center gap-2">
+            {/* Language toggle */}
+            <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/25 rounded-lg text-sm font-bold transition">
+              <Globe size={14} /> {lang === 'fr' ? 'EN' : 'FR'}
+            </button>
             <button onClick={onLogin}
               className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/25 rounded-lg text-sm font-medium transition">
-              <LogIn size={15} /> Connexion
+              <LogIn size={15} /> {TR[lang].login}
             </button>
             <button onClick={onRegister}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition hover:opacity-90"
               style={{ background: SNH_GOLD, color: '#1a1a1a' }}>
-              <UserPlus size={15} /> Créer un compte
+              <UserPlus size={15} /> {TR[lang].signup}
             </button>
           </div>
         </div>
@@ -598,27 +654,27 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
         <div className="relative max-w-5xl mx-auto px-6 py-12 text-center">
           <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5"
             style={{ background: `${SNH_GOLD}22`, color: SNH_GOLD, border: `1px solid ${SNH_GOLD}44` }}>
-            <Sparkles size={12} /> {openJobs.length} offre{openJobs.length !== 1 ? 's' : ''} disponible{openJobs.length !== 1 ? 's' : ''}
+            <Sparkles size={12} /> {openJobs.length} {TR[lang].available}
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight mb-4 tracking-tight">
-            Rejoignez la SNH<br />
-            <span className="font-light text-2xl" style={{ color: `${SNH_GOLD}CC` }}>et participez à l'avenir énergétique du Cameroun</span>
+            {TR[lang].heroTitle}<br />
+            <span className="font-light text-2xl" style={{ color: `${SNH_GOLD}CC` }}>{TR[lang].heroSub}</span>
           </h1>
           <p className="text-white/70 text-base max-w-2xl mx-auto mb-8">
-            Découvrez nos opportunités de carrière, de stage et déposez votre candidature en quelques étapes.
+            {TR[lang].heroDesc}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-xl mx-auto">
             <div className="flex-1 relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Poste, mot-clé, lieu..."
+                placeholder={TR[lang].searchPlaceholder}
                 className="w-full pl-9 pr-4 py-3 rounded-xl text-gray-900 text-sm outline-none shadow-sm focus:ring-2 focus:ring-green-400"
               />
             </div>
             <select value={filterContract} onChange={e => setFilterContract(e.target.value)}
               className="px-4 py-3 rounded-xl text-gray-900 text-sm outline-none bg-white shadow-sm min-w-[140px]">
-              <option value="">Tous les contrats</option>
+              <option value="">{TR[lang].allContracts}</option>
               {contracts.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -629,9 +685,9 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-8 flex-wrap">
           {[
-            { label: 'Offres publiées', value: openJobs.length },
-            { label: 'Types de contrats', value: contracts.length },
-            { label: 'Localisation', value: 'Cameroun' },
+            { label: lang === 'fr' ? 'Offres publiées' : 'Open positions', value: openJobs.length },
+            { label: lang === 'fr' ? 'Types de contrats' : 'Contract types', value: contracts.length },
+            { label: lang === 'fr' ? 'Localisation' : 'Location', value: 'Cameroun' },
           ].map(s => (
             <div key={s.label} className="flex items-center gap-2 text-sm text-gray-600">
               <CheckCircle size={14} style={{ color: SNH_GREEN }} />
@@ -768,12 +824,12 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
             <div className="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center" style={{ background: `${SNH_GREEN}18` }}>
               <Send size={22} style={{ color: SNH_GREEN }} />
             </div>
-            <h3 className="font-bold text-gray-900 mb-1">Vous ne trouvez pas votre bonheur ?</h3>
-            <p className="text-gray-500 text-sm mb-5">Envoyez une candidature spontanée ou recommandée — nous la garderons dans notre vivier de talents.</p>
+            <h3 className="font-bold text-gray-900 mb-1">{TR[lang].spontTitle}</h3>
+            <p className="text-gray-500 text-sm mb-5">{TR[lang].spontDesc}</p>
             <button onClick={onRegister}
               className="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl font-bold text-sm transition hover:opacity-90"
               style={{ background: SNH_GREEN }}>
-              <UserPlus size={16} /> Déposer une candidature spontanée
+              <UserPlus size={16} /> {TR[lang].spontBtn}
             </button>
           </div>
         </div>
@@ -797,11 +853,12 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs }: 
 }
 
 // ── Auth Modal ─────────────────────────────────────────────────────────────────
-function AuthModal({ onAuth, authMode, setAuthMode, onClose }: {
+function AuthModal({ onAuth, authMode, setAuthMode, onClose, lang = 'fr' }: {
   onAuth: (uid: string) => void;
   authMode: 'login' | 'register';
   setAuthMode: (m: 'login' | 'register') => void;
   onClose: () => void;
+  lang?: Lang;
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -858,8 +915,8 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose }: {
                 : '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#006B3C" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>';
             }} />
           </div>
-          <h2 className="text-white text-base font-bold">{authMode === 'login' ? 'Connexion à mon espace' : 'Créer mon compte candidat'}</h2>
-          <p className="text-white/60 text-xs mt-0.5">SNH Recrutement</p>
+          <h2 className="text-white text-base font-bold">{authMode === 'login' ? TR[lang].loginTitle : TR[lang].registerTitle}</h2>
+          <p className="text-white/60 text-xs mt-0.5">{TR[lang].snh}</p>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
@@ -869,13 +926,13 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose }: {
           )}
           {authMode === 'register' && (
             <div className="grid grid-cols-2 gap-3">
-              <div><Lbl>Prénom *</Lbl><input value={firstName} onChange={e => setFirstName(e.target.value)} className={inp()} placeholder="Jean" required /></div>
-              <div><Lbl>Nom *</Lbl><input value={lastName} onChange={e => setLastName(e.target.value)} className={inp()} placeholder="Dupont" required /></div>
+              <div><Lbl>{TR[lang].firstName} *</Lbl><input value={firstName} onChange={e => setFirstName(e.target.value)} className={inp()} placeholder={TR[lang].firstNamePh} required /></div>
+              <div><Lbl>{TR[lang].lastName} *</Lbl><input value={lastName} onChange={e => setLastName(e.target.value)} className={inp()} placeholder={TR[lang].lastNamePh} required /></div>
             </div>
           )}
-          <div><Lbl>Email</Lbl><input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inp()} placeholder="votre@email.cm" required /></div>
+          <div><Lbl>{TR[lang].email}</Lbl><input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inp()} placeholder="votre@email.cm" required /></div>
           <div>
-            <Lbl>Mot de passe</Lbl>
+            <Lbl>{TR[lang].password}</Lbl>
             <div className="relative">
               <input type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className={inp() + ' pr-10'} placeholder="••••••••" required minLength={6} />
               <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -886,19 +943,19 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose }: {
           {authMode === 'register' && (
             <p className="text-xs text-gray-500 flex items-start gap-1.5">
               <Lock size={11} className="mt-0.5 flex-shrink-0 text-gray-400" />
-              Vos données sont traitées de manière confidentielle conformément à la politique de recrutement SNH.
+              {TR[lang].privacy}
             </p>
           )}
           <button type="submit" disabled={loading}
             className="w-full py-3 text-white rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition text-sm"
             style={{ background: SNH_GREEN }}>
             {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
-              authMode === 'login' ? <><LogIn size={15} /> Se connecter</> : <><UserPlus size={15} /> Créer mon compte</>}
+              authMode === 'login' ? <><LogIn size={15} /> {lang === 'fr' ? 'Se connecter' : 'Log in'}</> : <><UserPlus size={15} /> {lang === 'fr' ? 'Créer mon compte' : 'Create account'}</>}
           </button>
           <div className="text-center">
             <button type="button" onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setError(''); }}
               className="text-sm font-semibold transition hover:underline" style={{ color: SNH_GREEN }}>
-              {authMode === 'login' ? 'Pas encore de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
+              {authMode === 'login' ? TR[lang].noAccount : TR[lang].alreadyAccount}
             </button>
           </div>
         </form>
@@ -2387,7 +2444,7 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
               </div>
               <div>
                 <Lbl>Encadreur académique (nom et contact)</Lbl>
-                <input value={stageSupervisor} onChange={e => setStageSupervisor(e.target.value)} className={inp()} placeholder="Ex: Pr. Jean Dupont — 699 000 000" />
+                <input value={stageSupervisor} onChange={e => setStageSupervisor(e.target.value)} className={inp()} placeholder="Ex: Pr. Olivier Kamdem — 699 000 000" />
               </div>
               <div className="col-span-2">
                 <Lbl>École / Université actuelle</Lbl>

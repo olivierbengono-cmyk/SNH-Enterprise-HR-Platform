@@ -81,10 +81,11 @@ const SKILL_CATEGORIES = [
   { value: 'other', label: 'Autre' },
 ];
 const LANG_LEVELS = [
-  { value: 'beginner',     label: 'Débutant' },
-  { value: 'intermediate', label: 'Intermédiaire' },
-  { value: 'good',         label: 'Bon' },
-  { value: 'excellent',    label: 'Excellent' },
+  { value: 'beginner',     label: 'Débutant',         stars: 1 },
+  { value: 'intermediate', label: 'Intermédiaire',     stars: 2 },
+  { value: 'good',         label: 'Bon niveau',        stars: 3 },
+  { value: 'excellent',    label: 'Courant',           stars: 4 },
+  { value: 'native',       label: 'Natif / Maternel',  stars: 5 },
 ];
 const REGIONS_CM = ['Centre','Littoral','Ouest','Nord','Extrême-Nord','Adamaoua','Est','Sud','Nord-Ouest','Sud-Ouest'];
 const SNH_DIRECTIONS = [
@@ -621,25 +622,22 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       {/* ── Header / Hero ── */}
-      <header className="text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${SNH_GREEN} 0%, #004d2b 100%)` }}>
-        {/* Subtle dot grid */}
-        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-        {/* Gold accent line at top */}
+      <header className="bg-white relative">
+        {/* Tricolor accent line at top */}
         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
 
         {/* Navbar */}
-        <div className="relative max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden p-1">
-            <img src="/logoSNH.png" alt="SNH" className="h-full w-auto object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-          </div>
+        <div className="relative max-w-5xl mx-auto px-6 pt-6 pb-4 flex items-center justify-between border-b border-gray-100">
+          <img src="/logoSNH.png" alt="SNH" className="h-10 w-auto object-contain flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
           <div className="flex items-center gap-2">
             {/* Language toggle */}
             <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/25 rounded-lg text-sm font-bold transition">
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 transition">
               <Globe size={14} /> {lang === 'fr' ? 'EN' : 'FR'}
             </button>
             <button onClick={onLogin}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/25 rounded-lg text-sm font-medium transition">
+              className="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition hover:bg-gray-50"
+              style={{ borderColor: SNH_GREEN, color: SNH_GREEN }}>
               <LogIn size={15} /> {TR[lang].login}
             </button>
             <button onClick={onRegister}
@@ -651,16 +649,16 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
         </div>
 
         {/* Hero content */}
-        <div className="relative max-w-5xl mx-auto px-6 py-12 text-center">
+        <div className="max-w-5xl mx-auto px-6 py-12 text-center">
           <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5"
-            style={{ background: `${SNH_GOLD}22`, color: SNH_GOLD, border: `1px solid ${SNH_GOLD}44` }}>
+            style={{ background: `${SNH_GREEN}12`, color: SNH_GREEN, border: `1px solid ${SNH_GREEN}30` }}>
             <Sparkles size={12} /> {openJobs.length} {TR[lang].available}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight mb-4 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-4 tracking-tight" style={{ color: SNH_GREEN }}>
             {TR[lang].heroTitle}<br />
-            <span className="font-light text-2xl" style={{ color: `${SNH_GOLD}CC` }}>{TR[lang].heroSub}</span>
+            <span className="font-light text-2xl text-gray-600">{TR[lang].heroSub}</span>
           </h1>
-          <p className="text-white/70 text-base max-w-2xl mx-auto mb-8">
+          <p className="text-gray-500 text-base max-w-2xl mx-auto mb-8">
             {TR[lang].heroDesc}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-xl mx-auto">
@@ -669,11 +667,12 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
               <input
                 value={search} onChange={e => setSearch(e.target.value)}
                 placeholder={TR[lang].searchPlaceholder}
-                className="w-full pl-9 pr-4 py-3 rounded-xl text-gray-900 text-sm outline-none shadow-sm focus:ring-2 focus:ring-green-400"
+                className="w-full pl-9 pr-4 py-3 rounded-xl text-gray-900 text-sm outline-none border border-gray-200 focus:ring-2 focus:border-transparent shadow-sm"
+                style={{ '--tw-ring-color': SNH_GREEN } as any}
               />
             </div>
             <select value={filterContract} onChange={e => setFilterContract(e.target.value)}
-              className="px-4 py-3 rounded-xl text-gray-900 text-sm outline-none bg-white shadow-sm min-w-[140px]">
+              className="px-4 py-3 rounded-xl text-gray-700 text-sm outline-none bg-white border border-gray-200 shadow-sm min-w-[160px]">
               <option value="">{TR[lang].allContracts}</option>
               {contracts.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -695,9 +694,9 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
             </div>
           ))}
           <div className="ml-auto flex items-center gap-2 text-sm text-gray-500">
-            <span>Déjà candidat ?</span>
+            <span>{lang === 'fr' ? 'Déjà candidat ?' : 'Already a candidate?'}</span>
             <button onClick={onLogin} className="font-bold hover:underline" style={{ color: SNH_GREEN }}>
-              Accéder à mon espace
+              {lang === 'fr' ? 'Accéder à mon espace' : 'Go to my space'}
             </button>
           </div>
         </div>
@@ -836,16 +835,14 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
       </main>
 
       {/* Footer */}
-      <footer className="mt-8 text-white" style={{ background: `linear-gradient(135deg, ${SNH_GREEN} 0%, #004d2b 100%)` }}>
+      <footer className="mt-8 bg-white border-t border-gray-100">
         <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between text-xs text-white/60 flex-wrap gap-2">
+        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between text-xs text-gray-400 flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center overflow-hidden">
-              <img src="/logoSNH.png" alt="SNH" className="h-5 w-auto" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-            </div>
+            <img src="/logoSNH.png" alt="SNH" className="h-6 w-auto" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
             <p>© {new Date().getFullYear()} Société Nationale des Hydrocarbures — Tous droits réservés</p>
           </div>
-          <p className="text-white/40">Portail de recrutement officiel</p>
+          <p>{lang === 'fr' ? 'Portail de recrutement officiel' : 'Official recruitment portal'}</p>
         </div>
       </footer>
     </div>
@@ -1127,7 +1124,7 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
 
   const TABS: { value: ProfileTab; label: string; icon: React.FC<any> }[] = [
     { value: 'infos', label: 'Infos personnelles', icon: User },
-    { value: 'formations', label: 'Formations', icon: GraduationCap },
+    { value: 'formations', label: 'Parcours Académique', icon: GraduationCap },
     { value: 'experiences', label: 'Expériences', icon: Briefcase },
     { value: 'competences', label: 'Compétences', icon: Star },
     { value: 'langues', label: 'Langues', icon: Globe },
@@ -1392,7 +1389,7 @@ function InfosTab({ profile, setProfile }: { profile: CandidateProfile; setProfi
       </div>
       <div><Lbl>Titre professionnel</Lbl><input value={profile.professional_title || ''} onChange={e => s('professional_title', e.target.value)} className={inp()} placeholder="Ex: Ingénieur Pétrole & Gaz Senior" /></div>
       <div className="grid grid-cols-2 gap-3">
-        <div><Lbl>Téléphone principal</Lbl><input value={profile.phone || ''} onChange={e => s('phone', e.target.value)} className={inp()} placeholder="+237 6XX XXX XXX" /></div>
+        <div><Lbl>Téléphone principal *</Lbl><input value={profile.phone || ''} onChange={e => s('phone', e.target.value)} className={inp()} placeholder="+237 6XX XXX XXX" required /></div>
         <div><Lbl>Téléphone secondaire</Lbl><input value={profile.phone2 || ''} onChange={e => s('phone2', e.target.value)} className={inp()} placeholder="+237 6XX XXX XXX" /></div>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -1412,9 +1409,9 @@ function InfosTab({ profile, setProfile }: { profile: CandidateProfile; setProfi
         <div><Lbl>Poste souhaité</Lbl><input value={profile.desired_position || ''} onChange={e => s('desired_position', e.target.value)} className={inp()} placeholder="Ingénieur Réservoir..." /></div>
         <div><Lbl>Disponibilité à partir du</Lbl><input type="date" value={profile.availability_date || ''} onChange={e => s('availability_date', e.target.value)} className={inp()} /></div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div><Lbl>Prétention salariale min (FCFA)</Lbl><input type="number" value={profile.desired_salary_min || ''} onChange={e => s('desired_salary_min', Number(e.target.value))} className={inp()} /></div>
-        <div><Lbl>Prétention salariale max (FCFA)</Lbl><input type="number" value={profile.desired_salary_max || ''} onChange={e => s('desired_salary_max', Number(e.target.value))} className={inp()} /></div>
+      <div>
+        <Lbl>Prétention Salariale (FCFA)</Lbl>
+        <input type="number" value={profile.desired_salary_min || ''} onChange={e => s('desired_salary_min', Number(e.target.value))} className={inp()} placeholder="Ex : 500 000" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div><Lbl>Profil LinkedIn</Lbl><input value={profile.linkedin_url || ''} onChange={e => s('linkedin_url', e.target.value)} className={inp()} placeholder="https://linkedin.com/in/..." /></div>
@@ -1425,7 +1422,7 @@ function InfosTab({ profile, setProfile }: { profile: CandidateProfile; setProfi
         <div><Lbl>Twitter / X</Lbl><input value={profile.twitter_url || ''} onChange={e => s('twitter_url', e.target.value)} className={inp()} placeholder="https://x.com/..." /></div>
         <div><Lbl>Instagram</Lbl><input value={profile.instagram_url || ''} onChange={e => s('instagram_url', e.target.value)} className={inp()} placeholder="https://instagram.com/..." /></div>
       </div>
-      <div><Lbl>Résumé / À propos de vous</Lbl>
+      <div><Lbl>À propos de vous</Lbl>
         <textarea value={profile.summary || ''} onChange={e => s('summary', e.target.value)} rows={4} className={inp()} placeholder="Décrivez votre parcours, vos expertises et vos ambitions professionnelles..." />
       </div>
     </div>
@@ -1684,8 +1681,9 @@ const LANGUAGE_CATALOGUE = [
   { group: 'Autres', langs: ['Coréen', 'Hindi', 'Turc', 'Néerlandais', 'Polonais', 'Ukrainien', 'Persan', 'Vietnamien', 'Thaï', 'Grec'] },
 ];
 
+const DEFAULT_LANGS = ['Français', 'Anglais'];
+
 function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Language[]) => void }) {
-  const [search, setSearch] = useState('');
   const [customName, setCustomName] = useState('');
   const selectedNames = new Set(items.map(l => l.name));
 
@@ -1708,69 +1706,63 @@ function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Lang
     setItems(items.map(l => l.name === name ? { ...l, level } : l));
   };
 
-  const f = search.toLowerCase();
-  const LEVEL_PCT: Record<string, number> = { beginner: 25, intermediate: 50, good: 75, excellent: 100 };
+  const currentStars = (level: string) => LANG_LEVELS.find(l => l.value === level)?.stars ?? 3;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">Langues parlées</h3>
-        <span className="text-xs text-gray-500">{items.length} sélectionnée{items.length > 1 ? 's' : ''}</span>
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Langues parlées</h3>
+        {/* Default languages: FR + EN */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {DEFAULT_LANGS.map(name => (
+            <button key={name} type="button" onClick={() => toggle(name)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-semibold transition-all ${selectedNames.has(name) ? 'border-green-500 bg-green-50 text-green-800' : 'border-gray-200 bg-white text-gray-600 hover:border-green-300'}`}>
+              <span className="text-base">{name === 'Français' ? '🇫🇷' : '🇬🇧'}</span>
+              {name}
+              {selectedNames.has(name) && <CheckCircle size={14} className="text-green-600" />}
+            </button>
+          ))}
+        </div>
+
+        {/* Add other language */}
+        <div className="flex gap-2">
+          <input value={customName} onChange={e => setCustomName(e.target.value)} className={inp() + ' flex-1'}
+            placeholder="Ajouter une autre langue (Ex : Espagnol, Arabe…)" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())} />
+          <button type="button" onClick={addCustom} className="px-4 py-2 text-sm rounded-lg text-white font-semibold flex items-center gap-1.5" style={{ background: SNH_GREEN }}>
+            <Plus size={14} /> Ajouter
+          </button>
+        </div>
       </div>
-
-      <input value={search} onChange={e => setSearch(e.target.value)} className={inp()} placeholder="Rechercher une langue..." />
-
-      {LANGUAGE_CATALOGUE.map(group => {
-        const list = group.langs.filter(l => !f || l.toLowerCase().includes(f));
-        if (list.length === 0) return null;
-        return (
-          <div key={group.group}>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{group.group}</p>
-            <div className="flex flex-wrap gap-2">
-              {list.map(lang => (
-                <button key={lang} type="button" onClick={() => toggle(lang)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedNames.has(lang) ? 'bg-green-50 border-green-500 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-700'}`}>
-                  {lang}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
 
       {items.length > 0 && (
-        <div className="pt-4 border-t border-gray-100">
-          <p className="text-xs font-semibold text-gray-500 mb-3">Niveaux des langues sélectionnées</p>
-          <div className="space-y-2">
-            {items.map(lang => (
-              <div key={lang.name} className="flex items-center gap-3">
-                <span className="text-xs font-medium text-gray-700 w-24 flex-shrink-0 truncate">{lang.name}</span>
-                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${LEVEL_PCT[lang.level] ?? 75}%`, background: SNH_GREEN }} />
+        <div className="space-y-3 pt-4 border-t border-gray-100">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Évaluation du niveau</p>
+          {items.map(lang => {
+            const stars = currentStars(lang.level);
+            const levelLabel = LANG_LEVELS.find(l => l.value === lang.level)?.label ?? '';
+            return (
+              <div key={lang.name} className="bg-gray-50 rounded-xl p-3 flex items-center gap-3 flex-wrap">
+                <span className="text-sm font-semibold text-gray-800 min-w-[80px]">{lang.name}</span>
+                {/* Star rating */}
+                <div className="flex gap-1 flex-1">
+                  {[1, 2, 3, 4, 5].map(n => {
+                    const lv = LANG_LEVELS[n - 1];
+                    return (
+                      <button key={n} type="button" title={lv.label}
+                        onClick={() => updateLevel(lang.name, lv.value)}
+                        className="transition-transform hover:scale-110">
+                        <Star size={20} fill={n <= stars ? SNH_GREEN : 'none'} stroke={n <= stars ? SNH_GREEN : '#d1d5db'} />
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="flex gap-1 flex-shrink-0">
-                  {LANG_LEVELS.map(lv => (
-                    <button key={lv.value} type="button" onClick={() => updateLevel(lang.name, lv.value)}
-                      className={`px-2 py-1 text-xs rounded border transition ${lang.level === lv.value ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:border-green-400'}`}
-                      style={lang.level === lv.value ? { background: SNH_GREEN } : {}}>
-                      {lv.label.slice(0, 3)}.
-                    </button>
-                  ))}
-                </div>
-                <button type="button" onClick={() => toggle(lang.name)} className="text-red-400 hover:text-red-600 flex-shrink-0"><X size={13} /></button>
+                <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: `${SNH_GREEN}15`, color: SNH_GREEN }}>{levelLabel}</span>
+                <button type="button" onClick={() => toggle(lang.name)} className="text-red-400 hover:text-red-600 ml-auto"><X size={14} /></button>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
-
-      <div className="flex gap-2 pt-3 border-t border-gray-100">
-        <input value={customName} onChange={e => setCustomName(e.target.value)} className={inp() + ' flex-1'}
-          placeholder="Ajouter une langue non listée..." onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())} />
-        <button type="button" onClick={addCustom} className="px-4 py-2 text-sm rounded-lg text-white font-semibold" style={{ background: SNH_BLUE }}>
-          <Plus size={14} />
-        </button>
-      </div>
     </div>
   );
 }
@@ -1863,21 +1855,21 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
         </div>
       )}
 
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-        <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+        <AlertCircle size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-amber-800">Documents requis par la SNH</p>
-          <p className="text-xs text-amber-700 mt-1">Assurez-vous d'avoir téléversé au minimum : votre CV, vos diplômes, votre CNI ou Passeport, et vos attestations d'emploi.</p>
+          <p className="text-sm font-semibold text-blue-800">À cette étape, seul votre CV est requis</p>
+          <p className="text-xs text-blue-700 mt-1">Les autres documents (diplômes, CNI, attestations d'emploi, etc.) vous seront demandés aux étapes suivantes du processus de recrutement.</p>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Téléverser un document</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Téléverser votre CV</h3>
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
             <Lbl>Type de document *</Lbl>
             <select value={selectedType} onChange={e => setSelectedType(e.target.value)} className={inp()}>
-              {DOC_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+              <option value="cv">CV / Curriculum Vitae</option>
             </select>
           </div>
           <div>
@@ -1945,7 +1937,6 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
 }) {
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState('');
-  const [showMissingWarning, setShowMissingWarning] = useState(false);
 
   const isStage = job.contract_type?.toLowerCase().includes('stage');
   const docKey = job.contract_type?.toLowerCase().includes('académique') ? 'stage_academique'
@@ -1953,12 +1944,10 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
     : 'emploi';
   const uploadedTypes = new Set(documents.map(d => d.type));
   const requiredDocs = REQUIRED_DOCS_BY_TYPE[docKey] ?? [];
-  const missingDocs = requiredDocs.filter(d => !uploadedTypes.has(d.value));
 
-  const doApply = async () => {
+  const handleApplyClick = async () => {
     setApplying(true);
     setApplyError('');
-    setShowMissingWarning(false);
     const { data, error } = await supabase.from('candidate_applications').insert({
       candidate_id: candidateId, job_opening_id: job.id,
       desired_position: job.title, status: 'new',
@@ -1970,10 +1959,6 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
       onClose();
     }
     setApplying(false);
-  };
-
-  const handleApplyClick = () => {
-    if (missingDocs.length > 0) { setShowMissingWarning(true); } else { doApply(); }
   };
 
   return (
@@ -2062,12 +2047,10 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
             </div>
           )}
 
-          {/* Required documents checklist */}
+          {/* Documents info */}
           {!readOnly && requiredDocs.length > 0 && (
-            <div className={`rounded-xl border p-4 ${missingDocs.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
-              <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${missingDocs.length > 0 ? 'text-amber-700' : 'text-green-700'}`}>
-                Documents requis pour postuler
-              </p>
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-blue-700">Documents complémentaires</p>
               <div className="space-y-1.5">
                 {requiredDocs.map(doc => {
                   const ok = uploadedTypes.has(doc.value);
@@ -2075,39 +2058,13 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
                     <div key={doc.value} className="flex items-center gap-2 text-sm">
                       {ok
                         ? <CheckCircle size={14} className="text-green-600 flex-shrink-0" />
-                        : <AlertCircle size={14} className="text-amber-500 flex-shrink-0" />}
-                      <span className={ok ? 'text-green-700' : 'text-amber-700 font-medium'}>{doc.label}</span>
-                      {!ok && <span className="text-xs text-amber-500">(manquant)</span>}
+                        : <AlertCircle size={14} className="text-blue-400 flex-shrink-0" />}
+                      <span className={ok ? 'text-green-700' : 'text-blue-600'}>{doc.label}</span>
                     </div>
                   );
                 })}
               </div>
-              {missingDocs.length > 0 && (
-                <p className="text-xs text-amber-600 mt-3">Vous pouvez quand même postuler, mais votre dossier sera incomplet.</p>
-              )}
-            </div>
-          )}
-
-          {/* Missing docs confirmation */}
-          {showMissingWarning && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-              <div className="flex items-start gap-2 mb-3">
-                <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-red-800">Dossier incomplet</p>
-                  <p className="text-xs text-red-700 mt-1">Il vous manque {missingDocs.length} document(s) requis :</p>
-                  <ul className="mt-1.5 space-y-0.5">
-                    {missingDocs.map(d => <li key={d.value} className="text-xs text-red-700 flex items-center gap-1"><X size={10} />{d.label}</li>)}
-                  </ul>
-                  <p className="text-xs text-red-600 mt-2 font-medium">Souhaitez-vous tout de même soumettre votre candidature ?</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setShowMissingWarning(false)} className="flex-1 px-3 py-2 text-xs border border-red-200 text-red-700 rounded-lg hover:bg-red-100 transition">Annuler</button>
-                <button onClick={doApply} disabled={applying} className="flex-1 px-3 py-2 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60 transition font-semibold">
-                  {applying ? 'Envoi...' : 'Postuler quand même'}
-                </button>
-              </div>
+              <p className="text-xs text-blue-600 mt-3">Ces documents seront demandés aux étapes suivantes du processus de sélection.</p>
             </div>
           )}
         </div>
@@ -2291,7 +2248,7 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (hasMissingDocs || !poste || !coverLetter.trim()) return;
+    if (!poste || !coverLetter.trim()) return;
     setSubmitting(true);
     const typeLabel = type === 'emploi' ? 'Emploi' : type === 'stage_academique' ? 'Stage académique' : 'Stage professionnel';
     const desiredPos = `[${typeLabel}] ${poste}`;
@@ -2366,16 +2323,15 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
           </div>
         </div>
 
-        {/* Required documents checklist */}
-        <div className={`rounded-xl border p-4 ${hasMissingDocs ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-          <div className="flex items-start gap-3">
-            {hasMissingDocs
-              ? <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
-              : <CheckCircle size={16} className="text-green-600 flex-shrink-0 mt-0.5" />}
-            <div className="flex-1">
-              <p className={`text-sm font-semibold ${hasMissingDocs ? 'text-red-800' : 'text-green-800'}`}>
-                Documents obligatoires pour une candidature {type === 'emploi' ? "d'emploi" : type === 'stage_academique' ? 'de stage académique' : 'de stage professionnel'}
-              </p>
+        {/* Documents info */}
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
+          <AlertCircle size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-blue-800">Documents complémentaires</p>
+            <p className="text-xs text-blue-700 mt-1">
+              Vous pouvez soumettre votre candidature dès maintenant. Les pièces justificatives (diplômes, CNI, attestations, etc.) vous seront demandées aux étapes suivantes du processus de sélection.
+            </p>
+            {requiredDocs.length > 0 && (
               <div className="mt-2 grid grid-cols-2 gap-1.5">
                 {requiredDocs.map(doc => {
                   const present = uploadedTypes.has(doc.value);
@@ -2383,21 +2339,13 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
                     <div key={doc.value} className="flex items-center gap-1.5">
                       {present
                         ? <CheckCircle size={12} className="text-green-600 flex-shrink-0" />
-                        : <XCircle size={12} className="text-red-500 flex-shrink-0" />}
-                      <span className={`text-xs ${present ? 'text-green-700' : 'text-red-700 font-medium'}`}>{doc.label}</span>
+                        : <AlertCircle size={12} className="text-blue-400 flex-shrink-0" />}
+                      <span className={`text-xs ${present ? 'text-green-700' : 'text-blue-600'}`}>{doc.label}</span>
                     </div>
                   );
                 })}
               </div>
-              {hasMissingDocs && (
-                <p className="text-xs text-red-700 mt-2 font-medium">
-                  Il manque {missingDocs.length} document{missingDocs.length > 1 ? 's' : ''} requis. Veuillez les ajouter dans{' '}
-                  <button type="button" className="underline font-semibold" onClick={() => {
-                    document.dispatchEvent(new CustomEvent('portal-nav', { detail: 'documents' }));
-                  }}>Mes documents</button>{' '}avant de soumettre.
-                </p>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
@@ -2480,15 +2428,12 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
             placeholder={`Madame, Monsieur le Directeur des Ressources Humaines,\n\nJe me permets de vous adresser ma candidature spontanée auprès de la Société Nationale des Hydrocarbures du Cameroun (SNH) pour un poste de [poste visé].\n\n[Développez vos motivations et votre valeur ajoutée pour la SNH]\n\nDans l'espoir d'une réponse favorable, je reste disponible pour tout entretien à votre convenance.\n\nVeuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${profile.first_name} ${profile.last_name}`} />
 
           <div className="flex gap-3 mt-4">
-            <button type="submit" disabled={submitting || hasMissingDocs || !coverLetter.trim() || !poste}
+            <button type="submit" disabled={submitting || !coverLetter.trim() || !poste}
               className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60 transition"
-              style={{ background: hasMissingDocs ? '#9ca3af' : SNH_BLUE }}>
+              style={{ background: SNH_BLUE }}>
               {submitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={14} />}
               Envoyer ma candidature à la SNH
             </button>
-            {hasMissingDocs && (
-              <p className="text-xs text-red-600 self-center">Complétez vos documents avant de soumettre.</p>
-            )}
           </div>
         </div>
       </form>

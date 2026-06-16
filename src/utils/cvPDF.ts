@@ -52,7 +52,7 @@ function formatDateRange(start?: string, end?: string, isCurrent?: boolean) {
 }
 
 // ── Template 1: SNH Classique (navy sidebar + photo) ─────────────────────────
-function buildClassicTemplate(data: CVData): string {
+function buildClassicTemplate(data: CVData, logoBase64 = ''): string {
   const { profile, experiences, educations, skills, languages, aiSummary } = data;
   const summary = aiSummary || profile.summary || '';
 
@@ -125,6 +125,7 @@ function buildClassicTemplate(data: CVData): string {
 <div class="page">
   <!-- Sidebar -->
   <div class="sidebar">
+    ${logoBase64 ? `<div style="padding:12px 16px 0;display:flex;justify-content:center;"><img src="${logoBase64}" alt="SNH" style="height:36px;width:auto;object-fit:contain;filter:brightness(0) invert(1);opacity:0.9;" /></div>` : ''}
     ${photoSection}
     <div class="sidebar-body">
       <h3>Contact</h3>
@@ -219,7 +220,7 @@ function buildClassicTemplate(data: CVData): string {
 }
 
 // ── Template 2: Moderne (clean, full-width, accent line) ─────────────────────
-function buildModernTemplate(data: CVData): string {
+function buildModernTemplate(data: CVData, logoBase64 = ''): string {
   const { profile, experiences, educations, skills, languages, aiSummary } = data;
   const summary = aiSummary || profile.summary || '';
   const allSkills = skills.filter(s => s.category !== 'language');
@@ -292,6 +293,7 @@ function buildModernTemplate(data: CVData): string {
         ${profile.linkedin_url ? `<span class="hc">🔗 LinkedIn</span>` : ''}
       </div>
     </div>
+    ${logoBase64 ? `<div style="margin-left:auto;flex-shrink:0;"><img src="${logoBase64}" alt="SNH" style="height:42px;width:auto;object-fit:contain;" /></div>` : ''}
   </div>
 
   <div class="body">
@@ -368,8 +370,26 @@ function formatDescription(desc: string): string {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
-export function generateCV(data: CVData, template: CVTemplate = 'classic') {
-  const html = template === 'classic' ? buildClassicTemplate(data) : buildModernTemplate(data);
+async function fetchLogoBase64(): Promise<string> {
+  try {
+    const res = await fetch('/logoSNH.png');
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return '';
+  }
+}
+
+export async function generateCV(data: CVData, template: CVTemplate = 'classic') {
+  const logoBase64 = await fetchLogoBase64();
+  const html = template === 'classic'
+    ? buildClassicTemplate(data, logoBase64)
+    : buildModernTemplate(data, logoBase64);
   const win = window.open('', '_blank');
   if (!win) { alert('Activez les popups pour afficher le CV'); return; }
   win.document.open();

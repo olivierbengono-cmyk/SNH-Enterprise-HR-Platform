@@ -6,11 +6,11 @@ import { generateCV, CVData } from '../../utils/cvPDF';
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface CandidateProfile {
   id: string; first_name: string; last_name: string; email: string;
-  phone: string | null; location: string | null; linkedin_url: string | null;
+  phone: string | null; location: string | null; linkedin_url: string | null; birth_date: string | null;
   portfolio_url: string | null; summary: string | null; desired_position: string | null;
   desired_salary_min: number | null; desired_salary_max: number | null;
   availability_date: string | null; mobility: string | null;
-  profile_completed: boolean; birth_date?: string | null; gender?: string | null;
+  profile_completed: boolean; gender?: string | null;
   nationality?: string | null; region?: string | null; professional_title?: string | null;
   national_id?: string | null; phone2?: string | null;
   facebook_url?: string | null; twitter_url?: string | null; instagram_url?: string | null;
@@ -365,7 +365,7 @@ export default function CandidatePortal() {
     if (!profile) return 0;
     const checks = [
       profile.phone, profile.location, profile.summary, profile.desired_position,
-      profile.availability_date, profile.professional_title,
+      profile.availability_date, profile.professional_title, profile.birth_date,
       experiences.length > 0 ? 'ok' : null,
       educations.length > 0 ? 'ok' : null,
       skills.length > 0 ? 'ok' : null,
@@ -1296,13 +1296,13 @@ function CVGeneratorPanel({ profile, experiences, educations, skills, languages,
     setGenerating(false);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const cvData: CVData = {
       profile: { ...profile, photo_url: profile.photo_url || null },
       experiences, educations, skills, languages,
       aiSummary: aiSummary || undefined,
     };
-    generateCV(cvData, template);
+    await generateCV(cvData, template);
   };
 
   return (
@@ -1393,6 +1393,16 @@ function InfosTab({ profile, setProfile }: { profile: CandidateProfile; setProfi
       <div className="grid grid-cols-2 gap-3">
         <div><Lbl>Prénom *</Lbl><input value={profile.first_name} onChange={e => s('first_name', e.target.value)} className={inp()} /></div>
         <div><Lbl>Nom *</Lbl><input value={profile.last_name} onChange={e => s('last_name', e.target.value)} className={inp()} /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Lbl>Date de naissance *</Lbl><input type="date" value={profile.birth_date || ''} onChange={e => s('birth_date', e.target.value)} className={inp()} required /></div>
+        <div><Lbl>Genre</Lbl>
+          <select value={profile.gender || ''} onChange={e => s('gender', e.target.value)} className={inp()}>
+            <option value="">— Sélectionner —</option>
+            <option value="Homme">Homme</option>
+            <option value="Femme">Femme</option>
+          </select>
+        </div>
       </div>
       <div><Lbl>Titre professionnel</Lbl><input value={profile.professional_title || ''} onChange={e => s('professional_title', e.target.value)} className={inp()} placeholder="Ex: Ingénieur Pétrole & Gaz Senior" /></div>
       <div className="grid grid-cols-2 gap-3">

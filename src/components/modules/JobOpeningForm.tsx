@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, ChevronRight, ChevronLeft, Search, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface MasterSkill { id: string; name: string; category: string; }
 const CAT_LABEL: Record<string, string> = {
@@ -51,6 +52,8 @@ function Lbl({ children, req }: { children: React.ReactNode; req?: boolean }) {
 }
 
 export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFormProps) {
+  const { profile: authProfile } = useAuth();
+  const canPublish = ['drh', 'admin', 'recruitment_manager'].includes(authProfile?.role || '');
   const isEdit = !!initialData?.id;
   const [tab, setTab] = useState<Tab>('infos');
   const [loading, setLoading] = useState(false);
@@ -62,7 +65,7 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
   const [reference, setReference] = useState(() => initialData?.reference || genRef());
   const [contractType, setContractType] = useState(() => initialData?.contract_type || 'CDI');
   const [location, setLocation] = useState(() => initialData?.location || 'Yaoundé');
-  const [status, setStatus] = useState(() => initialData?.status || 'open');
+  const [status, setStatus] = useState(() => initialData?.status || 'draft');
   const [workMode, setWorkMode] = useState(() => initialData?.work_mode || 'Présentiel uniquement');
   const [publicationDate, setPublicationDate] = useState(() => initialData?.publication_date || new Date().toISOString().split('T')[0]);
   const [closingDate, setClosingDate] = useState(() => initialData?.closing_date || '');
@@ -230,11 +233,13 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
                 </div>
                 <div>
                   <Lbl>Statut</Lbl>
-                  <select value={status} onChange={e => setStatus(e.target.value)} className={inp()}>
-                    <option value="open">Publiée</option>
+                  <select value={status} onChange={e => setStatus(e.target.value)} className={inp()} disabled={status === 'open' && !canPublish}>
+                    {canPublish && <option value="open">Publiée</option>}
                     <option value="draft">Brouillon</option>
                     <option value="closed">Fermée</option>
+                    {!canPublish && status === 'open' && <option value="open">Publiée</option>}
                   </select>
+                  {!canPublish && <p className="text-xs text-amber-600 mt-1">Seul un Responsable Recrutement ou le DRH peut publier une offre.</p>}
                 </div>
                 <div>
                   <Lbl>Date de publication</Lbl>

@@ -2236,9 +2236,8 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
   const [poste, setPoste] = useState('');
   const [coverLetter, setCoverLetter] = useState('');
   const [stageTopic, setStageTopic] = useState('');
-  const [stageDuration, setStageDuration] = useState('3 mois');
+  const [stageDuration, setStageDuration] = useState('1 mois');
   const [stageStart, setStageStart] = useState('');
-  const [stageEnd, setStageEnd] = useState('');
   const [stageSchool, setStageSchool] = useState('');
   const [stageSupervisor, setStageSupervisor] = useState('');
   const [stageEduLevel, setStageEduLevel] = useState('');
@@ -2265,8 +2264,7 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
         stageTopic && `Thème : ${stageTopic}`,
         stageDuration && `Durée : ${stageDuration}`,
         stageStart && `Début souhaité : ${stageStart}`,
-        stageEnd && `Fin souhaitée : ${stageEnd}`,
-        stageSchool && `École/Université : ${stageSchool}`,
+        stageSchool && `Institution : ${stageSchool}`,
         stageSupervisor && `Encadreur académique : ${stageSupervisor}`,
         stageEduLevel && `Niveau d'études actuel : ${stageEduLevel}`,
       ].filter(Boolean).join('\n');
@@ -2312,7 +2310,7 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Type selector */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Type de candidature *</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Type de candidature <span className="text-red-500">*</span></h3>
           <div className="grid grid-cols-3 gap-3">
             {[
               { value: 'emploi', icon: Briefcase, label: 'Emploi', sub: 'CDI ou CDD à la SNH' },
@@ -2358,7 +2356,7 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
 
         {/* Poste */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Poste visé *</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Poste visé <span className="text-red-500">*</span></h3>
           <div>
             <Lbl>Intitulé du poste / fonction *</Lbl>
             <input value={poste} onChange={e => setPoste(e.target.value)} className={inp()} placeholder="Ex: Ingénieur Réservoir, Comptable, Juriste..." required />
@@ -2386,7 +2384,7 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
               <div>
                 <Lbl>Durée souhaitée</Lbl>
                 <select value={stageDuration} onChange={e => setStageDuration(e.target.value)} className={inp()}>
-                  {['1 mois','2 mois','3 mois','4 mois','6 mois','À définir avec la SNH'].map(d => <option key={d}>{d}</option>)}
+                  {(type === 'stage_academique' ? ['1 mois','2 mois'] : ['1 mois','2 mois','3 mois','4 mois','6 mois','À définir avec la SNH']).map(d => <option key={d}>{d}</option>)}
                 </select>
               </div>
               <div>
@@ -2394,15 +2392,11 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
                 <input type="date" value={stageStart} onChange={e => setStageStart(e.target.value)} className={inp()} />
               </div>
               <div>
-                <Lbl>Date de fin souhaitée</Lbl>
-                <input type="date" value={stageEnd} onChange={e => setStageEnd(e.target.value)} className={inp()} />
-              </div>
-              <div>
                 <Lbl>Encadreur académique (nom et contact)</Lbl>
                 <input value={stageSupervisor} onChange={e => setStageSupervisor(e.target.value)} className={inp()} placeholder="Ex: Pr. Olivier Kamdem — 699 000 000" />
               </div>
               <div className="col-span-2">
-                <Lbl>École / Université actuelle</Lbl>
+                <Lbl>Institution actuelle</Lbl>
                 <input value={stageSchool} onChange={e => setStageSchool(e.target.value)} className={inp()} placeholder="ENSP, Université de Yaoundé I, IUT..." />
               </div>
             </div>
@@ -2430,7 +2424,7 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
 
         {/* Cover letter */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Lettre de motivation *</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Lettre de motivation <span className="text-red-500">*</span></h3>
           <textarea value={coverLetter} onChange={e => setCoverLetter(e.target.value)} rows={9} className={inp()} required
             placeholder={`Madame, Monsieur le Directeur des Ressources Humaines,\n\nJe me permets de vous adresser ma candidature spontanée auprès de la Société Nationale des Hydrocarbures du Cameroun (SNH) pour un poste de [poste visé].\n\n[Développez vos motivations et votre valeur ajoutée pour la SNH]\n\nDans l'espoir d'une réponse favorable, je reste disponible pour tout entretien à votre convenance.\n\nVeuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${profile.first_name} ${profile.last_name}`} />
 

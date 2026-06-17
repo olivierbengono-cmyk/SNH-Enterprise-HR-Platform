@@ -209,7 +209,7 @@ const TR = {
     login: 'Connexion', signup: 'Créer un compte', loginTitle: 'Connexion à mon espace',
     registerTitle: 'Créer mon compte candidat', snh: 'SNH Recrutement',
     heroTitle: 'Rejoignez la SNH', heroSub: 'et participez à l\'avenir énergétique du Cameroun',
-    heroDesc: 'Découvrez nos opportunités de carrière, de stage et déposez votre candidature en quelques étapes.',
+    heroDesc: 'Découvrez nos opportunités d\'emploi, de stage et déposez votre candidature en quelques étapes.',
     searchPlaceholder: 'Poste, mot-clé, lieu...', allContracts: 'Tous les contrats',
     apply: 'Candidater', seeDetails: 'Voir détails', hideDetails: 'Masquer',
     noJobs: 'Aucune offre ne correspond à votre recherche.', loadingJobs: 'Chargement des offres…',
@@ -659,15 +659,19 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
 
         {/* Hero content */}
         <div className="max-w-5xl mx-auto px-6 py-14 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5 bg-white/10 border border-white/20 text-white">
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border"
+            style={{ background: 'rgba(252,209,22,0.15)', borderColor: 'rgba(252,209,22,0.4)', color: SNH_GOLD }}>
             <Sparkles size={12} /> {openJobs.length} {TR[lang].available}
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-4 tracking-tight text-white">
             {TR[lang].heroTitle}<br />
-            <span className="font-light text-2xl text-white/75">{TR[lang].heroSub}</span>
+            <span className="font-light text-2xl" style={{ color: SNH_GOLD }}>{TR[lang].heroSub}</span>
           </h1>
           <p className="text-white/70 text-base max-w-2xl mx-auto mb-8">
-            {TR[lang].heroDesc}
+            {lang === 'fr'
+              ? <>Découvrez nos <span style={{ color: SNH_GOLD }} className="font-semibold">opportunités d'emploi</span>, de stage et déposez votre <span style={{ color: SNH_GOLD }} className="font-semibold">candidature</span> en quelques étapes.</>
+              : <>Discover our <span style={{ color: SNH_GOLD }} className="font-semibold">employment opportunities</span>, internships and submit your <span style={{ color: SNH_GOLD }} className="font-semibold">application</span> in a few steps.</>
+            }
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-xl mx-auto">
             <div className="flex-1 relative">
@@ -698,7 +702,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
           ].map(s => (
             <div key={s.label} className="flex items-center gap-2 text-sm text-gray-600">
               <CheckCircle size={14} style={{ color: SNH_GREEN }} />
-              <span><strong className="text-gray-900">{s.value}</strong> {s.label}</span>
+              <span><strong style={{ color: SNH_GOLD }}>{s.value}</strong> <span className="text-gray-600">{s.label}</span></span>
             </div>
           ))}
           <div className="ml-auto flex items-center gap-2 text-sm text-gray-500">
@@ -843,14 +847,17 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
       </main>
 
       {/* Footer */}
-      <footer className="mt-8 bg-white border-t border-gray-100">
+      <footer className="mt-8" style={{ background: `linear-gradient(145deg, #004d2e 0%, ${SNH_GREEN} 60%, #005c37 100%)` }}>
         <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between text-xs text-gray-400 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <img src="/logoSNHFINAL.png" alt="SNH" className="h-6 w-auto" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
-            <p>© {new Date().getFullYear()} Société Nationale des Hydrocarbures — Tous droits réservés</p>
+        <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
+            <div>
+              <p className="text-white/90 text-xs font-semibold">Société Nationale des Hydrocarbures</p>
+              <p className="text-white/50 text-xs">© {new Date().getFullYear()} — Tous droits réservés</p>
+            </div>
           </div>
-          <p>{lang === 'fr' ? 'Portail de recrutement officiel' : 'Official recruitment portal'}</p>
+          <p className="text-xs font-medium" style={{ color: SNH_GOLD }}>{lang === 'fr' ? 'Portail de recrutement officiel' : 'Official recruitment portal'}</p>
         </div>
       </footer>
     </div>

@@ -632,7 +632,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
       {/* ── Header / Hero ── */}
       <header className="relative" style={{ background: `linear-gradient(145deg, #004d2e 0%, ${SNH_GREEN} 50%, #005c37 100%)` }}>
         {/* Tricolor accent line at top */}
-        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
+        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
 
         {/* Navbar */}
         <div className="relative max-w-5xl mx-auto px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/10">
@@ -702,7 +702,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
           ].map(s => (
             <div key={s.label} className="flex items-center gap-2 text-sm text-gray-600">
               <CheckCircle size={14} style={{ color: SNH_GREEN }} />
-              <span><strong style={{ color: SNH_GOLD }}>{s.value}</strong> <span className="text-gray-600">{s.label}</span></span>
+              <span><strong style={{ color: SNH_GREEN }}>{s.value}</strong> <span style={{ color: SNH_GREEN }}>{s.label}</span></span>
             </div>
           ))}
           <div className="ml-auto flex items-center gap-2 text-sm text-gray-500">
@@ -830,7 +830,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
 
         {/* Spontaneous CTA */}
         <div className="mt-8 rounded-2xl overflow-hidden border border-green-200 bg-white">
-          <div className="h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
+          <div className="h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
           <div className="p-8 text-center">
             <div className="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center" style={{ background: `${SNH_GREEN}18` }}>
               <Send size={22} style={{ color: SNH_GREEN }} />
@@ -848,7 +848,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
 
       {/* Footer */}
       <footer className="mt-8" style={{ background: `linear-gradient(145deg, #004d2e 0%, ${SNH_GREEN} 60%, #005c37 100%)` }}>
-        <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
+        <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
         <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
@@ -918,8 +918,8 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose, lang = 'fr' }: {
           <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition">
             <X size={14} className="text-white" />
           </button>
-          <div className="bg-white rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md overflow-hidden px-3 py-2 w-fit">
-            <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto object-contain" onError={e => {
+          <div className="flex items-center justify-center mx-auto mb-3">
+            <img src="/logoSNHFINAL.png" alt="SNH" className="h-14 w-auto object-contain drop-shadow-md" onError={e => {
               const el = e.target as HTMLImageElement;
               el.src='/logoSNH.png';
               el.parentElement!.innerHTML = authMode === 'login'

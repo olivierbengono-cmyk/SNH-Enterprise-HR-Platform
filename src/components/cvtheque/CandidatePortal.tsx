@@ -1278,6 +1278,7 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
       supabase.from('candidates').update({
         first_name: profile.first_name, last_name: profile.last_name,
         professional_title: profile.professional_title || null,
+        birth_date: profile.birth_date || null,
         phone: profile.phone || null, phone2: profile.phone2 || null,
         location: profile.location || null, region: profile.region || null,
         nationality: profile.nationality || null, national_id: profile.national_id || null,

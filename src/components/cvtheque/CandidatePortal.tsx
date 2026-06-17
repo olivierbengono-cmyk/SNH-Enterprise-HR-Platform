@@ -262,10 +262,12 @@ function AppStatus({ status }: { status: string }) {
     new:          { label: 'Soumis',         cls: 'bg-blue-50 text-blue-700' },
     reviewing:    { label: 'En examen',      cls: 'bg-amber-50 text-amber-700' },
     interview:    { label: 'Entretien',      cls: 'bg-purple-50 text-purple-700' },
-    offer:        { label: 'Offre',          cls: 'bg-teal-50 text-teal-700' },
-    integrated:   { label: 'Intégré(e)',     cls: 'bg-emerald-50 text-emerald-700' },
-    rejected:     { label: 'Refusé(e)',      cls: 'bg-red-50 text-red-700' },
-    withdrawn:    { label: 'Retiré(e)',      cls: 'bg-gray-100 text-gray-600' },
+    offer:           { label: 'Offre',           cls: 'bg-teal-50 text-teal-700' },
+    pre_onboarding:  { label: 'Pré-intégration', cls: 'bg-cyan-50 text-cyan-700' },
+    onboarding:      { label: 'Intégration',     cls: 'bg-green-50 text-green-700' },
+    integrated:      { label: 'Intégré(e)',      cls: 'bg-emerald-50 text-emerald-700' },
+    rejected:        { label: 'Refusé(e)',       cls: 'bg-red-50 text-red-700' },
+    withdrawn:       { label: 'Retiré(e)',       cls: 'bg-gray-100 text-gray-600' },
   };
   const s = map[status] ?? map.new;
   return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${s.cls}`}>{s.label}</span>;
@@ -2599,7 +2601,8 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
 
   const STATUS_LABELS: Record<string, string> = {
     new: 'Soumis', reviewing: 'En examen', interview: 'Entretien',
-    offer: 'Offre', integrated: 'Intégré(e)', rejected: 'Refusé(e)', withdrawn: 'Retiré(e)',
+    offer: 'Offre', pre_onboarding: 'Pré-intégration', onboarding: 'Intégration',
+    integrated: 'Intégré(e)', rejected: 'Refusé(e)', withdrawn: 'Retiré(e)',
   };
 
   const canWithdraw = (status: string) => ['new', 'reviewing'].includes(status);

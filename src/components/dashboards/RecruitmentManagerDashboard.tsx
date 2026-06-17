@@ -246,7 +246,7 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
                   <button
                     key={app.id}
                     type="button"
-                    onClick={() => onNavigate?.('recruitment')}
+                    onClick={() => onNavigate?.(`recruitment:app:${app.id}`)}
                     className="w-full flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition text-left"
                   >
                     <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-green-700 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
@@ -295,7 +295,7 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
                   <button
                     key={job.id}
                     type="button"
-                    onClick={() => onNavigate?.('recruitment')}
+                    onClick={() => onNavigate?.(`recruitment:job:${job.id}`)}
                     className="w-full flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition text-left"
                   >
                     <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">

@@ -42,7 +42,12 @@ function CandidateInitials({ name }: { name: string }) {
   );
 }
 
-export function RecruitmentManagement() {
+interface RecruitmentManagementProps {
+  initialJobId?: string | null;
+  initialCandidateAppId?: string | null;
+}
+
+export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: RecruitmentManagementProps = {}) {
   const [jobOpenings, setJobOpenings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -75,6 +80,38 @@ export function RecruitmentManagement() {
       setLoading(false);
     }
   };
+
+  // Auto-open job or candidate when coming from dashboard
+  useEffect(() => {
+    if (!initialJobId || loading) return;
+    const job = jobOpenings.find(j => j.id === initialJobId);
+    if (job) openJob(job);
+  }, [initialJobId, loading, jobOpenings]);
+
+  useEffect(() => {
+    if (!initialCandidateAppId || loading) return;
+    (async () => {
+      const { data: app } = await supabase
+        .from('candidate_applications')
+        .select(`id, status, created_at, cover_letter, desired_position, job_opening_id,
+          candidate:candidates (id, first_name, last_name, email, phone, location, professional_title, linkedin_url, summary, desired_position)`)
+        .eq('id', initialCandidateAppId)
+        .maybeSingle();
+      if (!app) return;
+      if (app.job_opening_id) {
+        const { data: job } = await supabase.from('job_openings').select('*').eq('id', app.job_opening_id).maybeSingle();
+        if (job) {
+          await openJob(job);
+          await selectApp(app);
+          return;
+        }
+      }
+      // Spontaneous — show without a job context by finding or creating a pseudo-job shell
+      const { data: jobs } = await supabase.from('job_openings').select('*').order('created_at', { ascending: false });
+      setJobOpenings(jobs || []);
+      await selectApp(app);
+    })();
+  }, [initialCandidateAppId, loading]);
 
   const openJob = async (job: any) => {
     setSelectedJob(job);

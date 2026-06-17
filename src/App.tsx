@@ -45,6 +45,8 @@ function AppContent() {
   const { user, profile, loading, reloadProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [preselectedDiscussionId, setPreselectedDiscussionId] = useState<string | null>(null);
+  const [recruitmentInitialJobId, setRecruitmentInitialJobId] = useState<string | null>(null);
+  const [recruitmentInitialAppId, setRecruitmentInitialAppId] = useState<string | null>(null);
 
   const handleTabChange = (tab: string) => {
     if (tab.startsWith('qvct-discussions:')) {
@@ -53,8 +55,26 @@ function AppContent() {
       setActiveTab('qvct-discussions');
       return;
     }
+    if (tab.startsWith('recruitment:job:')) {
+      const jobId = tab.substring('recruitment:job:'.length);
+      setRecruitmentInitialJobId(jobId);
+      setRecruitmentInitialAppId(null);
+      setActiveTab('recruitment');
+      return;
+    }
+    if (tab.startsWith('recruitment:app:')) {
+      const appId = tab.substring('recruitment:app:'.length);
+      setRecruitmentInitialAppId(appId);
+      setRecruitmentInitialJobId(null);
+      setActiveTab('recruitment');
+      return;
+    }
     if (tab !== 'qvct-discussions') {
       setPreselectedDiscussionId(null);
+    }
+    if (tab !== 'recruitment') {
+      setRecruitmentInitialJobId(null);
+      setRecruitmentInitialAppId(null);
     }
     setActiveTab(tab);
   };
@@ -123,7 +143,7 @@ function AppContent() {
     }
 
     if (activeTab === 'recruitment' && (profile.role === 'drh' || profile.role === 'admin' || profile.role === 'recruitment_manager')) {
-      return <RecruitmentManagement />;
+      return <RecruitmentManagement initialJobId={recruitmentInitialJobId} initialCandidateAppId={recruitmentInitialAppId} />;
     }
 
     if (activeTab === 'payslips') {

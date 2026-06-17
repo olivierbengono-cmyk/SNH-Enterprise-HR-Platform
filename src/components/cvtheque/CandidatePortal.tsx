@@ -88,6 +88,99 @@ const LANG_LEVELS = [
   { value: 'native',       label: 'Natif / Maternel',  stars: 5 },
 ];
 const REGIONS_CM = ['Centre','Littoral','Ouest','Nord','Extrême-Nord','Adamaoua','Est','Sud','Nord-Ouest','Sud-Ouest'];
+
+const COUNTRIES = [
+  'Cameroun','Gabon','Congo','République Démocratique du Congo','République Centrafricaine',
+  'Guinée Équatoriale','Tchad','Nigeria','Sénégal','Côte d\'Ivoire','Ghana','Togo','Bénin',
+  'Mali','Burkina Faso','Niger','Mauritanie','Guinée','Guinée-Bissau','Sierra Leone','Liberia',
+  'Cap-Vert','Gambie','Angola','Mozambique','Zambie','Zimbabwe','Malawi','Tanzanie','Kenya',
+  'Ouganda','Rwanda','Burundi','Éthiopie','Somalie','Djibouti','Érythrée','Soudan','Soudan du Sud',
+  'Maroc','Algérie','Tunisie','Libye','Égypte','Madagascar','Île Maurice','Seychelles',
+  'Afrique du Sud','Namibie','Botswana','Lesotho','Eswatini',
+  'France','Belgique','Suisse','Luxembourg','Canada','États-Unis','Royaume-Uni','Allemagne',
+  'Espagne','Italie','Portugal','Pays-Bas','Suède','Norvège','Danemark','Finlande',
+  'Russie','Ukraine','Turquie','Chine','Inde','Japon','Corée du Sud','Brésil','Mexique',
+  'Argentine','Colombie','Autre',
+];
+
+const PROFILE_TR = {
+  fr: {
+    tabInfos: 'Infos personnelles', tabFormations: 'Parcours Académique',
+    tabExperiences: 'Expériences', tabCompetences: 'Compétences',
+    tabLangues: 'Langues', tabCV: 'Générer CV',
+    firstName: 'Prénom *', lastName: 'Nom *', birthDate: 'Date de naissance *',
+    gender: 'Genre *', genderPh: '— Sélectionner —', genderM: 'Homme', genderF: 'Femme',
+    professionalTitle: 'Titre professionnel', professionalTitlePh: 'Ex: Ingénieur Pétrole & Gaz Senior',
+    phoneMain: 'Téléphone principal *', phoneMainPh: '+237 6XX XXX XXX',
+    phoneSecondary: 'Téléphone secondaire',
+    cityResidence: 'Ville de résidence *', cityPh: 'Yaoundé',
+    countryResidence: 'Pays de résidence *', countryPh: '— Sélectionner —',
+    nationality: 'Nationalité', nationalityPh: 'Camerounaise',
+    idNumber: 'N° CNI / Passeport',
+    desiredPosition: 'Poste souhaité', desiredPositionPh: 'Ingénieur Réservoir...',
+    availability: 'Disponibilité à partir du',
+    salary: 'Prétention Salariale (FCFA)', salaryPh: 'Ex : 500 000',
+    linkedin: 'Profil LinkedIn', linkedinPh: 'https://linkedin.com/in/...',
+    portfolio: 'Site / Portfolio', portfolioPh: 'https://...',
+    facebook: 'Facebook', facebookPh: 'https://facebook.com/...',
+    twitter: 'Twitter / X', twitterPh: 'https://x.com/...',
+    instagram: 'Instagram', instagramPh: 'https://instagram.com/...',
+    about: 'À propos de vous', aboutPh: 'Décrivez votre parcours, vos expertises et vos ambitions professionnelles...',
+    academicPathTitle: 'Parcours académique',
+    formationN: 'Formation', addFormation: 'Ajouter une formation',
+    level: 'Niveau *', degree: 'Diplôme obtenu *', institution: 'Établissement *',
+    fieldOfStudy: "Domaine d'études", fieldPh: 'Génie Pétrolier, Finance...',
+    eduCountry: 'Pays', eduCity: 'Ville', startYear: 'Année de début', endYear: 'Année de fin',
+    grade: 'Mention', gradePh: 'Très bien, Bien...',
+    descSpec: 'Description / Spécialisation', descSpecPh: "Décrivez votre spécialisation, mémoire, projet de fin d'études...",
+    currentFormation: 'Formation en cours',
+    experiencesTitle: 'Expériences professionnelles / Stages',
+    expN: 'Expérience', addExp: 'Ajouter une expérience',
+    jobTitle: 'Poste occupé *', jobTitlePh: 'Ingénieur Réservoir...',
+    company: 'Entreprise *', sector: "Secteur d'activité", sectorPh: 'Pétrole & Gaz, Finance...',
+    contractType: 'Type de contrat', expCity: 'Ville',
+    startDate: 'Date de début *', endDate: 'Date de fin',
+    currentJob: 'Poste actuel', missions: 'Description des missions', missionsPh: 'Vos principales responsabilités et réalisations...',
+  },
+  en: {
+    tabInfos: 'Personal info', tabFormations: 'Academic path',
+    tabExperiences: 'Experience', tabCompetences: 'Skills',
+    tabLangues: 'Languages', tabCV: 'Generate CV',
+    firstName: 'First name *', lastName: 'Last name *', birthDate: 'Date of birth *',
+    gender: 'Gender *', genderPh: '— Select —', genderM: 'Male', genderF: 'Female',
+    professionalTitle: 'Professional title', professionalTitlePh: 'Ex: Senior Petroleum Engineer',
+    phoneMain: 'Main phone *', phoneMainPh: '+237 6XX XXX XXX',
+    phoneSecondary: 'Secondary phone',
+    cityResidence: 'City of residence *', cityPh: 'Yaoundé',
+    countryResidence: 'Country of residence *', countryPh: '— Select —',
+    nationality: 'Nationality', nationalityPh: 'Cameroonian',
+    idNumber: 'National ID / Passport',
+    desiredPosition: 'Desired position', desiredPositionPh: 'Reservoir Engineer...',
+    availability: 'Available from',
+    salary: 'Salary expectation (FCFA)', salaryPh: 'Ex: 500,000',
+    linkedin: 'LinkedIn profile', linkedinPh: 'https://linkedin.com/in/...',
+    portfolio: 'Website / Portfolio', portfolioPh: 'https://...',
+    facebook: 'Facebook', facebookPh: 'https://facebook.com/...',
+    twitter: 'Twitter / X', twitterPh: 'https://x.com/...',
+    instagram: 'Instagram', instagramPh: 'https://instagram.com/...',
+    about: 'About you', aboutPh: 'Describe your background, expertise and career goals...',
+    academicPathTitle: 'Academic path',
+    formationN: 'Education', addFormation: 'Add education',
+    level: 'Level *', degree: 'Degree obtained *', institution: 'Institution *',
+    fieldOfStudy: 'Field of study', fieldPh: 'Petroleum Engineering, Finance...',
+    eduCountry: 'Country', eduCity: 'City', startYear: 'Start year', endYear: 'End year',
+    grade: 'Grade', gradePh: 'Distinction, Merit...',
+    descSpec: 'Description / Specialization', descSpecPh: 'Describe your specialization, thesis, final project...',
+    currentFormation: 'Currently enrolled',
+    experiencesTitle: 'Work experience / Internships',
+    expN: 'Experience', addExp: 'Add experience',
+    jobTitle: 'Job title *', jobTitlePh: 'Reservoir Engineer...',
+    company: 'Company *', sector: 'Industry', sectorPh: 'Oil & Gas, Finance...',
+    contractType: 'Contract type', expCity: 'City',
+    startDate: 'Start date *', endDate: 'End date',
+    currentJob: 'Current position', missions: 'Job description', missionsPh: 'Your main responsibilities and achievements...',
+  },
+} as const;
 const SNH_DIRECTIONS = [
   'Direction Exploration & Production',
   'Direction Financière',
@@ -294,6 +387,31 @@ export default function CandidatePortal() {
     document.addEventListener('portal-nav', handler);
     return () => document.removeEventListener('portal-nav', handler);
   }, []);
+
+  // Realtime subscription: receive new notifications when HR changes application status
+  useEffect(() => {
+    if (!candidateId) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return;
+      const channel = supabase
+        .channel(`candidate-notifs-${session.user.id}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${session.user.id}`,
+        }, (payload) => {
+          const n = payload.new as any;
+          const notif: Notification = {
+            id: n.id, title: n.title, body: n.message, read: false, created_at: n.created_at,
+          };
+          setNotifications(prev => [notif, ...prev]);
+          setUnreadNotifs(prev => prev + 1);
+        })
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    });
+  }, [candidateId]);
 
   const loadPortal = async (userId: string, showSpinner = true) => {
     if (showSpinner) setLoading(true);
@@ -533,6 +651,7 @@ export default function CandidatePortal() {
               languages={languages} setLanguages={setLanguages}
               masterSkills={masterSkills}
               candidateId={candidateId!}
+              lang={lang}
             />
           )}
           {section === 'documents' && candidateId && (
@@ -1124,7 +1243,7 @@ function dateToYear(v: string | null | undefined): string {
 // ── Profile Section ───────────────────────────────────────────────────────────
 type ProfileTab = 'infos' | 'formations' | 'experiences' | 'competences' | 'langues' | 'cv';
 
-function ProfileSection({ profile, setProfile, experiences, setExperiences, educations, setEducations, skills, setSkills, languages, setLanguages, masterSkills, candidateId }: {
+function ProfileSection({ profile, setProfile, experiences, setExperiences, educations, setEducations, skills, setSkills, languages, setLanguages, masterSkills, candidateId, lang }: {
   profile: CandidateProfile; setProfile: (p: CandidateProfile) => void;
   experiences: Experience[]; setExperiences: (v: Experience[]) => void;
   educations: Education[]; setEducations: (v: Education[]) => void;
@@ -1132,18 +1251,20 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
   languages: Language[]; setLanguages: (v: Language[]) => void;
   masterSkills: MasterSkill[];
   candidateId: string;
+  lang: 'fr' | 'en';
 }) {
   const [tab, setTab] = useState<ProfileTab>('infos');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const t = PROFILE_TR[lang];
   const TABS: { value: ProfileTab; label: string; icon: React.FC<any> }[] = [
-    { value: 'infos', label: 'Infos personnelles', icon: User },
-    { value: 'formations', label: 'Parcours Académique', icon: GraduationCap },
-    { value: 'experiences', label: 'Expériences', icon: Briefcase },
-    { value: 'competences', label: 'Compétences', icon: Star },
-    { value: 'langues', label: 'Langues', icon: Globe },
-    { value: 'cv', label: 'Générer CV', icon: Download },
+    { value: 'infos', label: t.tabInfos, icon: User },
+    { value: 'formations', label: t.tabFormations, icon: GraduationCap },
+    { value: 'experiences', label: t.tabExperiences, icon: Briefcase },
+    { value: 'competences', label: t.tabCompetences, icon: Star },
+    { value: 'langues', label: t.tabLangues, icon: Globe },
+    { value: 'cv', label: t.tabCV, icon: Download },
   ];
 
   const save = async () => {
@@ -1231,9 +1352,9 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        {tab === 'infos' && <InfosTab profile={profile} setProfile={setProfile} />}
-        {tab === 'formations' && <FormationsTab items={educations} setItems={setEducations} />}
-        {tab === 'experiences' && <ExperiencesTab items={experiences} setItems={setExperiences} />}
+        {tab === 'infos' && <InfosTab profile={profile} setProfile={setProfile} t={t} />}
+        {tab === 'formations' && <FormationsTab items={educations} setItems={setEducations} t={t} />}
+        {tab === 'experiences' && <ExperiencesTab items={experiences} setItems={setExperiences} t={t} />}
         {tab === 'competences' && <CompetencesTab items={skills} setItems={setSkills} masterSkills={masterSkills} />}
         {tab === 'langues' && <LanguesTab items={languages} setItems={setLanguages} />}
         {tab === 'cv' && (
@@ -1394,148 +1515,148 @@ function CVGeneratorPanel({ profile, experiences, educations, skills, languages,
   );
 }
 
-function InfosTab({ profile, setProfile }: { profile: CandidateProfile; setProfile: (p: CandidateProfile) => void }) {
+function InfosTab({ profile, setProfile, t }: { profile: CandidateProfile; setProfile: (p: CandidateProfile) => void; t: typeof PROFILE_TR['fr'] }) {
   const s = (k: keyof CandidateProfile, v: any) => setProfile({ ...profile, [k]: v });
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <div><Lbl>Prénom *</Lbl><input value={profile.first_name} onChange={e => s('first_name', e.target.value)} className={inp()} /></div>
-        <div><Lbl>Nom *</Lbl><input value={profile.last_name} onChange={e => s('last_name', e.target.value)} className={inp()} /></div>
+        <div><Lbl>{t.firstName}</Lbl><input value={profile.first_name} onChange={e => s('first_name', e.target.value)} className={inp()} /></div>
+        <div><Lbl>{t.lastName}</Lbl><input value={profile.last_name} onChange={e => s('last_name', e.target.value)} className={inp()} /></div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div><Lbl>Date de naissance *</Lbl><input type="date" value={profile.birth_date || ''} onChange={e => s('birth_date', e.target.value)} className={inp()} required /></div>
-        <div><Lbl>Genre</Lbl>
-          <select value={profile.gender || ''} onChange={e => s('gender', e.target.value)} className={inp()}>
-            <option value="">— Sélectionner —</option>
-            <option value="Homme">Homme</option>
-            <option value="Femme">Femme</option>
+        <div><Lbl>{t.birthDate}</Lbl><input type="date" value={profile.birth_date || ''} onChange={e => s('birth_date', e.target.value)} className={inp()} required /></div>
+        <div><Lbl>{t.gender}</Lbl>
+          <select value={profile.gender || ''} onChange={e => s('gender', e.target.value)} className={inp()} required>
+            <option value="">{t.genderPh}</option>
+            <option value="Homme">{t.genderM}</option>
+            <option value="Femme">{t.genderF}</option>
           </select>
         </div>
       </div>
-      <div><Lbl>Titre professionnel</Lbl><input value={profile.professional_title || ''} onChange={e => s('professional_title', e.target.value)} className={inp()} placeholder="Ex: Ingénieur Pétrole & Gaz Senior" /></div>
+      <div><Lbl>{t.professionalTitle}</Lbl><input value={profile.professional_title || ''} onChange={e => s('professional_title', e.target.value)} className={inp()} placeholder={t.professionalTitlePh} /></div>
       <div className="grid grid-cols-2 gap-3">
-        <div><Lbl>Téléphone principal *</Lbl><input value={profile.phone || ''} onChange={e => s('phone', e.target.value)} className={inp()} placeholder="+237 6XX XXX XXX" required /></div>
-        <div><Lbl>Téléphone secondaire</Lbl><input value={profile.phone2 || ''} onChange={e => s('phone2', e.target.value)} className={inp()} placeholder="+237 6XX XXX XXX" /></div>
+        <div><Lbl>{t.phoneMain}</Lbl><input value={profile.phone || ''} onChange={e => s('phone', e.target.value)} className={inp()} placeholder={t.phoneMainPh} required /></div>
+        <div><Lbl>{t.phoneSecondary}</Lbl><input value={profile.phone2 || ''} onChange={e => s('phone2', e.target.value)} className={inp()} placeholder={t.phoneMainPh} /></div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div><Lbl>Ville de résidence</Lbl><input value={profile.location || ''} onChange={e => s('location', e.target.value)} className={inp()} placeholder="Yaoundé" /></div>
-        <div><Lbl>Région</Lbl>
-          <select value={profile.region || ''} onChange={e => s('region', e.target.value)} className={inp()}>
-            <option value="">— Sélectionner —</option>
-            {REGIONS_CM.map(r => <option key={r}>{r}</option>)}
+        <div><Lbl>{t.cityResidence}</Lbl><input value={profile.location || ''} onChange={e => s('location', e.target.value)} className={inp()} placeholder={t.cityPh} required /></div>
+        <div><Lbl>{t.countryResidence}</Lbl>
+          <select value={profile.region || ''} onChange={e => s('region', e.target.value)} className={inp()} required>
+            <option value="">{t.countryPh}</option>
+            {COUNTRIES.map(c => <option key={c}>{c}</option>)}
           </select>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div><Lbl>Nationalité</Lbl><input value={profile.nationality || ''} onChange={e => s('nationality', e.target.value)} className={inp()} placeholder="Camerounaise" /></div>
-        <div><Lbl>N° CNI / Passeport</Lbl><input value={profile.national_id || ''} onChange={e => s('national_id', e.target.value)} className={inp()} /></div>
+        <div><Lbl>{t.nationality}</Lbl><input value={profile.nationality || ''} onChange={e => s('nationality', e.target.value)} className={inp()} placeholder={t.nationalityPh} /></div>
+        <div><Lbl>{t.idNumber}</Lbl><input value={profile.national_id || ''} onChange={e => s('national_id', e.target.value)} className={inp()} /></div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div><Lbl>Poste souhaité</Lbl><input value={profile.desired_position || ''} onChange={e => s('desired_position', e.target.value)} className={inp()} placeholder="Ingénieur Réservoir..." /></div>
-        <div><Lbl>Disponibilité à partir du</Lbl><input type="date" value={profile.availability_date || ''} onChange={e => s('availability_date', e.target.value)} className={inp()} /></div>
+        <div><Lbl>{t.desiredPosition}</Lbl><input value={profile.desired_position || ''} onChange={e => s('desired_position', e.target.value)} className={inp()} placeholder={t.desiredPositionPh} /></div>
+        <div><Lbl>{t.availability}</Lbl><input type="date" value={profile.availability_date || ''} onChange={e => s('availability_date', e.target.value)} className={inp()} /></div>
       </div>
       <div>
-        <Lbl>Prétention Salariale (FCFA)</Lbl>
-        <input type="number" value={profile.desired_salary_min || ''} onChange={e => s('desired_salary_min', Number(e.target.value))} className={inp()} placeholder="Ex : 500 000" />
+        <Lbl>{t.salary}</Lbl>
+        <input type="number" value={profile.desired_salary_min || ''} onChange={e => s('desired_salary_min', Number(e.target.value))} className={inp()} placeholder={t.salaryPh} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div><Lbl>Profil LinkedIn</Lbl><input value={profile.linkedin_url || ''} onChange={e => s('linkedin_url', e.target.value)} className={inp()} placeholder="https://linkedin.com/in/..." /></div>
-        <div><Lbl>Site / Portfolio</Lbl><input value={profile.portfolio_url || ''} onChange={e => s('portfolio_url', e.target.value)} className={inp()} placeholder="https://..." /></div>
+        <div><Lbl>{t.linkedin}</Lbl><input value={profile.linkedin_url || ''} onChange={e => s('linkedin_url', e.target.value)} className={inp()} placeholder={t.linkedinPh} /></div>
+        <div><Lbl>{t.portfolio}</Lbl><input value={profile.portfolio_url || ''} onChange={e => s('portfolio_url', e.target.value)} className={inp()} placeholder={t.portfolioPh} /></div>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <div><Lbl>Facebook</Lbl><input value={profile.facebook_url || ''} onChange={e => s('facebook_url', e.target.value)} className={inp()} placeholder="https://facebook.com/..." /></div>
-        <div><Lbl>Twitter / X</Lbl><input value={profile.twitter_url || ''} onChange={e => s('twitter_url', e.target.value)} className={inp()} placeholder="https://x.com/..." /></div>
-        <div><Lbl>Instagram</Lbl><input value={profile.instagram_url || ''} onChange={e => s('instagram_url', e.target.value)} className={inp()} placeholder="https://instagram.com/..." /></div>
+        <div><Lbl>{t.facebook}</Lbl><input value={profile.facebook_url || ''} onChange={e => s('facebook_url', e.target.value)} className={inp()} placeholder={t.facebookPh} /></div>
+        <div><Lbl>{t.twitter}</Lbl><input value={profile.twitter_url || ''} onChange={e => s('twitter_url', e.target.value)} className={inp()} placeholder={t.twitterPh} /></div>
+        <div><Lbl>{t.instagram}</Lbl><input value={profile.instagram_url || ''} onChange={e => s('instagram_url', e.target.value)} className={inp()} placeholder={t.instagramPh} /></div>
       </div>
-      <div><Lbl>À propos de vous</Lbl>
-        <textarea value={profile.summary || ''} onChange={e => s('summary', e.target.value)} rows={4} className={inp()} placeholder="Décrivez votre parcours, vos expertises et vos ambitions professionnelles..." />
+      <div><Lbl>{t.about}</Lbl>
+        <textarea value={profile.summary || ''} onChange={e => s('summary', e.target.value)} rows={4} className={inp()} placeholder={t.aboutPh} />
       </div>
     </div>
   );
 }
 
-function FormationsTab({ items, setItems }: { items: Education[]; setItems: (v: Education[]) => void }) {
+function FormationsTab({ items, setItems, t }: { items: Education[]; setItems: (v: Education[]) => void; t: typeof PROFILE_TR['fr'] }) {
   const add = () => setItems([...items, { degree: '', field_of_study: '', institution: '', location: '', start_date: '', end_date: '', is_current: false, grade: '', country: 'Cameroun', education_level: '', description: '' }]);
   const upd = (i: number, k: keyof Education, v: any) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
   const del = (i: number) => setItems(items.filter((_, j) => j !== i));
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-gray-900">Formations académiques</h3>
+      <h3 className="text-sm font-semibold text-gray-900">{t.academicPathTitle}</h3>
       {items.map((edu, i) => (
         <div key={i} className="border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-gray-500">Formation {i + 1}</span>
+            <span className="text-xs font-semibold text-gray-500">{t.formationN} {i + 1}</span>
             <button onClick={() => del(i)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Lbl>Niveau *</Lbl>
+            <div><Lbl>{t.level}</Lbl>
               <select value={edu.education_level || ''} onChange={e => upd(i,'education_level',e.target.value)} className={inp()}>
                 <option value="">— Sélectionner —</option>
                 {EDU_LEVELS.map(l => <option key={l}>{l}</option>)}
               </select>
             </div>
-            <div><Lbl>Diplôme obtenu *</Lbl><input value={edu.degree} onChange={e => upd(i,'degree',e.target.value)} className={inp()} placeholder="Master en Génie Pétrolier..." /></div>
-            <div><Lbl>Établissement *</Lbl><input value={edu.institution} onChange={e => upd(i,'institution',e.target.value)} className={inp()} placeholder="ENSP, Université de Yaoundé..." /></div>
-            <div><Lbl>Domaine d'études</Lbl><input value={edu.field_of_study} onChange={e => upd(i,'field_of_study',e.target.value)} className={inp()} placeholder="Génie Pétrolier, Finance..." /></div>
-            <div><Lbl>Pays</Lbl><input value={edu.country || ''} onChange={e => upd(i,'country',e.target.value)} className={inp()} /></div>
-            <div><Lbl>Ville</Lbl><input value={edu.location} onChange={e => upd(i,'location',e.target.value)} className={inp()} /></div>
-            <div><Lbl>Année de début</Lbl><input type="number" value={dateToYear(edu.start_date)} onChange={e => upd(i,'start_date',e.target.value)} className={inp()} placeholder="Ex: 2018" min="1950" max="2030" /></div>
-            {!edu.is_current && <div><Lbl>Année de fin</Lbl><input type="number" value={dateToYear(edu.end_date)} onChange={e => upd(i,'end_date',e.target.value)} className={inp()} placeholder="Ex: 2022" min="1950" max="2030" /></div>}
-            <div><Lbl>Mention</Lbl><input value={edu.grade} onChange={e => upd(i,'grade',e.target.value)} className={inp()} placeholder="Très bien, Bien..." /></div>
-            <div className="col-span-2"><Lbl>Description / Spécialisation</Lbl>
-              <textarea value={edu.description || ''} onChange={e => upd(i,'description',e.target.value)} rows={2} className={inp()} placeholder="Décrivez votre spécialisation, mémoire, projet de fin d'études..." />
+            <div><Lbl>{t.degree}</Lbl><input value={edu.degree} onChange={e => upd(i,'degree',e.target.value)} className={inp()} placeholder="Master en Génie Pétrolier..." /></div>
+            <div><Lbl>{t.institution}</Lbl><input value={edu.institution} onChange={e => upd(i,'institution',e.target.value)} className={inp()} placeholder="ENSP, Université de Yaoundé..." /></div>
+            <div><Lbl>{t.fieldOfStudy}</Lbl><input value={edu.field_of_study} onChange={e => upd(i,'field_of_study',e.target.value)} className={inp()} placeholder={t.fieldPh} /></div>
+            <div><Lbl>{t.eduCountry}</Lbl><input value={edu.country || ''} onChange={e => upd(i,'country',e.target.value)} className={inp()} /></div>
+            <div><Lbl>{t.eduCity}</Lbl><input value={edu.location} onChange={e => upd(i,'location',e.target.value)} className={inp()} /></div>
+            <div><Lbl>{t.startYear}</Lbl><input type="number" value={dateToYear(edu.start_date)} onChange={e => upd(i,'start_date',e.target.value)} className={inp()} placeholder="Ex: 2018" min="1950" max="2030" /></div>
+            {!edu.is_current && <div><Lbl>{t.endYear}</Lbl><input type="number" value={dateToYear(edu.end_date)} onChange={e => upd(i,'end_date',e.target.value)} className={inp()} placeholder="Ex: 2022" min="1950" max="2030" /></div>}
+            <div><Lbl>{t.grade}</Lbl><input value={edu.grade} onChange={e => upd(i,'grade',e.target.value)} className={inp()} placeholder={t.gradePh} /></div>
+            <div className="col-span-2"><Lbl>{t.descSpec}</Lbl>
+              <textarea value={edu.description || ''} onChange={e => upd(i,'description',e.target.value)} rows={2} className={inp()} placeholder={t.descSpecPh} />
             </div>
           </div>
           <label className="flex items-center gap-2 mt-3 cursor-pointer text-sm text-gray-700">
             <input type="checkbox" checked={edu.is_current} onChange={e => upd(i,'is_current',e.target.checked)} className="rounded border-gray-300" />
-            Formation en cours
+            {t.currentFormation}
           </label>
         </div>
       ))}
       <button onClick={add} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-green-400 hover:text-green-700 transition">
-        <Plus size={15} /> Ajouter une formation
+        <Plus size={15} /> {t.addFormation}
       </button>
     </div>
   );
 }
 
-function ExperiencesTab({ items, setItems }: { items: Experience[]; setItems: (v: Experience[]) => void }) {
+function ExperiencesTab({ items, setItems, t }: { items: Experience[]; setItems: (v: Experience[]) => void; t: typeof PROFILE_TR['fr'] }) {
   const add = () => setItems([...items, { job_title: '', company: '', location: '', start_date: '', end_date: '', is_current: false, description: '', contract_type: 'CDI', sector: '' }]);
   const upd = (i: number, k: keyof Experience, v: any) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
   const del = (i: number) => setItems(items.filter((_, j) => j !== i));
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-gray-900">Expériences professionnelles / Stages</h3>
+      <h3 className="text-sm font-semibold text-gray-900">{t.experiencesTitle}</h3>
       {items.map((exp, i) => (
         <div key={i} className="border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-gray-500">Expérience {i + 1}</span>
+            <span className="text-xs font-semibold text-gray-500">{t.expN} {i + 1}</span>
             <button onClick={() => del(i)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Lbl>Poste occupé *</Lbl><input value={exp.job_title} onChange={e => upd(i,'job_title',e.target.value)} className={inp()} placeholder="Ingénieur Réservoir..." /></div>
-            <div><Lbl>Entreprise *</Lbl><input value={exp.company} onChange={e => upd(i,'company',e.target.value)} className={inp()} /></div>
-            <div><Lbl>Secteur d'activité</Lbl><input value={exp.sector || ''} onChange={e => upd(i,'sector',e.target.value)} className={inp()} placeholder="Pétrole & Gaz, Finance..." /></div>
-            <div><Lbl>Type de contrat</Lbl>
+            <div><Lbl>{t.jobTitle}</Lbl><input value={exp.job_title} onChange={e => upd(i,'job_title',e.target.value)} className={inp()} placeholder={t.jobTitlePh} /></div>
+            <div><Lbl>{t.company}</Lbl><input value={exp.company} onChange={e => upd(i,'company',e.target.value)} className={inp()} /></div>
+            <div><Lbl>{t.sector}</Lbl><input value={exp.sector || ''} onChange={e => upd(i,'sector',e.target.value)} className={inp()} placeholder={t.sectorPh} /></div>
+            <div><Lbl>{t.contractType}</Lbl>
               <select value={exp.contract_type || 'CDI'} onChange={e => upd(i,'contract_type',e.target.value)} className={inp()}>
-                {['CDI','CDD','Stage','Freelance','Alternance','Autre'].map(t => <option key={t}>{t}</option>)}
+                {['CDI','CDD','Stage','Freelance','Alternance','Autres'].map(ct => <option key={ct}>{ct}</option>)}
               </select>
             </div>
-            <div><Lbl>Ville</Lbl><input value={exp.location} onChange={e => upd(i,'location',e.target.value)} className={inp()} /></div>
-            <div><Lbl>Date de début *</Lbl><input type="date" value={exp.start_date} onChange={e => upd(i,'start_date',e.target.value)} className={inp()} /></div>
-            {!exp.is_current && <div><Lbl>Date de fin</Lbl><input type="date" value={exp.end_date} onChange={e => upd(i,'end_date',e.target.value)} className={inp()} /></div>}
+            <div><Lbl>{t.expCity}</Lbl><input value={exp.location} onChange={e => upd(i,'location',e.target.value)} className={inp()} /></div>
+            <div><Lbl>{t.startDate}</Lbl><input type="date" value={exp.start_date} onChange={e => upd(i,'start_date',e.target.value)} className={inp()} /></div>
+            {!exp.is_current && <div><Lbl>{t.endDate}</Lbl><input type="date" value={exp.end_date} onChange={e => upd(i,'end_date',e.target.value)} className={inp()} /></div>}
           </div>
           <label className="flex items-center gap-2 my-3 cursor-pointer text-sm text-gray-700">
             <input type="checkbox" checked={exp.is_current} onChange={e => upd(i,'is_current',e.target.checked)} className="rounded border-gray-300" />
-            Poste actuel
+            {t.currentJob}
           </label>
-          <div><Lbl>Description des missions</Lbl>
-            <textarea value={exp.description} onChange={e => upd(i,'description',e.target.value)} rows={3} className={inp()} placeholder="Vos principales responsabilités et réalisations..." />
+          <div><Lbl>{t.missions}</Lbl>
+            <textarea value={exp.description} onChange={e => upd(i,'description',e.target.value)} rows={3} className={inp()} placeholder={t.missionsPh} />
           </div>
         </div>
       ))}
       <button onClick={add} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-green-400 hover:text-green-700 transition">
-        <Plus size={15} /> Ajouter une expérience
+        <Plus size={15} /> {t.addExp}
       </button>
     </div>
   );

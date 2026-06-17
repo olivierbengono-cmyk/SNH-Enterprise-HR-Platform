@@ -377,8 +377,8 @@ export default function CandidatePortal() {
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
-      <div className="w-14 h-14 bg-white rounded-xl shadow-md flex items-center justify-center overflow-hidden p-1">
-        <img src="/logoSNHFINAL.png" alt="SNH" className="h-full w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
+      <div className="bg-white rounded-xl shadow-md flex items-center justify-center overflow-hidden px-3 py-2">
+        <img src="/logoSNHFINAL.png" alt="SNH" className="h-12 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
       </div>
       <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: SNH_GREEN }} />
       <p className="text-sm text-gray-500">Chargement de votre espace…</p>
@@ -435,8 +435,8 @@ export default function CandidatePortal() {
         {/* Logo */}
         <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-100 shadow-sm p-1">
-              <img src="/logoSNHFINAL.png" alt="SNH" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
+            <div className="px-1">
+              <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto object-contain" onError={(e) => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
             </div>
           </div>
           {/* Close button (mobile only) */}
@@ -636,14 +636,8 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
 
         {/* Navbar */}
         <div className="relative max-w-5xl mx-auto px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg p-1">
-              <img src="/logoSNHFINAL.png" alt="SNH" className="w-full h-full object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
-            </div>
-            <div>
-              <div className="text-white font-bold text-sm leading-tight">Société Nationale</div>
-              <div className="text-white/60 text-xs">des Hydrocarbures</div>
-            </div>
+          <div className="flex items-center">
+            <img src="/logoSNHFINAL.png" alt="SNH" className="h-14 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
           </div>
           <div className="flex items-center gap-2">
             {/* Language toggle */}
@@ -917,8 +911,8 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose, lang = 'fr' }: {
           <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition">
             <X size={14} className="text-white" />
           </button>
-          <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md overflow-hidden">
-            <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto" onError={e => {
+          <div className="bg-white rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md overflow-hidden px-3 py-2 w-fit">
+            <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto object-contain" onError={e => {
               const el = e.target as HTMLImageElement;
               el.src='/logoSNH.png';
               el.parentElement!.innerHTML = authMode === 'login'

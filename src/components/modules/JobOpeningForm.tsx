@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, ChevronRight, ChevronLeft, Search, Plus, Trash2 } from 'lucide-react';
+import { X, AlertCircle, ChevronRight, ChevronLeft, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface MasterSkill { id: string; name: string; category: string; }
+interface Position { id: string; title: string; department_id: string | null; }
+
 const CAT_LABEL: Record<string, string> = {
   technical: 'Technique', soft: 'Soft Skills', language: 'Langues', certification: 'Certifications', other: 'Autres',
 };
@@ -15,21 +17,13 @@ interface JobOpeningFormProps {
   initialData?: any;
 }
 
-function parseLanguages(raw: string[] | null | undefined): { language: string; level: string }[] {
-  if (!raw?.length) return [];
-  return raw.map(s => {
-    const m = s.match(/^(.+)\s+\((.+)\)$/);
-    return m ? { language: m[1], level: m[2] } : { language: s, level: 'Courant' };
-  });
-}
-
-type Tab = 'infos' | 'candidat' | 'competences' | 'conditions';
+type Tab = 'infos' | 'candidat' | 'competences' | 'recapitulatif';
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: 'infos',       label: 'Informations' },
-  { value: 'candidat',    label: 'Critères candidat' },
-  { value: 'competences', label: 'Compétences' },
-  { value: 'conditions',  label: 'Langues & Conditions' },
+  { value: 'infos',          label: 'Informations' },
+  { value: 'candidat',       label: 'Critères candidat' },
+  { value: 'competences',    label: 'Compétences' },
+  { value: 'recapitulatif',  label: 'Récapitulatif' },
 ];
 
 const EDU_LEVELS = [
@@ -37,8 +31,6 @@ const EDU_LEVELS = [
   'BAC+2 (BTS/DUT)', 'BAC+3 (Licence)', 'BAC+4',
   'BAC+5 (Master)', 'Doctorat', 'Indifférent',
 ];
-
-const WORK_MODES = ['Présentiel uniquement', 'Télétravail partiel', 'Full remote'];
 
 function genRef() {
   return `SNH-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`;
@@ -59,8 +51,10 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
 
   // ── Tab 1: Informations ───────────────────────────────────────────────────
+  const [positionId, setPositionId] = useState(() => initialData?.position_id || '');
   const [title, setTitle] = useState(() => initialData?.title || '');
   const [reference, setReference] = useState(() => initialData?.reference || genRef());
   const [contractType, setContractType] = useState(() => initialData?.contract_type || 'CDI');
@@ -85,19 +79,6 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
   const [masterSkills, setMasterSkills] = useState<MasterSkill[]>([]);
   const [skillSearch, setSkillSearch] = useState('');
 
-  // ── Tab 4: Langues & Conditions ───────────────────────────────────────────
-  const [salaryRange, setSalaryRange] = useState(() => initialData?.salary_range || '');
-  const [requiredLanguages, setRequiredLanguages] = useState<{ language: string; level: string }[]>(
-    () => parseLanguages(initialData?.required_languages)
-  );
-  const [benefits, setBenefits] = useState(() => initialData?.benefits || '');
-  const [otherConditions, setOtherConditions] = useState(() => initialData?.other_conditions || '');
-
-  const addLanguage = () => setRequiredLanguages(p => [...p, { language: '', level: 'Courant' }]);
-  const updLanguage = (i: number, k: 'language' | 'level', v: string) =>
-    setRequiredLanguages(p => { const a = [...p]; a[i] = { ...a[i], [k]: v }; return a; });
-  const delLanguage = (i: number) => setRequiredLanguages(p => p.filter((_, j) => j !== i));
-
   useEffect(() => {
     supabase.from('departments').select('id, name').order('name').then(({ data }) => {
       if (data) setDepartments(data);
@@ -105,17 +86,18 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
     supabase.from('skills').select('id, name, category').order('category').order('name').then(({ data }) => {
       if (data) setMasterSkills(data as MasterSkill[]);
     });
+    supabase.from('positions').select('id, title, department_id').order('title').then(({ data }) => {
+      if (data) setPositions(data as Position[]);
+    });
   }, []);
 
-  const toggleSkill = (name: string, required: boolean) => {
-    if (required) {
-      setRequiredSkills(prev =>
-        prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
-      );
-    } else {
-      setNiceToHaveSkills(prev =>
-        prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
-      );
+  const handlePositionSelect = (pid: string) => {
+    setPositionId(pid);
+    if (!pid) { setTitle(''); return; }
+    const pos = positions.find(p => p.id === pid);
+    if (pos) {
+      setTitle(pos.title);
+      if (pos.department_id && !departmentId) setDepartmentId(pos.department_id);
     }
   };
 
@@ -124,20 +106,31 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
   const isFirst = tabIdx === 0;
 
   const goNext = () => {
-    if (tab === 'infos' && !title.trim()) { setError('Le titre du poste est obligatoire.'); return; }
-    if (tab === 'infos' && !reference.trim()) { setError('La référence est obligatoire.'); return; }
+    if (tab === 'infos') {
+      if (!positionId) { setError('Veuillez sélectionner un poste dans le référentiel.'); return; }
+      if (!reference.trim()) { setError('La référence est obligatoire.'); return; }
+      if (!description.trim()) { setError('La description du poste est obligatoire.'); return; }
+    }
+    if (tab === 'candidat') {
+      if (!educationLevel) { setError('Le niveau d\'études requis est obligatoire.'); return; }
+      if (!requirements.trim()) { setError('Le profil recherché / exigences est obligatoire.'); return; }
+    }
     setError('');
     setTab(TABS[tabIdx + 1].value);
   };
   const goPrev = () => { setError(''); setTab(TABS[tabIdx - 1].value); };
 
   const handleSubmit = async () => {
-    if (!title.trim()) { setTab('infos'); setError('Le titre du poste est obligatoire.'); return; }
+    if (!positionId) { setTab('infos'); setError('Veuillez sélectionner un poste dans le référentiel.'); return; }
     if (!reference.trim()) { setTab('infos'); setError('La référence est obligatoire.'); return; }
     if (!description.trim()) { setTab('infos'); setError('La description du poste est obligatoire.'); return; }
+    if (!educationLevel) { setTab('candidat'); setError('Le niveau d\'études requis est obligatoire.'); return; }
+    if (!requirements.trim()) { setTab('candidat'); setError('Le profil recherché / exigences est obligatoire.'); return; }
     setError(''); setLoading(true);
     const payload = {
-      title, reference, contract_type: contractType,
+      title,
+      position_id: positionId || null,
+      reference, contract_type: contractType,
       location: location || null,
       status,
       description,
@@ -147,15 +140,11 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
       min_experience_years: minExperienceYears,
       required_skills: requiredSkills,
       nice_to_have_skills: niceToHaveSkills,
-      salary_range: salaryRange || null,
       publication_date: publicationDate || null,
       closing_date: closingDate || null,
       openings_count: openingsCount,
       is_internal: isInternal,
       work_mode: workMode || null,
-      required_languages: requiredLanguages.filter(l => l.language.trim()).map(l => `${l.language.trim()} (${l.level})`),
-      benefits: benefits.trim() || null,
-      other_conditions: otherConditions.trim() || null,
     };
     try {
       if (isEdit) {
@@ -173,6 +162,8 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
       setLoading(false);
     }
   };
+
+  const dept = departments.find(d => d.id === departmentId);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -211,11 +202,24 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
           {/* ── Tab 1: Informations ─────────────────────────────────────── */}
           {tab === 'infos' && (
             <div className="space-y-4">
+              {/* Poste du référentiel */}
               <div>
-                <Lbl req>Titre du poste</Lbl>
-                <input value={title} onChange={e => setTitle(e.target.value)} className={inp(!title && !!error)}
-                  placeholder="Ingénieur Réservoir, Analyste Financier..." />
+                <Lbl req>Poste (référentiel)</Lbl>
+                <select
+                  value={positionId}
+                  onChange={e => handlePositionSelect(e.target.value)}
+                  className={inp(!positionId && !!error)}
+                >
+                  <option value="">— Sélectionner un poste dans le référentiel —</option>
+                  {positions.map(p => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                </select>
+                {positionId && title && (
+                  <p className="text-xs text-slate-500 mt-1">Intitulé retenu : <strong>{title}</strong></p>
+                )}
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Lbl req>Référence</Lbl>
@@ -279,23 +283,23 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Lbl>Niveau d'études requis</Lbl>
-                  <select value={educationLevel} onChange={e => setEducationLevel(e.target.value)} className={inp()}>
-                    <option value="">— Indifférent —</option>
+                  <Lbl req>Niveau d'études requis</Lbl>
+                  <select value={educationLevel} onChange={e => setEducationLevel(e.target.value)} className={inp(!educationLevel && !!error)}>
+                    <option value="">— Sélectionner —</option>
                     {EDU_LEVELS.map(l => <option key={l}>{l}</option>)}
                   </select>
                 </div>
                 <div>
-                  <Lbl>Expérience minimum (années)</Lbl>
+                  <Lbl req>Expérience minimum (années)</Lbl>
                   <input type="number" min={0} max={30} value={minExperienceYears}
                     onChange={e => setMinExperienceYears(Number(e.target.value))} className={inp()} />
                 </div>
               </div>
               <div>
-                <Lbl>Profil recherché / Exigences</Lbl>
+                <Lbl req>Profil recherché / Exigences</Lbl>
                 <textarea value={requirements} onChange={e => setRequirements(e.target.value)} rows={7}
                   placeholder="Compétences requises, qualifications, expérience souhaitée, qualités personnelles..."
-                  className={inp() + ' resize-none'} />
+                  className={inp(!requirements && !!error) + ' resize-none'} />
               </div>
             </div>
           )}
@@ -407,131 +411,45 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
             </div>
           )}
 
-          {/* ── Tab 4: Langues & Conditions ─────────────────────────────── */}
-          {tab === 'conditions' && (
-            <div className="space-y-5">
-
-              {/* Langues requises */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <Lbl>Langues requises</Lbl>
-                  <button type="button" onClick={addLanguage}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-snh-green text-white font-semibold hover:bg-snh-green-dark transition">
-                    <Plus size={12} /> Ajouter une langue
-                  </button>
-                </div>
-                {requiredLanguages.length === 0 ? (
-                  <button type="button" onClick={addLanguage}
-                    className="w-full border-2 border-dashed border-slate-200 rounded-xl py-5 text-sm text-slate-400 hover:border-snh-green hover:text-snh-green flex items-center justify-center gap-2 transition">
-                    <Plus size={15} /> Cliquez pour ajouter une exigence linguistique
-                  </button>
-                ) : (
-                  <div className="space-y-2">
-                    {requiredLanguages.map((lang, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <div className="flex-1">
-                          <label className="block text-xs text-slate-500 mb-1">Langue</label>
-                          <input value={lang.language} onChange={e => updLanguage(i, 'language', e.target.value)}
-                            className={inp()} placeholder="Français, Anglais, Espagnol..." />
-                        </div>
-                        <div className="w-44 flex-shrink-0">
-                          <label className="block text-xs text-slate-500 mb-1">Niveau requis</label>
-                          <select value={lang.level} onChange={e => updLanguage(i, 'level', e.target.value)} className={inp()}>
-                            {['Notions', 'Scolaire', 'Intermédiaire', 'Courant', 'Professionnel', 'Bilingue', 'Langue maternelle'].map(l => (
-                              <option key={l}>{l}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <button type="button" onClick={() => delLanguage(i)}
-                          className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition flex-shrink-0">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Conditions de rémunération */}
-              <div className="border-t border-slate-100 pt-4">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Rémunération & Avantages</p>
-                <div className="space-y-4">
-                  <div>
-                    <Lbl>Fourchette salariale</Lbl>
-                    <input value={salaryRange} onChange={e => setSalaryRange(e.target.value)} className={inp()}
-                      placeholder="Ex: 400 000 – 700 000 FCFA/mois" />
-                    <p className="text-xs text-slate-400 mt-1">Laissez vide si confidentiel.</p>
-                  </div>
-                  <div>
-                    <Lbl>Avantages et bénéfices</Lbl>
-                    <textarea value={benefits} onChange={e => setBenefits(e.target.value)} rows={3}
-                      className={inp() + ' resize-none'}
-                      placeholder="Assurance santé, voiture de fonction, tickets restaurant, prime de performance, logement de fonction..." />
-                  </div>
-                </div>
-              </div>
-
-              {/* Autres conditions */}
-              <div className="border-t border-slate-100 pt-4">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Autres conditions</p>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <Lbl>Mode de travail</Lbl>
-                    <select value={workMode} onChange={e => setWorkMode(e.target.value)} className={inp()}>
-                      {WORK_MODES.map(m => <option key={m}>{m}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <Lbl>Disponibilité requise</Lbl>
-                    <select className={inp()} defaultValue="">
-                      <option value="">— Non précisée —</option>
-                      <option>Immédiate</option>
-                      <option>Sous 1 mois</option>
-                      <option>Sous 3 mois</option>
-                      <option>Flexible</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <Lbl>Autres conditions particulières</Lbl>
-                  <textarea value={otherConditions} onChange={e => setOtherConditions(e.target.value)} rows={3}
-                    className={inp() + ' resize-none'}
-                    placeholder="Mobilité géographique, horaires décalés, astreintes, port d'EPI obligatoire, permis B requis..." />
-                </div>
-              </div>
-
-              {/* Récapitulatif */}
-              <div className="border-t border-slate-100 pt-4">
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Récapitulatif de l'offre</p>
-                  <dl className="space-y-2 text-sm">
-                    {[
-                      ['Titre', title || '—'],
-                      ['Référence', reference || '—'],
-                      ['Contrat', contractType],
-                      ['Localisation', location || '—'],
-                      ['Mode de travail', workMode],
-                      ['Statut', status === 'open' ? 'Publiée' : status === 'draft' ? 'Brouillon' : 'Fermée'],
-                      ['Publication', publicationDate || '—'],
-                      ['Clôture', closingDate || 'Non définie'],
-                      ['Postes', String(openingsCount)],
-                      ['Niveau requis', educationLevel || 'Indifférent'],
-                      ['Expérience min.', `${minExperienceYears} an${minExperienceYears > 1 ? 's' : ''}`],
-                      ['Langues', requiredLanguages.filter(l => l.language.trim()).length
-                        ? requiredLanguages.filter(l => l.language.trim()).map(l => `${l.language} (${l.level})`).join(', ')
-                        : '—'],
-                      ['Compétences requises', requiredSkills.length ? requiredSkills.join(', ') : '—'],
-                      ['Compétences bonus', niceToHaveSkills.length ? niceToHaveSkills.join(', ') : '—'],
-                      ['Salaire', salaryRange || 'Confidentiel'],
-                      ['Avantages', benefits || '—'],
-                    ].map(([k, v]) => (
-                      <div key={k} className="flex gap-2">
-                        <dt className="text-slate-500 w-44 flex-shrink-0">{k}</dt>
-                        <dd className="text-slate-800 font-medium break-words">{v}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
+          {/* ── Tab 4: Récapitulatif ────────────────────────────────────── */}
+          {tab === 'recapitulatif' && (
+            <div>
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-4">Récapitulatif de l'offre</p>
+                <dl className="space-y-2.5 text-sm">
+                  {[
+                    ['Poste', title || '—'],
+                    ['Référence', reference || '—'],
+                    ['Contrat', contractType],
+                    ['Localisation', location || '—'],
+                    ['Statut', status === 'open' ? 'Publiée' : status === 'draft' ? 'Brouillon' : 'Fermée'],
+                    ['Publication', publicationDate || '—'],
+                    ['Clôture', closingDate || 'Non définie'],
+                    ['Postes', String(openingsCount)],
+                    ['Direction', dept?.name || '—'],
+                    ['Niveau requis', educationLevel || 'Non défini'],
+                    ['Expérience min.', `${minExperienceYears} an${minExperienceYears > 1 ? 's' : ''}`],
+                    ['Compétences requises', requiredSkills.length ? requiredSkills.join(', ') : '—'],
+                    ['Compétences appréciées', niceToHaveSkills.length ? niceToHaveSkills.join(', ') : '—'],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex gap-2">
+                      <dt className="text-slate-500 w-44 flex-shrink-0">{k}</dt>
+                      <dd className="text-slate-800 font-medium break-words">{v}</dd>
+                    </div>
+                  ))}
+                  {description && (
+                    <div className="pt-2 border-t border-slate-200">
+                      <dt className="text-slate-500 mb-1">Description</dt>
+                      <dd className="text-slate-700 text-xs leading-relaxed whitespace-pre-wrap">{description}</dd>
+                    </div>
+                  )}
+                  {requirements && (
+                    <div className="pt-2 border-t border-slate-200">
+                      <dt className="text-slate-500 mb-1">Profil recherché</dt>
+                      <dd className="text-slate-700 text-xs leading-relaxed whitespace-pre-wrap">{requirements}</dd>
+                    </div>
+                  )}
+                </dl>
               </div>
             </div>
           )}

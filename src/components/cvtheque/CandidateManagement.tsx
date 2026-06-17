@@ -187,7 +187,7 @@ const SPONTANEOUS_TYPE_LABELS: Record<SpontaneousType, string> = {
   emploi: 'Candidature emploi',
   stage_academique: 'Stage académique',
   stage_professionnel: 'Stage professionnel',
-  recommande: 'Candidature recommandée',
+  recommande: 'Candidature avec parrain',
 };
 
 // ── Main component ─────────────────────────────────────────────────────────
@@ -539,10 +539,10 @@ export default function CandidateManagement() {
             <button
               onClick={() => setFilterType(f => f === 'recommande' ? 'all' : 'recommande')}
               className={`flex items-center gap-1.5 px-3 py-2.5 border rounded-xl text-sm font-medium transition ${filterType === 'recommande' ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-slate-200 text-slate-600 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700'}`}
-              title="Afficher uniquement les candidats recommandés"
+              title="Afficher uniquement les candidats parrainés"
             >
               <UserPlus size={14} />
-              Recommandés
+              Parrainés
               {filterType === 'recommande' && <X size={11} className="ml-0.5 opacity-70" />}
             </button>
             <button onClick={() => setShowFilters(v => !v)}
@@ -567,7 +567,7 @@ export default function CandidateManagement() {
                   <option value="offre">Sur offre publiée</option>
                   <option value="emploi">Emploi (spontanée)</option>
                   <option value="stage">Stage (académique / pro)</option>
-                  <option value="recommande">Recommandé(e)</option>
+                  <option value="recommande">Avec parrain</option>
                 </select>
               </div>
               <div>
@@ -592,7 +592,7 @@ export default function CandidateManagement() {
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none">
                   <option value="all">Toutes les sources</option>
                   <option value="spontaneous">Candidature spontanée</option>
-                  <option value="referral">Recommandation interne</option>
+                  <option value="referral">Parrainage interne</option>
                   <option value="linkedin">LinkedIn</option>
                   <option value="job_board">Job board</option>
                   <option value="school">Partenariat école</option>
@@ -646,10 +646,10 @@ export default function CandidateManagement() {
                       const recType = c.recommender_type; // 'internal' | 'external' | null
                       const recBadge = isRecommended
                         ? recType === 'internal'
-                          ? { label: 'Recommandé (SNH)', cls: 'bg-teal-50 text-teal-700 border-teal-200', dot: 'bg-teal-500' }
+                          ? { label: 'Parrainé (SNH)', cls: 'bg-teal-50 text-teal-700 border-teal-200', dot: 'bg-teal-500' }
                           : recType === 'external'
-                          ? { label: 'Recommandé (ext.)', cls: 'bg-orange-50 text-orange-700 border-orange-200', dot: 'bg-orange-500' }
-                          : { label: 'Recommandé', cls: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-400' }
+                          ? { label: 'Parrainé (ext.)', cls: 'bg-orange-50 text-orange-700 border-orange-200', dot: 'bg-orange-500' }
+                          : { label: 'Parrainé', cls: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-400' }
                         : null;
                       return (
                         <tr key={c.id} className="hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => openCandidate(c)}>
@@ -1213,7 +1213,7 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
   const [coverLetter, setCoverLetter] = useState(() => initApp?.cover_letter || '');
   const [internalNotes, setInternalNotes] = useState(() => initApp?.internal_notes || '');
   const [source, setSource] = useState(() => ic?.source || 'spontaneous');
-  // Recommandeur
+  // Parrain
   const [recommenderType, setRecommenderType] = useState<'internal' | 'external'>(() => (ic?.recommender_type as 'internal' | 'external') || 'internal');
   const [recommenderName, setRecommenderName] = useState(() => ic?.recommender_name || '');
   const [recommenderContact, setRecommenderContact] = useState(() => ic?.recommender_contact || '');
@@ -1713,14 +1713,14 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
                   ))}
                 </div>
               </div>
-              {/* ── Recommandeur (visible seulement si type = recommande) ── */}
+              {/* ── Parrain (visible seulement si type = recommande) ── */}
               {appType === 'recommande' && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
                   <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <UserPlus size={13} /> Informations du recommandeur
+                    <UserPlus size={13} /> Informations du parrain
                   </p>
                   <div>
-                    <FL>Type de recommandeur</FL>
+                    <FL>Type de parrain</FL>
                     <div className="flex gap-2">
                       <button type="button" onClick={() => setRecommenderType('internal')}
                         className={`flex-1 py-2 px-3 rounded-lg border text-xs font-semibold transition ${recommenderType === 'internal' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200 hover:border-teal-300'}`}>
@@ -1733,7 +1733,7 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
                     </div>
                   </div>
                   <div>
-                    <FL>{recommenderType === 'internal' ? 'Nom de l\'agent SNH' : 'Nom du recommandeur'}</FL>
+                    <FL>{recommenderType === 'internal' ? 'Nom de l\'agent SNH' : 'Nom du parrain'}</FL>
                     <input value={recommenderName} onChange={e => setRecommenderName(e.target.value)} className={fi()} placeholder={recommenderType === 'internal' ? 'Ex : Jean MBELLA, Chef de service...' : 'Ex : Dr. Martin BIYA...'} />
                   </div>
                   <div>
@@ -1754,7 +1754,7 @@ function AddCandidateModal({ jobs, onClose, onCreated, initialCandidate }: { job
                 <FL>Source / Provenance</FL>
                 <select value={source} onChange={e=>setSource(e.target.value)} className={fi()}>
                   <option value="spontaneous">Candidature spontanée</option>
-                  <option value="referral">Recommandation interne</option>
+                  <option value="referral">Parrainage interne</option>
                   <option value="linkedin">LinkedIn</option>
                   <option value="job_board">Job board</option>
                   <option value="school">Partenariat école</option>
@@ -2552,18 +2552,18 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
                     job_board: 'Job board', school: 'École partenaire', portal: 'Portail candidats', other: 'Autre' }[c.source] || c.source
                 } />}
               </div>
-              {/* Bloc recommandeur */}
+              {/* Bloc parrain */}
               {(app?.spontaneous_type === 'recommande' || c.source === 'referral') && (
                 <div className={`rounded-xl border p-4 ${c.recommender_type === 'internal' ? 'bg-teal-50 border-teal-200' : c.recommender_type === 'external' ? 'bg-orange-50 border-orange-200' : 'bg-amber-50 border-amber-200'}`}>
                   <div className="flex items-center gap-2 mb-2">
                     <UserPlus size={14} className={c.recommender_type === 'internal' ? 'text-teal-600' : c.recommender_type === 'external' ? 'text-orange-600' : 'text-amber-600'} />
                     <span className={`text-xs font-semibold uppercase tracking-wider ${c.recommender_type === 'internal' ? 'text-teal-700' : c.recommender_type === 'external' ? 'text-orange-700' : 'text-amber-700'}`}>
-                      {c.recommender_type === 'internal' ? 'Recommandé par un Agent SNH' : c.recommender_type === 'external' ? 'Recommandé par une personnalité extérieure' : 'Candidature recommandée'}
+                      {c.recommender_type === 'internal' ? 'Parrainé par un Agent SNH' : c.recommender_type === 'external' ? 'Parrainé par une personnalité extérieure' : 'Candidature avec parrain'}
                     </span>
                   </div>
                   {c.recommender_name && <p className="text-sm font-medium text-slate-800">{c.recommender_name}</p>}
                   {c.recommender_contact && <p className="text-xs text-slate-500 mt-0.5">{c.recommender_contact}</p>}
-                  {!c.recommender_name && !c.recommender_contact && <p className="text-xs text-slate-400 italic">Aucun détail sur le recommandeur</p>}
+                  {!c.recommender_name && !c.recommender_contact && <p className="text-xs text-slate-400 italic">Aucun détail sur le parrain</p>}
                 </div>
               )}
               <div className="flex gap-3 flex-wrap">

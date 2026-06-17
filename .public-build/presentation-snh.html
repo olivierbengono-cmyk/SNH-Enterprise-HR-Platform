@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Présentation — Portail Candidat & CVthèque SNH</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    :root {
+      --snh-green: #006B3F;
+      --snh-gold:  #FCD116;
+      --snh-red:   #CE1126;
+      --snh-dark:  #0f2d52;
+      --gray-50:   #f8fafc;
+      --gray-100:  #f1f5f9;
+      --gray-200:  #e2e8f0;
+      --gray-300:  #cbd5e1;
+      --gray-400:  #94a3b8;
+      --gray-500:  #64748b;
+      --gray-600:  #475569;
+      --gray-700:  #334155;
+      --gray-800:  #1e293b;
+      --gray-900:  #0f172a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f0f4f8; color: var(--gray-800); font-size: 10pt; }
+
+    @media print {
+      body { background: white; font-size: 9pt; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none !important; }
+      .screen { box-shadow: none !important; border: 1px solid #ddd !important; }
+      @page { margin: 15mm 12mm; size: A4; }
+    }
+
+    /* ── Print button ── */
+    .no-print {
+      position: fixed; top: 20px; right: 20px; z-index: 1000;
+      display: flex; gap: 10px;
+    }
+    .no-print button {
+      padding: 10px 20px; border: none; border-radius: 8px;
+      font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .no-print button:hover { opacity: .85; }
+    .btn-print { background: var(--snh-green); color: white; }
+    .btn-close  { background: var(--gray-500); color: white; }
+
+    /* ── Document wrapper ── */
+    .document { max-width: 210mm; margin: 0 auto; background: white; }
+
+    /* ── Cover page ── */
+    .cover {
+      min-height: 297mm; display: flex; flex-direction: column;
+      background: linear-gradient(160deg, #0a1f3d 0%, #0f2d52 45%, #1a3a6b 100%);
+      color: white; position: relative; overflow: hidden;
+    }
+    .cover::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 80% 20%, rgba(0,107,63,.3) 0%, transparent 60%),
+                  radial-gradient(ellipse at 10% 80%, rgba(252,209,22,.1) 0%, transparent 50%);
+    }
+    .cover-tricolor {
+      height: 4px; background: linear-gradient(90deg, var(--snh-green) 33.3%, var(--snh-gold) 33.3% 66.6%, var(--snh-red) 66.6%);
+      flex-shrink: 0; position: relative; z-index: 2;
+    }
+    .cover-body { flex: 1; display: flex; flex-direction: column; padding: 40px 50px; position: relative; z-index: 2; }
+    .cover-logo { display: flex; align-items: center; gap: 16px; margin-bottom: 60px; }
+    .cover-logo-img { width: 64px; height: 64px; background: white; border-radius: 12px; padding: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .cover-logo-img img { width: 100%; height: 100%; object-fit: contain; }
+    .cover-logo-text { font-size: 13pt; font-weight: 700; letter-spacing: .5px; }
+    .cover-logo-sub  { font-size: 9pt; color: rgba(255,255,255,.6); margin-top: 2px; }
+
+    .cover-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(0,107,63,.3); border: 1px solid rgba(0,107,63,.5);
+      color: #6ee7b7; padding: 6px 14px; border-radius: 20px;
+      font-size: 8pt; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+      margin-bottom: 24px; width: fit-content;
+    }
+    .cover-badge::before { content: ''; width: 6px; height: 6px; background: #6ee7b7; border-radius: 50%; }
+
+    .cover-title { font-size: 30pt; font-weight: 900; line-height: 1.1; margin-bottom: 12px; }
+    .cover-title span { color: var(--snh-gold); }
+    .cover-subtitle { font-size: 13pt; color: rgba(255,255,255,.7); font-weight: 300; max-width: 420px; line-height: 1.5; margin-bottom: 40px; }
+
+    .cover-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 60px; }
+    .chip {
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+      padding: 8px 16px; border-radius: 20px; font-size: 9pt; font-weight: 500; color: white;
+    }
+
+    .cover-footer {
+      margin-top: auto; padding-top: 40px; border-top: 1px solid rgba(255,255,255,.1);
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .cover-date { font-size: 9pt; color: rgba(255,255,255,.5); }
+    .cover-dest {
+      text-align: right; font-size: 8pt; color: rgba(255,255,255,.5);
+      line-height: 1.6;
+    }
+    .cover-dest strong { color: rgba(255,255,255,.8); display: block; font-size: 10pt; margin-bottom: 2px; }
+
+    /* ── Section pages ── */
+    .section-page { padding: 40px 50px; min-height: 297mm; display: flex; flex-direction: column; }
+    .section-header { margin-bottom: 28px; }
+    .section-tag {
+      display: inline-block; background: #dcfce7; color: var(--snh-green);
+      padding: 4px 12px; border-radius: 12px; font-size: 7.5pt; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px;
+    }
+    .section-tag.admin { background: #eff6ff; color: var(--snh-dark); }
+    .section-tag.feature { background: #fef9c3; color: #92400e; }
+    .section-title { font-size: 18pt; font-weight: 800; color: var(--gray-900); margin-bottom: 6px; }
+    .section-desc { font-size: 10pt; color: var(--gray-500); line-height: 1.5; max-width: 500px; }
+
+    /* ── Screen mockup ── */
+    .screen-wrapper { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+    .screen {
+      border-radius: 12px; overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.08);
+      border: 1px solid var(--gray-200);
+    }
+    .screen-bar {
+      height: 32px; background: #e8ecef; display: flex; align-items: center;
+      padding: 0 12px; gap: 6px; flex-shrink: 0;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #febc2e; }
+    .dot-g { background: #28c840; }
+    .url-bar {
+      flex: 1; margin: 0 10px; background: white; border-radius: 4px;
+      padding: 3px 10px; font-size: 8pt; color: var(--gray-500);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .url-bar::before { content: '🔒'; font-size: 8pt; }
+    .screen-content { background: #f8fafc; }
+
+    /* ── Portal mockup ── */
+    .portal-layout { display: flex; min-height: 420px; }
+    .portal-sidebar {
+      width: 220px; background: #0f2d52; color: white; flex-shrink: 0;
+      display: flex; flex-direction: column; padding: 0;
+    }
+    .sidebar-tricolor { height: 3px; background: linear-gradient(90deg, var(--snh-green) 33.3%, var(--snh-gold) 33.3% 66.6%, var(--snh-red) 66.6%); }
+    .sidebar-logo { padding: 14px 16px 10px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,.1); }
+    .sidebar-logo-img { width: 32px; height: 32px; background: white; border-radius: 6px; padding: 3px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .sidebar-logo-img img { width: 100%; height: 100%; object-fit: contain; }
+    .sidebar-logo-text { font-size: 8pt; font-weight: 700; }
+    .sidebar-logo-sub  { font-size: 6.5pt; color: rgba(255,255,255,.5); }
+    .sidebar-profile { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .sidebar-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11pt; font-weight: 700; color: white; margin-bottom: 6px;
+    }
+    .sidebar-name { font-size: 8.5pt; font-weight: 600; }
+    .sidebar-email { font-size: 7pt; color: rgba(255,255,255,.5); }
+    .sidebar-progress { margin-top: 8px; }
+    .sidebar-progress-label { font-size: 7pt; color: rgba(255,255,255,.5); margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .sidebar-bar { height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; }
+    .sidebar-bar-fill { height: 100%; background: var(--snh-gold); border-radius: 2px; }
+    .sidebar-nav { flex: 1; padding: 10px 0; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 16px; font-size: 8pt; color: rgba(255,255,255,.65);
+      cursor: pointer; transition: all .15s;
+    }
+    .nav-item.active {
+      background: rgba(0,107,63,.35); color: white; font-weight: 600;
+      border-right: 3px solid var(--snh-gold);
+    }
+    .nav-icon { width: 16px; height: 16px; opacity: .7; flex-shrink: 0; }
+    .nav-item.active .nav-icon { opacity: 1; }
+    .nav-badge {
+      margin-left: auto; background: var(--snh-red); color: white;
+      font-size: 6pt; font-weight: 700; padding: 1px 5px; border-radius: 8px;
+    }
+
+    .portal-main { flex: 1; padding: 16px; overflow: hidden; }
+    .portal-main-header { margin-bottom: 12px; }
+    .portal-main-title { font-size: 13pt; font-weight: 800; color: var(--gray-900); }
+    .portal-main-sub   { font-size: 8pt; color: var(--gray-400); margin-top: 2px; }
+
+    /* KPI Cards */
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .kpi-card {
+      background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px 12px;
+    }
+    .kpi-label { font-size: 7pt; color: var(--gray-400); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+    .kpi-value { font-size: 16pt; font-weight: 800; color: var(--gray-900); margin-top: 2px; }
+    .kpi-sub   { font-size: 6.5pt; color: var(--gray-400); margin-top: 1px; }
+    .kpi-dot   { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; }
+
+    /* Content sections */
+    .content-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+    .card { background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px; }
+    .card-title { font-size: 8pt; font-weight: 700; color: var(--gray-700); margin-bottom: 8px; border-bottom: 1px solid var(--gray-100); padding-bottom: 5px; }
+    .job-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--gray-50); }
+    .job-icon { width: 24px; height: 24px; background: #eff6ff; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+    .job-info { flex: 1; }
+    .job-title-text { font-size: 7.5pt; font-weight: 600; color: var(--gray-800); }
+    .job-meta { font-size: 6.5pt; color: var(--gray-400); margin-top: 1px; }
+    .badge {
+      display: inline-block; padding: 2px 7px; border-radius: 10px;
+      font-size: 6pt; font-weight: 700; border: 1px solid;
+    }
+    .badge-green  { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+    .badge-amber  { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+    .badge-blue   { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .badge-violet { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+    .badge-gray   { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+
+    .app-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--gray-50); }
+    .app-avatar { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: 700; color: white; flex-shrink: 0; }
+
+    /* ── Public landing ── */
+    .landing { background: linear-gradient(160deg, #0a1f3d 0%, #0f2d52 60%, #14336b 100%); color: white; }
+    .landing-tricolor { height: 3px; background: linear-gradient(90deg, var(--snh-green) 33.3%, var(--snh-gold) 33.3% 66.6%, var(--snh-red) 66.6%); }
+    .landing-nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; }
+    .landing-nav-logo { display: flex; align-items: center; gap: 10px; }
+    .landing-nav-logo-img { width: 32px; height: 32px; background: white; border-radius: 6px; padding: 3px; overflow: hidden; }
+    .landing-nav-logo-img img { width: 100%; height: 100%; object-fit: contain; }
+    .landing-nav-name  { font-size: 9pt; font-weight: 700; }
+    .landing-nav-btns  { display: flex; gap: 8px; }
+    .btn-outline { border: 1px solid rgba(255,255,255,.3); background: transparent; color: white; padding: 5px 14px; border-radius: 6px; font-size: 8pt; font-weight: 500; }
+    .btn-solid   { background: var(--snh-green); color: white; border: none; padding: 5px 14px; border-radius: 6px; font-size: 8pt; font-weight: 600; }
+    .landing-hero { padding: 32px 24px 24px; }
+    .landing-hero-tag { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,107,63,.25); border: 1px solid rgba(0,107,63,.4); color: #6ee7b7; padding: 4px 12px; border-radius: 20px; font-size: 7.5pt; font-weight: 600; margin-bottom: 14px; }
+    .landing-hero-title { font-size: 20pt; font-weight: 900; line-height: 1.15; margin-bottom: 8px; }
+    .landing-hero-title span { color: var(--snh-gold); }
+    .landing-hero-desc { font-size: 9pt; color: rgba(255,255,255,.65); line-height: 1.5; max-width: 360px; margin-bottom: 18px; }
+    .landing-hero-btns { display: flex; gap: 10px; margin-bottom: 24px; }
+    .btn-hero-primary { background: var(--snh-green); color: white; border: none; padding: 9px 20px; border-radius: 8px; font-size: 9pt; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .btn-hero-secondary { background: rgba(255,255,255,.1); color: white; border: 1px solid rgba(255,255,255,.2); padding: 9px 20px; border-radius: 8px; font-size: 9pt; font-weight: 500; }
+
+    .job-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .job-card { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 12px; }
+    .job-card-dept { font-size: 7pt; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+    .job-card-title { font-size: 9pt; font-weight: 700; margin-bottom: 5px; }
+    .job-card-meta { font-size: 7pt; color: rgba(255,255,255,.5); margin-bottom: 8px; }
+    .job-card-btn { background: var(--snh-green); color: white; border: none; padding: 4px 12px; border-radius: 5px; font-size: 7.5pt; font-weight: 600; }
+
+    /* ── Profile edit ── */
+    .profile-layout { display: flex; min-height: 380px; }
+    .profile-content { flex: 1; padding: 14px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .form-field { display: flex; flex-direction: column; gap: 3px; }
+    .form-label { font-size: 7pt; font-weight: 600; color: var(--gray-600); }
+    .form-label .req { color: var(--snh-red); }
+    .form-input {
+      height: 28px; border: 1px solid var(--gray-200); border-radius: 5px;
+      padding: 0 8px; font-size: 8pt; color: var(--gray-700); background: white;
+    }
+    .form-input.filled { border-color: var(--gray-300); color: var(--gray-800); }
+    .photo-preview { width: 72px; height: 72px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 22pt; font-weight: 700; color: white; margin-bottom: 6px; }
+    .tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--gray-100); margin-bottom: 12px; }
+    .tab { padding: 6px 14px; font-size: 8pt; font-weight: 500; color: var(--gray-400); border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; }
+    .tab.active { color: var(--snh-green); border-bottom-color: var(--snh-green); font-weight: 700; }
+
+    /* ── Admin mockup ── */
+    .admin-layout { display: flex; min-height: 460px; }
+    .admin-sidebar {
+      width: 200px; background: white; border-right: 1px solid var(--gray-200);
+      flex-shrink: 0; padding: 12px 0;
+    }
+    .admin-sidebar-header { padding: 0 14px 12px; margin-bottom: 6px; border-bottom: 1px solid var(--gray-100); }
+    .admin-logo-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+    .admin-logo-img { width: 28px; height: 28px; background: var(--snh-dark); border-radius: 5px; padding: 2px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .admin-logo-img img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0) invert(1); }
+    .admin-logo-title { font-size: 9pt; font-weight: 800; color: var(--gray-900); }
+    .admin-logo-role  { font-size: 7pt; color: var(--gray-400); }
+    .admin-nav-group { padding: 0 8px; margin-bottom: 4px; }
+    .admin-nav-label { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--gray-400); padding: 6px 6px 3px; }
+    .admin-nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 6px; font-size: 8pt;
+      color: var(--gray-600); cursor: pointer;
+    }
+    .admin-nav-item.active { background: #f0fdf4; color: var(--snh-green); font-weight: 600; }
+    .admin-nav-badge { margin-left: auto; background: #fee2e2; color: var(--snh-red); font-size: 6pt; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
+    .admin-main { flex: 1; padding: 14px; background: var(--gray-50); overflow: hidden; }
+    .admin-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .admin-page-title { font-size: 13pt; font-weight: 800; color: var(--gray-900); }
+    .admin-page-sub   { font-size: 8pt; color: var(--gray-400); margin-top: 1px; }
+    .admin-actions    { display: flex; gap: 8px; align-items: center; }
+    .btn-admin-primary { background: var(--snh-green); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 8pt; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .btn-admin-outline { background: white; border: 1px solid var(--gray-200); color: var(--gray-700); padding: 6px 14px; border-radius: 6px; font-size: 8pt; font-weight: 500; }
+
+    .admin-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .stat-card { background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px 12px; }
+    .stat-val { font-size: 18pt; font-weight: 900; color: var(--gray-900); }
+    .stat-lbl { font-size: 7pt; color: var(--gray-400); text-transform: uppercase; letter-spacing: .4px; margin-top: 1px; }
+
+    .admin-content { display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px; }
+    .candidates-table { background: white; border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; }
+    .table-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 8px; padding: 8px 12px; background: var(--gray-50); border-bottom: 1px solid var(--gray-100); font-size: 7pt; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: .4px; }
+    .table-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--gray-50); align-items: center; }
+    .cand-info { display: flex; align-items: center; gap: 7px; }
+    .cand-avatar { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 7.5pt; font-weight: 700; color: white; flex-shrink: 0; }
+    .cand-name { font-size: 7.5pt; font-weight: 600; color: var(--gray-800); }
+    .cand-pos  { font-size: 6.5pt; color: var(--gray-400); margin-top: 1px; }
+    .table-cell { font-size: 7.5pt; color: var(--gray-600); }
+
+    .pipeline-panel { background: white; border: 1px solid var(--gray-200); border-radius: 8px; padding: 12px; }
+    .pipeline-title { font-size: 9pt; font-weight: 700; color: var(--gray-800); margin-bottom: 10px; }
+    .pipeline-steps { display: flex; flex-direction: column; gap: 6px; }
+    .pipeline-step { display: flex; align-items: center; gap: 8px; }
+    .step-dot { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: 700; color: white; flex-shrink: 0; }
+    .step-dot.done    { background: var(--snh-green); }
+    .step-dot.current { background: #2563eb; }
+    .step-dot.pending { background: var(--gray-200); color: var(--gray-400); }
+    .step-info { flex: 1; }
+    .step-name  { font-size: 8pt; font-weight: 600; color: var(--gray-700); }
+    .step-sub   { font-size: 6.5pt; color: var(--gray-400); }
+    .step-count { font-size: 7pt; font-weight: 700; color: var(--gray-500); }
+    .step-line  { width: 2px; height: 14px; background: var(--gray-100); margin-left: 9px; }
+
+    /* ── Features page ── */
+    .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .feature-block { border: 1px solid var(--gray-200); border-radius: 10px; padding: 18px; background: white; }
+    .feature-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16pt; margin-bottom: 10px; }
+    .feature-title { font-size: 11pt; font-weight: 700; color: var(--gray-900); margin-bottom: 6px; }
+    .feature-desc { font-size: 9pt; color: var(--gray-500); line-height: 1.55; }
+    .feature-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+    .ftag { background: var(--gray-100); color: var(--gray-600); padding: 2px 8px; border-radius: 10px; font-size: 7pt; font-weight: 500; }
+
+    /* ── Closing page ── */
+    .closing { min-height: 297mm; background: linear-gradient(160deg, #0a1f3d 0%, #0f2d52 100%); color: white; display: flex; flex-direction: column; padding: 50px; position: relative; overflow: hidden; }
+    .closing::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 80% 20%, rgba(0,107,63,.25) 0%, transparent 60%);
+    }
+    .closing-content { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .closing-badge { display: inline-block; background: rgba(252,209,22,.15); border: 1px solid rgba(252,209,22,.3); color: var(--snh-gold); padding: 5px 14px; border-radius: 20px; font-size: 8pt; font-weight: 600; margin-bottom: 20px; width: fit-content; }
+    .closing-title { font-size: 24pt; font-weight: 900; line-height: 1.2; margin-bottom: 16px; }
+    .closing-title span { color: var(--snh-gold); }
+    .closing-desc { font-size: 11pt; color: rgba(255,255,255,.7); line-height: 1.6; max-width: 480px; margin-bottom: 40px; }
+    .closing-contact { border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 20px 24px; max-width: 380px; }
+    .closing-contact-title { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: rgba(255,255,255,.5); margin-bottom: 12px; }
+    .contact-item-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 9pt; color: rgba(255,255,255,.8); }
+    .contact-icon-box { width: 28px; height: 28px; background: rgba(0,107,63,.3); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11pt; flex-shrink: 0; }
+    .closing-footer { position: relative; z-index: 2; border-top: 1px solid rgba(255,255,255,.1); padding-top: 20px; margin-top: 30px; display: flex; justify-content: space-between; align-items: center; }
+    .closing-footer-logo { font-size: 8pt; color: rgba(255,255,255,.5); }
+    .closing-footer-page { font-size: 8pt; color: rgba(255,255,255,.3); }
+  </style>
+</head>
+<body>
+
+<div class="no-print">
+  <button class="btn-print" onclick="window.print()">🖨 Imprimer / Exporter PDF</button>
+</div>
+
+<div class="document">
+
+  <!-- ════════════════════════════════════════════════════════════
+       PAGE 1 : COUVERTURE
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="cover">
+    <div class="cover-tricolor"></div>
+    <div class="cover-body">
+
+      <div class="cover-logo">
+        <div class="cover-logo-img">
+          <img src="/logoSNH.png" alt="SNH" onerror="this.parentNode.innerHTML='<svg viewBox=\'0 0 40 40\' fill=\'none\'><text x=\'50%\' y=\'58%\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-size=\'11\' font-weight=\'800\' fill=\'%230f2d52\'>SNH</text></svg>'" />
+        </div>
+        <div>
+          <div class="cover-logo-text">Société Nationale des Hydrocarbures</div>
+          <div class="cover-logo-sub">SIRH — Solution Numérique RH</div>
+        </div>
+      </div>
+
+      <div class="cover-badge">Dossier de Présentation Technique</div>
+
+      <div class="cover-title">
+        Portail Candidat &<br><span>CVthèque Intelligente</span>
+      </div>
+      <div class="cover-subtitle">
+        Solution de gestion du recrutement et de l'acquisition de talents,
+        intégrée au SIRH SNH.
+      </div>
+
+      <div class="cover-chips">
+        <span class="chip">Portail candidat bilingue</span>
+        <span class="chip">CVthèque & matching IA</span>
+        <span class="chip">Pipeline de recrutement</span>
+        <span class="chip">Notifications temps réel</span>
+        <span class="chip">Génération CV PDF + Logo SNH</span>
+        <span class="chip">Gestion des documents</span>
+        <span class="chip">Contrôle des accès par rôle</span>
+      </div>
+
+      <div class="cover-footer">
+        <div class="cover-date">
+          Document préparé le 17 juin 2026<br>
+          <span style="color:rgba(255,255,255,.35);font-size:8pt;">Version 1.0 — Usage interne SNH</span>
+        </div>
+        <div class="cover-dest">
+          <strong>Direction des Ressources Humaines</strong>
+          Société Nationale des Hydrocarbures<br>
+          Yaoundé, République du Cameroun
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       PAGE 2 : PORTAIL PUBLIC — LANDING PAGE
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section-page page-break">
+    <div class="section-header">
+      <div class="section-tag">Module 1 — Accès Public</div>
+      <div class="section-title">Page d'accueil du Portail Candidat</div>
+      <div class="section-desc">
+        Interface publique accessible sans compte. Les candidats découvrent les offres d'emploi
+        publiées par la SNH et s'inscrivent en quelques clics.
+      </div>
+    </div>
+    <div class="screen-wrapper">
+      <div class="screen">
+        <div class="screen-bar">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          <div class="url-bar">candidatures.snh.cm</div>
+        </div>
+        <div class="screen-content">
+          <div class="landing">
+            <div class="landing-tricolor"></div>
+            <div class="landing-nav">
+              <div class="landing-nav-logo">
+                <div class="landing-nav-logo-img">
+                  <img src="/logoSNH.png" alt="SNH" onerror="this.style.display='none'" />
+                </div>
+                <div>
+                  <div class="landing-nav-name">SNH — Espace Candidats</div>
+                </div>
+              </div>
+              <div class="landing-nav-btns">
+                <button class="btn-outline">EN / FR</button>
+                <button class="btn-outline">Se connecter</button>
+                <button class="btn-solid">Créer un compte</button>
+              </div>
+            </div>
+            <div class="landing-hero" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+              <div>
+                <div class="landing-hero-tag">
+                  <span style="width:6px;height:6px;background:#6ee7b7;border-radius:50%;display:inline-block;"></span>
+                  Offres ouvertes · Juin 2026
+                </div>
+                <div class="landing-hero-title">Rejoignez la <span>SNH</span>,<br>bâtissons le Cameroun</div>
+                <div class="landing-hero-desc">
+                  Découvrez les opportunités de carrière au sein de la Société Nationale
+                  des Hydrocarbures et déposez votre candidature en ligne.
+                </div>
+                <div class="landing-hero-btns">
+                  <button class="btn-hero-primary">Voir les offres ↓</button>
+                  <button class="btn-hero-secondary">Candidature spontanée</button>
+                </div>
+                <div style="display:flex;gap:20px;margin-top:8px;">
+                  <div style="text-align:center;">
+                    <div style="font-size:14pt;font-weight:900;color:var(--snh-gold);">12</div>
+                    <div style="font-size:7pt;color:rgba(255,255,255,.5);">Offres actives</div>
+                  </div>
+                  <div style="text-align:center;">
+                    <div style="font-size:14pt;font-weight:900;color:var(--snh-gold);">3</div>
+                    <div style="font-size:7pt;color:rgba(255,255,255,.5);">Stages disponibles</div>
+                  </div>
+                  <div style="text-align:center;">
+                    <div style="font-size:14pt;font-weight:900;color:var(--snh-gold);">247</div>
+                    <div style="font-size:7pt;color:rgba(255,255,255,.5);">Candidats inscrits</div>
+                  </div>
+                </div>
+              </div>
+              <div class="job-cards">
+                <div class="job-card">
+                  <div class="job-card-dept">Direction Technique</div>
+                  <div class="job-card-title">Ingénieur Réservoir Senior</div>
+                  <div class="job-card-meta">📍 Yaoundé · CDI · BAC+5</div>
+                  <button class="job-card-btn">Postuler</button>
+                </div>
+                <div class="job-card">
+                  <div class="job-card-dept">Direction Financière</div>
+                  <div class="job-card-title">Contrôleur de Gestion</div>
+                  <div class="job-card-meta">📍 Douala · CDI · BAC+5</div>
+                  <button class="job-card-btn">Postuler</button>
+                </div>
+                <div class="job-card">
+                  <div class="job-card-dept">DSI</div>
+                  <div class="job-card-title">Développeur Full-Stack</div>
+                  <div class="job-card-meta">📍 Yaoundé · CDD · BAC+4</div>
+                  <button class="job-card-btn">Postuler</button>
+                </div>
+                <div class="job-card" style="opacity:.6;">
+                  <div class="job-card-dept">Direction Juridique</div>
+                  <div class="job-card-title">Juriste d'Affaires</div>
+                  <div class="job-card-meta">📍 Yaoundé · CDI · BAC+5</div>
+                  <button class="job-card-btn">Postuler</button>
+                </div>
+                <div class="job-card" style="opacity:.4;">
+                  <div class="job-card-dept">DRH</div>
+                  <div class="job-card-title">Stage académique</div>
+                  <div class="job-card-meta">📍 Yaoundé · Stage · BAC+4</div>
+                  <button class="job-card-btn">Postuler</button>
+                </div>
+                <div class="job-card" style="opacity:.25;display:flex;align-items:center;justify-content:center;">
+                  <div style="font-size:8pt;color:rgba(255,255,255,.4);text-align:center;">+7 offres…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:4px;">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;">
+          <div style="font-size:7pt;font-weight:700;color:var(--snh-green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Inscription rapide</div>
+          <div style="font-size:8.5pt;color:var(--gray-700);line-height:1.4;">Création de compte en moins de 2 minutes — nom, email et mot de passe.</div>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;">
+          <div style="font-size:7pt;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Interface bilingue</div>
+          <div style="font-size:8.5pt;color:var(--gray-700);line-height:1.4;">Bascule FR / EN en un clic, tout le portail s'adapte instantanément.</div>
+        </div>
+        <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:12px;">
+          <div style="font-size:7pt;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Candidature spontanée</div>
+          <div style="font-size:8.5pt;color:var(--gray-700);line-height:1.4;">Possibilité de déposer une candidature hors offre publiée (emploi, stage académique ou professionnel).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       PAGE 3 : TABLEAU DE BORD CANDIDAT
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section-page page-break">
+    <div class="section-header">
+      <div class="section-tag">Module 2 — Espace Candidat</div>
+      <div class="section-title">Tableau de bord personnel du candidat</div>
+      <div class="section-desc">
+        Après connexion, chaque candidat dispose d'un espace personnalisé lui permettant
+        de suivre ses candidatures, compléter son profil et recevoir des notifications.
+      </div>
+    </div>
+    <div class="screen-wrapper">
+      <div class="screen">
+        <div class="screen-bar">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          <div class="url-bar">candidatures.snh.cm/dashboard</div>
+        </div>
+        <div class="screen-content">
+          <div class="portal-layout">
+            <div class="portal-sidebar">
+              <div class="sidebar-tricolor"></div>
+              <div class="sidebar-logo">
+                <div class="sidebar-logo-img">
+                  <img src="/logoSNH.png" alt="SNH" onerror="this.style.display='none'" />
+                </div>
+                <div>
+                  <div class="sidebar-logo-text">Portail Candidat</div>
+                  <div class="sidebar-logo-sub">SNH — Recrutement</div>
+                </div>
+              </div>
+              <div class="sidebar-profile">
+                <div class="sidebar-avatar">AN</div>
+                <div class="sidebar-name">Aline NGUEMA</div>
+                <div class="sidebar-email">a.nguema@gmail.com</div>
+                <div class="sidebar-progress">
+                  <div class="sidebar-progress-label">
+                    <span>Profil complété</span><span style="color:var(--snh-gold);font-weight:700;">74%</span>
+                  </div>
+                  <div class="sidebar-bar"><div class="sidebar-bar-fill" style="width:74%"></div></div>
+                </div>
+              </div>
+              <div class="sidebar-nav">
+                <div class="nav-item active">
+                  <svg class="nav-icon" fill="currentColor" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+                  Tableau de bord
+                </div>
+                <div class="nav-item">
+                  <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 16 16" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+                  Mon profil
+                </div>
+                <div class="nav-item">
+                  <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 16 16" stroke-width="1.5"><path d="M2 4h12M2 8h8M2 12h10"/></svg>
+                  Mes candidatures
+                  <span class="nav-badge">2</span>
+                </div>
+                <div class="nav-item">
+                  <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 16 16" stroke-width="1.5"><path d="M3 3h10v10H3zM3 6h10M7 3v10"/></svg>
+                  Mes documents
+                </div>
+                <div class="nav-item">
+                  <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 16 16" stroke-width="1.5"><circle cx="8" cy="8" r="5"/><path d="M8 6v3l2 1"/></svg>
+                  Notifications
+                  <span class="nav-badge">3</span>
+                </div>
+                <div class="nav-item">
+                  <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 16 16" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M6 8h4M8 6v4"/></svg>
+                  Générer mon CV
+                </div>
+                <div class="nav-item">
+                  <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 16 16" stroke-width="1.5"><path d="M2 11l6-8 6 8"/></svg>
+                  Offres d'emploi
+                </div>
+              </div>
+            </div>
+            <div class="portal-main">
+              <div class="portal-main-header">
+                <div class="portal-main-title">Bonjour, Aline 👋</div>
+                <div class="portal-main-sub">Mardi 17 juin 2026 · Voici un résumé de votre activité</div>
+              </div>
+              <div class="kpi-row">
+                <div class="kpi-card">
+                  <div class="kpi-label">Candidatures</div>
+                  <div class="kpi-value" style="color:#2563eb;">3</div>
+                  <div class="kpi-sub"><span class="kpi-dot" style="background:#2563eb;"></span>dont 2 actives</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">Profil</div>
+                  <div class="kpi-value" style="color:var(--snh-gold);">74%</div>
+                  <div class="kpi-sub">Ajouter votre CV</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">Documents</div>
+                  <div class="kpi-value" style="color:var(--snh-green);">4</div>
+                  <div class="kpi-sub">CV, LM, diplôme…</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">Notifications</div>
+                  <div class="kpi-value" style="color:var(--snh-red);">3</div>
+                  <div class="kpi-sub">Non lues</div>
+                </div>
+              </div>
+              <div class="content-grid">
+                <div class="card">
+                  <div class="card-title">Mes candidatures récentes</div>
+                  <div class="app-row">
+                    <div class="app-avatar" style="background:#2563eb;">IR</div>
+                    <div style="flex:1;">
+                      <div style="font-size:7.5pt;font-weight:600;color:var(--gray-800);">Ingénieur Réservoir Senior</div>
+                      <div style="font-size:6.5pt;color:var(--gray-400);">Soumis le 14 juin 2026</div>
+                    </div>
+                    <span class="badge badge-amber">En examen</span>
+                  </div>
+                  <div class="app-row">
+                    <div class="app-avatar" style="background:#7c3aed;">CG</div>
+                    <div style="flex:1;">
+                      <div style="font-size:7.5pt;font-weight:600;color:var(--gray-800);">Contrôleur de Gestion</div>
+                      <div style="font-size:6.5pt;color:var(--gray-400);">Soumis le 10 juin 2026</div>
+                    </div>
+                    <span class="badge badge-violet">Entretien</span>
+                  </div>
+                  <div class="app-row">
+                    <div class="app-avatar" style="background:var(--gray-400);">SA</div>
+                    <div style="flex:1;">
+                      <div style="font-size:7.5pt;font-weight:600;color:var(--gray-800);">Stage académique — DRH</div>
+                      <div style="font-size:6.5pt;color:var(--gray-400);">Soumis le 2 juin 2026</div>
+                    </div>
+                    <span class="badge badge-gray">Soumis</span>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-title">Notifications récentes</div>
+                  <div style="display:flex;flex-direction:column;gap:7px;">
+                    <div style="border-left:3px solid #2563eb;padding:6px 8px;background:#eff6ff;border-radius:0 5px 5px 0;">
+                      <div style="font-size:7.5pt;font-weight:700;color:var(--gray-800);">Dossier mis à jour</div>
+                      <div style="font-size:6.5pt;color:var(--gray-500);margin-top:1px;">Votre candidature "Ingénieur Réservoir" est passée en statut <strong>En examen</strong>.</div>
+                      <div style="font-size:6pt;color:var(--gray-400);margin-top:3px;">Il y a 2 heures</div>
+                    </div>
+                    <div style="border-left:3px solid #7c3aed;padding:6px 8px;background:#f5f3ff;border-radius:0 5px 5px 0;">
+                      <div style="font-size:7.5pt;font-weight:700;color:var(--gray-800);">Entretien planifié</div>
+                      <div style="font-size:6.5pt;color:var(--gray-500);margin-top:1px;">"Contrôleur de Gestion" — nouveau statut : <strong>Entretien</strong>.</div>
+                      <div style="font-size:6pt;color:var(--gray-400);margin-top:3px;">Hier, 14h32</div>
+                    </div>
+                    <div style="border-left:3px solid var(--snh-green);padding:6px 8px;background:#f0fdf4;border-radius:0 5px 5px 0;">
+                      <div style="font-size:7.5pt;font-weight:700;color:var(--gray-800);">Candidature reçue</div>
+                      <div style="font-size:6.5pt;color:var(--gray-500);margin-top:1px;">Votre candidature "Stage DRH" a bien été reçue par l'équipe RH.</div>
+                      <div style="font-size:6pt;color:var(--gray-400);margin-top:3px;">02 juin 2026</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       PAGE 4 : PROFIL & CV
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section-page page-break">
+    <div class="section-header">
+      <div class="section-tag">Module 3 — Profil & CV</div>
+      <div class="section-title">Édition du profil et génération de CV</div>
+      <div class="section-desc">
+        Le candidat renseigne ses informations personnelles, expériences, formations et compétences.
+        Un CV professionnel (classique ou moderne) avec logo SNH est généré en un clic.
+      </div>
+    </div>
+    <div class="screen-wrapper">
+      <div class="screen">
+        <div class="screen-bar">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          <div class="url-bar">candidatures.snh.cm/profil</div>
+        </div>
+        <div class="screen-content">
+          <div class="profile-layout">
+            <div class="portal-sidebar">
+              <div class="sidebar-tricolor"></div>
+              <div class="sidebar-logo">
+                <div class="sidebar-logo-img"><img src="/logoSNH.png" alt="SNH" onerror="this.style.display='none'" /></div>
+                <div><div class="sidebar-logo-text">Portail Candidat</div></div>
+              </div>
+              <div class="sidebar-nav" style="padding-top:8px;">
+                <div class="nav-item">
+                  <svg class="nav-icon" fill="currentColor" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+                  Tableau de bord
+                </div>
+                <div class="nav-item active">
+                  <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 16 16" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+                  Mon profil
+                </div>
+                <div class="nav-item">
+                  <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 16 16" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M6 8h4M8 6v4"/></svg>
+                  Générer mon CV
+                </div>
+              </div>
+            </div>
+            <div class="profile-content">
+              <div class="tab-bar">
+                <div class="tab active">Informations</div>
+                <div class="tab">Formations</div>
+                <div class="tab">Expériences</div>
+                <div class="tab">Compétences</div>
+                <div class="tab">Langues</div>
+                <div class="tab">Générer CV</div>
+              </div>
+              <div style="display:flex;gap:14px;align-items:flex-start;">
+                <div>
+                  <div class="photo-preview">AN</div>
+                  <div style="font-size:6.5pt;color:var(--gray-400);text-align:center;">Photo profil</div>
+                </div>
+                <div style="flex:1;">
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <div class="form-label">Prénom <span class="req">*</span></div>
+                      <div class="form-input filled">Aline</div>
+                    </div>
+                    <div class="form-field">
+                      <div class="form-label">Nom <span class="req">*</span></div>
+                      <div class="form-input filled">NGUEMA</div>
+                    </div>
+                    <div class="form-field">
+                      <div class="form-label">Date de naissance <span class="req">*</span></div>
+                      <div class="form-input filled">12/03/1995</div>
+                    </div>
+                    <div class="form-field">
+                      <div class="form-label">Genre</div>
+                      <div class="form-input filled">Femme</div>
+                    </div>
+                    <div class="form-field">
+                      <div class="form-label">Téléphone principal <span class="req">*</span></div>
+                      <div class="form-input filled">+237 699 123 456</div>
+                    </div>
+                    <div class="form-field">
+                      <div class="form-label">Nationalité</div>
+                      <div class="form-input filled">Camerounaise</div>
+                    </div>
+                    <div class="form-field">
+                      <div class="form-label">Ville de résidence</div>
+                      <div class="form-input filled">Yaoundé</div>
+                    </div>
+                    <div class="form-field">
+                      <div class="form-label">Poste souhaité</div>
+                      <div class="form-input filled">Ingénieure Réservoir</div>
+                    </div>
+                  </div>
+                  <div class="form-field">
+                    <div class="form-label">À propos de vous</div>
+                    <div style="border:1px solid var(--gray-200);border-radius:5px;padding:6px 8px;font-size:7.5pt;color:var(--gray-600);height:42px;line-height:1.4;">Ingénieure pétrolière avec 4 ans d'expérience dans la modélisation de réservoir et l'optimisation de production. Maîtrise des logiciels ECLIPSE et Petrel...</div>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top:10px;display:flex;justify-content:flex-end;gap:8px;">
+                <button style="background:var(--snh-green);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:8pt;font-weight:600;">Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       PAGE 5 : INTERFACE ADMINISTRATEUR — CVTHÈQUE
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section-page page-break">
+    <div class="section-header">
+      <div class="section-tag admin">Module 4 — Administration RH</div>
+      <div class="section-title">CVthèque & Gestion des candidatures</div>
+      <div class="section-desc">
+        Interface réservée aux gestionnaires RH. Vue complète des candidats, pipeline de recrutement
+        et gestion des offres avec contrôle des accès par rôle.
+      </div>
+    </div>
+    <div class="screen-wrapper">
+      <div class="screen">
+        <div class="screen-bar">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          <div class="url-bar">sirh.snh.cm/recrutement</div>
+        </div>
+        <div class="screen-content">
+          <div class="admin-layout">
+            <div class="admin-sidebar">
+              <div class="admin-sidebar-header">
+                <div class="admin-logo-row">
+                  <div class="admin-logo-img"><img src="/logoSNH.png" alt="SNH" onerror="this.style.display='none'" /></div>
+                  <div>
+                    <div class="admin-logo-title">SIRH SNH</div>
+                    <div class="admin-logo-role">Responsable Recrutement</div>
+                  </div>
+                </div>
+              </div>
+              <div class="admin-nav-group">
+                <div class="admin-nav-label">Tableau de bord</div>
+                <div class="admin-nav-item">📊 Vue d'ensemble</div>
+              </div>
+              <div class="admin-nav-group">
+                <div class="admin-nav-label">Recrutement</div>
+                <div class="admin-nav-item active">🗂 CVthèque
+                  <span class="admin-nav-badge">8</span>
+                </div>
+                <div class="admin-nav-item">📋 Offres d'emploi</div>
+                <div class="admin-nav-item">📈 Analytique</div>
+              </div>
+              <div class="admin-nav-group">
+                <div class="admin-nav-label">RH Général</div>
+                <div class="admin-nav-item">👥 Employés</div>
+                <div class="admin-nav-item">📆 Congés</div>
+                <div class="admin-nav-item">⚙️ Paramètres</div>
+              </div>
+            </div>
+            <div class="admin-main">
+              <div class="admin-topbar">
+                <div>
+                  <div class="admin-page-title">CVthèque</div>
+                  <div class="admin-page-sub">Gestion des candidats et du pipeline de recrutement</div>
+                </div>
+                <div class="admin-actions">
+                  <button class="btn-admin-outline">🔍 Filtrer</button>
+                  <button class="btn-admin-outline">📤 Exporter</button>
+                  <button class="btn-admin-primary">+ Ajouter un candidat</button>
+                </div>
+              </div>
+              <div class="admin-stats">
+                <div class="stat-card">
+                  <div class="stat-val">247</div>
+                  <div class="stat-lbl">Candidats</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-val" style="color:#2563eb;">38</div>
+                  <div class="stat-lbl">En cours</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-val" style="color:var(--snh-gold);">12</div>
+                  <div class="stat-lbl">En entretien</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-val" style="color:var(--snh-green);">5</div>
+                  <div class="stat-lbl">Titularisé(e)s</div>
+                </div>
+              </div>
+              <div class="admin-content">
+                <div class="candidates-table">
+                  <div class="table-header">
+                    <span>Candidat</span><span>Poste visé</span><span>Statut</span><span>Date</span>
+                  </div>
+                  <div class="table-row">
+                    <div class="cand-info">
+                      <div class="cand-avatar" style="background:#2563eb;">AN</div>
+                      <div><div class="cand-name">Aline NGUEMA</div><div class="cand-pos">Yaoundé</div></div>
+                    </div>
+                    <div class="table-cell" style="font-size:7pt;">Ingénieur Réservoir</div>
+                    <span class="badge badge-amber">En examen</span>
+                    <div class="table-cell">14 juin</div>
+                  </div>
+                  <div class="table-row">
+                    <div class="cand-info">
+                      <div class="cand-avatar" style="background:#7c3aed;">PM</div>
+                      <div><div class="cand-name">Pierre MVONDO</div><div class="cand-pos">Douala</div></div>
+                    </div>
+                    <div class="table-cell" style="font-size:7pt;">Contrôleur de Gestion</div>
+                    <span class="badge badge-violet">Entretien</span>
+                    <div class="table-cell">10 juin</div>
+                  </div>
+                  <div class="table-row">
+                    <div class="cand-info">
+                      <div class="cand-avatar" style="background:#059669;">SF</div>
+                      <div><div class="cand-name">Sophie FOUDA</div><div class="cand-pos">Yaoundé</div></div>
+                    </div>
+                    <div class="table-cell" style="font-size:7pt;">Juriste d'Affaires</div>
+                    <span class="badge badge-blue">Offre</span>
+                    <div class="table-cell">5 juin</div>
+                  </div>
+                  <div class="table-row">
+                    <div class="cand-info">
+                      <div class="cand-avatar" style="background:#dc2626;">JN</div>
+                      <div><div class="cand-name">Jean NKOMO</div><div class="cand-pos">Bafoussam</div></div>
+                    </div>
+                    <div class="table-cell" style="font-size:7pt;">Dév. Full-Stack</div>
+                    <span class="badge badge-green">Essai</span>
+                    <div class="table-cell">1 juin</div>
+                  </div>
+                  <div class="table-row" style="opacity:.6;">
+                    <div class="cand-info">
+                      <div class="cand-avatar" style="background:#9333ea;">CE</div>
+                      <div><div class="cand-name">Clarisse ESSONO</div><div class="cand-pos">Yaoundé</div></div>
+                    </div>
+                    <div class="table-cell" style="font-size:7pt;">DRH — Stage</div>
+                    <span class="badge badge-gray">Soumis</span>
+                    <div class="table-cell">2 juin</div>
+                  </div>
+                </div>
+                <div class="pipeline-panel">
+                  <div class="pipeline-title">Pipeline — Pierre MVONDO</div>
+                  <div class="pipeline-steps">
+                    <div class="pipeline-step">
+                      <div class="step-dot done">✓</div>
+                      <div class="step-info"><div class="step-name">Soumis</div><div class="step-sub">10 juin 2026</div></div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="pipeline-step">
+                      <div class="step-dot done">✓</div>
+                      <div class="step-info"><div class="step-name">En examen</div><div class="step-sub">12 juin 2026</div></div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="pipeline-step">
+                      <div class="step-dot current">→</div>
+                      <div class="step-info"><div class="step-name">Entretien</div><div class="step-sub">En cours</div></div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="pipeline-step">
+                      <div class="step-dot pending">4</div>
+                      <div class="step-info"><div class="step-name">Offre</div><div class="step-sub">À venir</div></div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="pipeline-step">
+                      <div class="step-dot pending">5</div>
+                      <div class="step-info"><div class="step-name">Essai</div><div class="step-sub">À venir</div></div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="pipeline-step">
+                      <div class="step-dot pending">6</div>
+                      <div class="step-info"><div class="step-name">Titularisé(e)</div><div class="step-sub">À venir</div></div>
+                    </div>
+                  </div>
+                  <div style="margin-top:14px;padding:8px;background:var(--gray-50);border-radius:6px;border:1px solid var(--gray-200);">
+                    <div style="font-size:7pt;font-weight:700;color:var(--gray-600);margin-bottom:5px;">Actions rapides</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                      <span class="badge badge-violet" style="cursor:pointer;padding:3px 8px;">Entretien</span>
+                      <span class="badge badge-blue"   style="cursor:pointer;padding:3px 8px;">Offre</span>
+                      <span class="badge badge-green"  style="cursor:pointer;padding:3px 8px;">Essai</span>
+                      <span class="badge badge-gray"   style="cursor:pointer;padding:3px 8px;background:#fee2e2;color:var(--snh-red);">Refusé</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       PAGE 6 : FONCTIONNALITÉS CLÉS
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="section-page page-break">
+    <div class="section-header">
+      <div class="section-tag feature">Récapitulatif des fonctionnalités</div>
+      <div class="section-title">Fonctionnalités du module Recrutement</div>
+      <div class="section-desc">
+        Vue synthétique de l'ensemble des fonctions couvertes par le portail candidat
+        et l'interface d'administration RH.
+      </div>
+    </div>
+    <div class="features-grid">
+      <div class="feature-block">
+        <div class="feature-icon" style="background:#f0fdf4;">🌐</div>
+        <div class="feature-title">Portail public bilingue</div>
+        <div class="feature-desc">
+          Page d'accueil publique présentant les offres SNH en temps réel. Interface
+          disponible en français et en anglais, sans installation requise.
+        </div>
+        <div class="feature-tags">
+          <span class="ftag">FR / EN</span>
+          <span class="ftag">Responsive</span>
+          <span class="ftag">Sans compte</span>
+        </div>
+      </div>
+      <div class="feature-block">
+        <div class="feature-icon" style="background:#eff6ff;">📋</div>
+        <div class="feature-title">Profil candidat complet</div>
+        <div class="feature-desc">
+          Saisie structurée des informations personnelles (date de naissance obligatoire),
+          formations, expériences, compétences, langues et liens professionnels.
+        </div>
+        <div class="feature-tags">
+          <span class="ftag">Taux de complétion</span>
+          <span class="ftag">Photo profil</span>
+          <span class="ftag">Validation</span>
+        </div>
+      </div>
+      <div class="feature-block">
+        <div class="feature-icon" style="background:#fef9c3;">📄</div>
+        <div class="feature-title">Génération de CV PDF</div>
+        <div class="feature-desc">
+          Deux templates professionnels (Classique SNH + Moderne), générant un PDF
+          prêt à l'impression incluant le logo SNH, la photo et la date de naissance.
+        </div>
+        <div class="feature-tags">
+          <span class="ftag">Template Classique</span>
+          <span class="ftag">Template Moderne</span>
+          <span class="ftag">Logo SNH</span>
+        </div>
+      </div>
+      <div class="feature-block">
+        <div class="feature-icon" style="background:#f5f3ff;">📬</div>
+        <div class="feature-title">Candidature & documents</div>
+        <div class="feature-desc">
+          Dépôt de candidature sur offre publiée ou spontanée (emploi, stage académique
+          ≤ 2 mois, stage professionnel) avec pièces jointes vérifiées.
+        </div>
+        <div class="feature-tags">
+          <span class="ftag">CDI / CDD</span>
+          <span class="ftag">Stage acad. ≤ 2 mois</span>
+          <span class="ftag">Lettre de motivation</span>
+        </div>
+      </div>
+      <div class="feature-block">
+        <div class="feature-icon" style="background:#fff1f2;">🔔</div>
+        <div class="feature-title">Notifications automatiques</div>
+        <div class="feature-desc">
+          À chaque évolution du dossier (examen, entretien, offre, essai, titularisation,
+          refus), le candidat reçoit une notification dans son espace en temps réel.
+        </div>
+        <div class="feature-tags">
+          <span class="ftag">Trigger SQL</span>
+          <span class="ftag">Temps réel</span>
+          <span class="ftag">Historique</span>
+        </div>
+      </div>
+      <div class="feature-block">
+        <div class="feature-icon" style="background:#f0fdf4;">🗂</div>
+        <div class="feature-title">Pipeline de recrutement (RH)</div>
+        <div class="feature-desc">
+          Interface admin avec 6 étapes : Soumis → En examen → Entretien → Offre →
+          Essai → Titularisé(e). Publication d'offres réservée aux rôles privilégiés.
+        </div>
+        <div class="feature-tags">
+          <span class="ftag">6 étapes</span>
+          <span class="ftag">Rôles</span>
+          <span class="ftag">Brouillon → Publié</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;background:linear-gradient(135deg,#0a1f3d,#0f2d52);border-radius:12px;padding:18px 22px;color:white;">
+      <div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.5);margin-bottom:8px;">Stack technique</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:white;padding:5px 12px;border-radius:16px;font-size:8pt;font-weight:500;">React + TypeScript</span>
+        <span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:white;padding:5px 12px;border-radius:16px;font-size:8pt;font-weight:500;">Vite + Tailwind CSS</span>
+        <span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:white;padding:5px 12px;border-radius:16px;font-size:8pt;font-weight:500;">Supabase (PostgreSQL + Auth)</span>
+        <span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:white;padding:5px 12px;border-radius:16px;font-size:8pt;font-weight:500;">RLS & Triggers SQL</span>
+        <span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:white;padding:5px 12px;border-radius:16px;font-size:8pt;font-weight:500;">Edge Functions (Deno)</span>
+        <span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:white;padding:5px 12px;border-radius:16px;font-size:8pt;font-weight:500;">Génération PDF HTML</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       PAGE 7 : PAGE DE CLÔTURE
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="closing page-break">
+    <div class="cover-tricolor" style="position:relative;z-index:2;"></div>
+    <div class="closing-content">
+      <div class="closing-badge">Demande de déploiement</div>
+      <div class="closing-title">
+        Prêt à être déployé<br>au service de la <span>SNH</span>
+      </div>
+      <div class="closing-desc">
+        La solution est fonctionnelle, sécurisée et conforme aux besoins identifiés
+        par la Direction des Ressources Humaines. Elle est prête pour une mise en production
+        au sein de l'infrastructure SNH dans les meilleurs délais.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:30px;max-width:500px;">
+        <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:14px;">
+          <div style="font-size:8pt;color:rgba(255,255,255,.4);margin-bottom:4px;">Délai de déploiement</div>
+          <div style="font-size:13pt;font-weight:800;color:var(--snh-gold);">2–4 semaines</div>
+          <div style="font-size:7.5pt;color:rgba(255,255,255,.5);margin-top:2px;">Configuration + formation</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:14px;">
+          <div style="font-size:8pt;color:rgba(255,255,255,.4);margin-bottom:4px;">Infrastructure</div>
+          <div style="font-size:13pt;font-weight:800;color:var(--snh-gold);">Cloud sécurisé</div>
+          <div style="font-size:7.5pt;color:rgba(255,255,255,.5);margin-top:2px;">Hébergement Supabase Pro</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:14px;">
+          <div style="font-size:8pt;color:rgba(255,255,255,.4);margin-bottom:4px;">Conformité sécurité</div>
+          <div style="font-size:13pt;font-weight:800;color:var(--snh-gold);">RLS + Rôles</div>
+          <div style="font-size:7.5pt;color:rgba(255,255,255,.5);margin-top:2px;">Contrôle d'accès granulaire</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:14px;">
+          <div style="font-size:8pt;color:rgba(255,255,255,.4);margin-bottom:4px;">Formation utilisateurs</div>
+          <div style="font-size:13pt;font-weight:800;color:var(--snh-gold);">Incluse</div>
+          <div style="font-size:7.5pt;color:rgba(255,255,255,.5);margin-top:2px;">RH + managers + candidats</div>
+        </div>
+      </div>
+    </div>
+    <div class="closing-footer">
+      <div class="closing-footer-logo">
+        SNH — SIRH · Portail Candidats & CVthèque · Document confidentiel
+      </div>
+      <div class="closing-footer-page">Juin 2026</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

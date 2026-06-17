@@ -258,6 +258,7 @@ export default function CandidatePortal() {
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [section, setSection] = useState<Section>('dashboard');
   const [loading, setLoading] = useState(false);
+  const [loadingJobs, setLoadingJobs] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openJobs, setOpenJobs] = useState<JobOpening[]>([]);
   const [matches, setMatches] = useState<JobMatch[]>([]);
@@ -276,7 +277,7 @@ export default function CandidatePortal() {
   useEffect(() => {
     // Load public jobs and master skills list immediately — no auth required
     supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false })
-      .then(({ data }) => { if (data) setOpenJobs(data as JobOpening[]); });
+      .then(({ data }) => { setOpenJobs((data || []) as JobOpening[]); setLoadingJobs(false); });
     supabase.from('skills').select('id, name, category, description').order('category').order('name')
       .then(({ data }) => { if (data) setMasterSkills(data as MasterSkill[]); });
     // Check session silently — if logged in, transition to portal view without spinner
@@ -377,7 +378,7 @@ export default function CandidatePortal() {
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
       <div className="w-14 h-14 bg-white rounded-xl shadow-md flex items-center justify-center overflow-hidden p-1">
-        <img src="/logoSNH.png" alt="SNH" className="h-full w-auto object-contain" />
+        <img src="/logoSNHFINAL.png" alt="SNH" className="h-full w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
       </div>
       <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: SNH_GREEN }} />
       <p className="text-sm text-gray-500">Chargement de votre espace…</p>
@@ -392,7 +393,7 @@ export default function CandidatePortal() {
         onLogin={() => openAuth('login')}
         onRegister={() => openAuth('register')}
         onApply={(jobId) => openAuth('login', jobId)}
-        loadingJobs={loading}
+        loadingJobs={loadingJobs}
         lang={lang} setLang={setLang}
       />
       {view === 'auth' && (
@@ -434,8 +435,8 @@ export default function CandidatePortal() {
         {/* Logo */}
         <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-100 shadow-sm">
-              <img src="/logoSNH.png" alt="SNH" className="h-7 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-100 shadow-sm p-1">
+              <img src="/logoSNHFINAL.png" alt="SNH" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
             </div>
           </div>
           {/* Close button (mobile only) */}
@@ -629,22 +630,29 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       {/* ── Header / Hero ── */}
-      <header className="bg-white relative">
+      <header className="relative" style={{ background: `linear-gradient(145deg, #004d2e 0%, ${SNH_GREEN} 50%, #005c37 100%)` }}>
         {/* Tricolor accent line at top */}
         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
 
         {/* Navbar */}
-        <div className="relative max-w-5xl mx-auto px-6 pt-6 pb-4 flex items-center justify-between border-b border-gray-100">
-          <img src="/logoSNH.png" alt="SNH" className="h-10 w-auto object-contain flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+        <div className="relative max-w-5xl mx-auto px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg p-1">
+              <img src="/logoSNHFINAL.png" alt="SNH" className="w-full h-full object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
+            </div>
+            <div>
+              <div className="text-white font-bold text-sm leading-tight">Société Nationale</div>
+              <div className="text-white/60 text-xs">des Hydrocarbures</div>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             {/* Language toggle */}
             <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
-              className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 transition">
+              className="flex items-center gap-1.5 px-3 py-2 border border-white/30 rounded-lg text-sm font-bold text-white hover:bg-white/10 transition">
               <Globe size={14} /> {lang === 'fr' ? 'EN' : 'FR'}
             </button>
             <button onClick={onLogin}
-              className="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition hover:bg-gray-50"
-              style={{ borderColor: SNH_GREEN, color: SNH_GREEN }}>
+              className="flex items-center gap-2 px-4 py-2 border border-white/40 rounded-lg text-sm font-medium text-white transition hover:bg-white/10">
               <LogIn size={15} /> {TR[lang].login}
             </button>
             <button onClick={onRegister}
@@ -656,16 +664,15 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
         </div>
 
         {/* Hero content */}
-        <div className="max-w-5xl mx-auto px-6 py-12 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5"
-            style={{ background: `${SNH_GREEN}12`, color: SNH_GREEN, border: `1px solid ${SNH_GREEN}30` }}>
+        <div className="max-w-5xl mx-auto px-6 py-14 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5 bg-white/10 border border-white/20 text-white">
             <Sparkles size={12} /> {openJobs.length} {TR[lang].available}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-4 tracking-tight" style={{ color: SNH_GREEN }}>
+          <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-4 tracking-tight text-white">
             {TR[lang].heroTitle}<br />
-            <span className="font-light text-2xl text-gray-600">{TR[lang].heroSub}</span>
+            <span className="font-light text-2xl text-white/75">{TR[lang].heroSub}</span>
           </h1>
-          <p className="text-gray-500 text-base max-w-2xl mx-auto mb-8">
+          <p className="text-white/70 text-base max-w-2xl mx-auto mb-8">
             {TR[lang].heroDesc}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-xl mx-auto">
@@ -674,12 +681,12 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
               <input
                 value={search} onChange={e => setSearch(e.target.value)}
                 placeholder={TR[lang].searchPlaceholder}
-                className="w-full pl-9 pr-4 py-3 rounded-xl text-gray-900 text-sm outline-none border border-gray-200 focus:ring-2 focus:border-transparent shadow-sm"
-                style={{ '--tw-ring-color': SNH_GREEN } as any}
+                className="w-full pl-9 pr-4 py-3 rounded-xl text-gray-900 text-sm outline-none border-0 focus:ring-2 shadow-md"
+                style={{ '--tw-ring-color': SNH_GOLD } as any}
               />
             </div>
             <select value={filterContract} onChange={e => setFilterContract(e.target.value)}
-              className="px-4 py-3 rounded-xl text-gray-700 text-sm outline-none bg-white border border-gray-200 shadow-sm min-w-[160px]">
+              className="px-4 py-3 rounded-xl text-gray-700 text-sm outline-none bg-white border-0 shadow-md min-w-[160px]">
               <option value="">{TR[lang].allContracts}</option>
               {contracts.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -846,7 +853,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
         <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN}, ${SNH_GOLD}, ${SNH_RED})` }} />
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between text-xs text-gray-400 flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <img src="/logoSNH.png" alt="SNH" className="h-6 w-auto" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+            <img src="/logoSNHFINAL.png" alt="SNH" className="h-6 w-auto" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
             <p>© {new Date().getFullYear()} Société Nationale des Hydrocarbures — Tous droits réservés</p>
           </div>
           <p>{lang === 'fr' ? 'Portail de recrutement officiel' : 'Official recruitment portal'}</p>
@@ -911,9 +918,9 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose, lang = 'fr' }: {
             <X size={14} className="text-white" />
           </button>
           <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md overflow-hidden">
-            <img src="/logoSNH.png" alt="SNH" className="h-10 w-auto" onError={e => {
+            <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto" onError={e => {
               const el = e.target as HTMLImageElement;
-              el.style.display = 'none';
+              el.src='/logoSNH.png';
               el.parentElement!.innerHTML = authMode === 'login'
                 ? '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#006B3C" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>'
                 : '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#006B3C" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>';

@@ -276,7 +276,7 @@ export default function CandidatePortal() {
 
   useEffect(() => {
     // Load public jobs and master skills list immediately — no auth required
-    supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false })
+    supabase.from('job_openings').select('*').eq('status', 'open').or('closing_date.is.null,closing_date.gte.' + new Date().toISOString().split('T')[0]).order('publication_date', { ascending: false })
       .then(({ data }) => { setOpenJobs((data || []) as JobOpening[]); setLoadingJobs(false); });
     supabase.from('skills').select('id, name, category, description').order('category').order('name')
       .then(({ data }) => { if (data) setMasterSkills(data as MasterSkill[]); });
@@ -311,7 +311,7 @@ export default function CandidatePortal() {
         supabase.from('candidate_documents').select('*').eq('candidate_id', cand.id).order('uploaded_at', { ascending: false }),
         supabase.from('candidate_applications').select('*,job_opening:job_openings(id,title)').eq('candidate_id', cand.id).order('created_at', { ascending: false }),
         supabase.from('candidate_job_matches').select('*, job_opening:job_openings(*)').eq('candidate_id', cand.id).order('match_score', { ascending: false }),
-        supabase.from('job_openings').select('*').eq('status', 'open').order('publication_date', { ascending: false }),
+        supabase.from('job_openings').select('*').eq('status', 'open').or('closing_date.is.null,closing_date.gte.' + new Date().toISOString().split('T')[0]).order('publication_date', { ascending: false }),
         supabase.from('notifications').select('*').eq('user_id', userId).eq('category', 'recruitment').order('created_at', { ascending: false }).limit(30),
       ]);
       setExperiences((expRes.data || []) as Experience[]);

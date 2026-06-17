@@ -431,7 +431,7 @@ export default function CandidatePortal() {
         md:relative md:translate-x-0 md:w-56 md:flex md:flex-shrink-0 md:sticky md:top-0 md:h-screen
       `}>
         {/* Tricolor top accent */}
-        <div className="h-0.5 flex-shrink-0" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
+        <div className="h-0.5 flex-shrink-0" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
         {/* Logo */}
         <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -632,7 +632,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
       {/* ── Header / Hero ── */}
       <header className="relative" style={{ background: `linear-gradient(145deg, #004d2e 0%, ${SNH_GREEN} 50%, #005c37 100%)` }}>
         {/* Tricolor accent line at top */}
-        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
+        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
 
         {/* Navbar */}
         <div className="relative max-w-5xl mx-auto px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/10">
@@ -830,7 +830,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
 
         {/* Spontaneous CTA */}
         <div className="mt-8 rounded-2xl overflow-hidden border border-green-200 bg-white">
-          <div className="h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
+          <div className="h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
           <div className="p-8 text-center">
             <div className="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center" style={{ background: `${SNH_GREEN}18` }}>
               <Send size={22} style={{ color: SNH_GREEN }} />
@@ -848,7 +848,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
 
       {/* Footer */}
       <footer className="mt-8" style={{ background: `linear-gradient(145deg, #004d2e 0%, ${SNH_GREEN} 60%, #005c37 100%)` }}>
-        <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
+        <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
         <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
@@ -912,7 +912,7 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose, lang = 'fr' }: {
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
         {/* Tricolor top bar */}
-        <div className="h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_GOLD} 50%, ${SNH_RED} 67%)` }} />
+        <div className="h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
         {/* Header */}
         <div className="px-6 pt-6 pb-5 text-center relative" style={{ background: `linear-gradient(135deg, ${SNH_GREEN} 0%, #004d2b 100%)` }}>
           <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition">

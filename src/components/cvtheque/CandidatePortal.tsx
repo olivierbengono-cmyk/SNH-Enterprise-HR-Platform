@@ -81,11 +81,11 @@ const SKILL_CATEGORIES = [
   { value: 'other', label: 'Autre' },
 ];
 const LANG_LEVELS = [
-  { value: 'beginner',     label: 'Débutant',         stars: 1 },
-  { value: 'intermediate', label: 'Intermédiaire',     stars: 2 },
-  { value: 'good',         label: 'Bon niveau',        stars: 3 },
-  { value: 'excellent',    label: 'Courant',           stars: 4 },
-  { value: 'native',       label: 'Natif / Maternel',  stars: 5 },
+  { value: 'beginner',     labelFr: 'Débutant',         labelEn: 'Beginner',    stars: 1 },
+  { value: 'intermediate', labelFr: 'Intermédiaire',     labelEn: 'Intermediate', stars: 2 },
+  { value: 'good',         labelFr: 'Bon niveau',        labelEn: 'Good',        stars: 3 },
+  { value: 'excellent',    labelFr: 'Courant',           labelEn: 'Fluent',      stars: 4 },
+  { value: 'native',       labelFr: 'Natif / Maternel',  labelEn: 'Native',      stars: 5 },
 ];
 const REGIONS_CM = ['Centre','Littoral','Ouest','Nord','Extrême-Nord','Adamaoua','Est','Sud','Nord-Ouest','Sud-Ouest'];
 
@@ -141,6 +141,35 @@ const PROFILE_TR = {
     contractType: 'Type de contrat', expCity: 'Ville',
     startDate: 'Date de début *', endDate: 'Date de fin',
     currentJob: 'Poste actuel', missions: 'Description des missions', missionsPh: 'Vos principales responsabilités et réalisations...',
+    // Skills tab
+    skillsTitle: 'Compétences', skillsSelected: 'sélectionnée', skillsSelectedPlural: 'sélectionnées',
+    closeCatalogue: 'Fermer le catalogue', browseCatalogue: 'Parcourir le catalogue de compétences',
+    skillLevelTitle: 'Niveau par compétence', catTechnical: 'Technique', catSoft: 'Soft Skills',
+    catLanguage: 'Langues', catCertification: 'Certifications', catOther: 'Autres',
+    noResultFor: 'Aucun résultat pour', customSkillPh: 'Compétence personnalisée non listée...',
+    addBtn: 'Ajouter',
+    // Languages tab
+    langTitle: 'Langues parlées', langLevelTitle: 'Évaluation du niveau',
+    langAddPh: 'Ajouter une autre langue (Ex : Espagnol, Arabe…)',
+    langGroupWorld: 'Langues mondiales', langGroupAfrican: 'Langues africaines', langGroupOther: 'Autres',
+    langLevelBeginner: 'Débutant', langLevelIntermediate: 'Intermédiaire',
+    langLevelGood: 'Bon niveau', langLevelExcellent: 'Courant', langLevelNative: 'Natif / Maternel',
+    // CV generator
+    cvPhotoTitle: 'Photo de profil (CV)',
+    cvPhotoHint: 'Format : JPG, PNG, WEBP — max 5 Mo\nPrivilégiez une photo professionnelle (fond neutre, tenue formelle)',
+    cvPhotoUploading: 'Téléversement...', cvPhotoBtn: 'Choisir une photo',
+    cvPhotoTooLarge: 'Photo trop volumineuse (max 5 Mo)', cvPhotoError: 'Erreur upload : ',
+    cvTemplateTitle: 'Modèle de CV',
+    cvTemplateClassicLabel: 'SNH Classique', cvTemplateClassicDesc: 'Colonne latérale marine, photo, style institutionnel',
+    cvTemplateModernLabel: 'Moderne', cvTemplateModernDesc: 'En-tête plein, bicolonne, épuré et contemporain',
+    cvAITitle: 'Amélioration IA (optionnel)',
+    cvAIDesc: 'Décrivez le style souhaité, le poste visé ou les points à mettre en avant. L\'IA améliorera votre résumé professionnel.',
+    cvAIPh: 'Ex : Mets en avant mes compétences en forage et production pétrolière...',
+    cvAIGenerating: 'Génération IA...', cvAIBtn: 'Améliorer avec l\'IA',
+    cvAIGenerated: 'Résumé IA généré', cvAISummaryLabel: 'Résumé IA :',
+    cvAIDone: 'Génération IA terminée.', cvAIError: 'Erreur lors de la génération IA.',
+    cvExportBtn: 'Générer et télécharger le CV (PDF)',
+    cvExportHint: 'Le CV s\'ouvre dans un nouvel onglet — utilisez "Imprimer" → "Enregistrer en PDF"',
   },
   en: {
     tabInfos: 'Personal info', tabFormations: 'Academic path',
@@ -179,6 +208,35 @@ const PROFILE_TR = {
     contractType: 'Contract type', expCity: 'City',
     startDate: 'Start date *', endDate: 'End date',
     currentJob: 'Current position', missions: 'Job description', missionsPh: 'Your main responsibilities and achievements...',
+    // Skills tab
+    skillsTitle: 'Skills', skillsSelected: 'selected', skillsSelectedPlural: 'selected',
+    closeCatalogue: 'Close catalogue', browseCatalogue: 'Browse skills catalogue',
+    skillLevelTitle: 'Level by skill', catTechnical: 'Technical', catSoft: 'Soft Skills',
+    catLanguage: 'Languages', catCertification: 'Certifications', catOther: 'Other',
+    noResultFor: 'No result for', customSkillPh: 'Custom skill not listed...',
+    addBtn: 'Add',
+    // Languages tab
+    langTitle: 'Languages spoken', langLevelTitle: 'Level assessment',
+    langAddPh: 'Add another language (e.g. Spanish, Arabic…)',
+    langGroupWorld: 'World languages', langGroupAfrican: 'African languages', langGroupOther: 'Other',
+    langLevelBeginner: 'Beginner', langLevelIntermediate: 'Intermediate',
+    langLevelGood: 'Good', langLevelExcellent: 'Fluent', langLevelNative: 'Native / Mother tongue',
+    // CV generator
+    cvPhotoTitle: 'Profile photo (CV)',
+    cvPhotoHint: 'Format: JPG, PNG, WEBP — max 5 MB\nUse a professional photo (neutral background, formal attire)',
+    cvPhotoUploading: 'Uploading...', cvPhotoBtn: 'Choose a photo',
+    cvPhotoTooLarge: 'Photo too large (max 5 MB)', cvPhotoError: 'Upload error: ',
+    cvTemplateTitle: 'CV template',
+    cvTemplateClassicLabel: 'SNH Classic', cvTemplateClassicDesc: 'Navy sidebar, photo, institutional style',
+    cvTemplateModernLabel: 'Modern', cvTemplateModernDesc: 'Full header, two-column, clean and contemporary',
+    cvAITitle: 'AI enhancement (optional)',
+    cvAIDesc: 'Describe the desired style, target position or key highlights. AI will improve your professional summary.',
+    cvAIPh: 'Ex: Highlight my drilling and oil production skills...',
+    cvAIGenerating: 'Generating...', cvAIBtn: 'Enhance with AI',
+    cvAIGenerated: 'AI summary generated', cvAISummaryLabel: 'AI summary:',
+    cvAIDone: 'AI generation complete.', cvAIError: 'Error during AI generation.',
+    cvExportBtn: 'Generate and download CV (PDF)',
+    cvExportHint: 'The CV opens in a new tab — use "Print" → "Save as PDF"',
   },
 } as const;
 const SNH_DIRECTIONS = [
@@ -194,7 +252,7 @@ const SNH_DIRECTIONS = [
   'Direction Générale',
   'Sans préférence — Au choix de la SNH',
 ];
-const DOC_TYPES = [
+const DOC_TYPES_FR = [
   { value: 'cv',                  label: 'CV / Curriculum Vitae' },
   { value: 'cover_letter',        label: 'Lettre de motivation' },
   { value: 'diploma',             label: 'Diplôme / Attestation de diplôme' },
@@ -210,6 +268,23 @@ const DOC_TYPES = [
   { value: 'reference',           label: 'Lettre de recommandation' },
   { value: 'other',               label: 'Autre document' },
 ];
+const DOC_TYPES_EN = [
+  { value: 'cv',                  label: 'CV / Curriculum Vitae' },
+  { value: 'cover_letter',        label: 'Cover letter' },
+  { value: 'diploma',             label: 'Diploma / Degree certificate' },
+  { value: 'cni_passport',        label: 'National ID / Passport' },
+  { value: 'employment_cert',     label: 'Employment certificate' },
+  { value: 'work_cert',           label: 'Work certificate' },
+  { value: 'criminal_record',     label: 'Criminal record extract' },
+  { value: 'birth_cert',          label: 'Birth certificate' },
+  { value: 'residence_cert',      label: 'Residence certificate' },
+  { value: 'medical_cert',        label: 'Medical fitness certificate' },
+  { value: 'tax_cert',            label: 'Tax clearance certificate' },
+  { value: 'cnps_cert',           label: 'CNPS certificate' },
+  { value: 'reference',           label: 'Recommendation letter' },
+  { value: 'other',               label: 'Other document' },
+];
+function getDocTypes(lang: 'fr' | 'en') { return lang === 'fr' ? DOC_TYPES_FR : DOC_TYPES_EN; }
 
 const EDU_LEVELS = [
   'CEP', 'BEPC', 'BAC',
@@ -301,6 +376,7 @@ type Section = 'dashboard' | 'profile' | 'documents' | 'jobs' | 'spontaneous' | 
 type Lang = 'fr' | 'en';
 const TR = {
   fr: {
+    // Auth / nav
     login: 'Connexion', signup: 'Créer un compte', loginTitle: 'Connexion à mon espace',
     registerTitle: 'Créer mon compte candidat', snh: 'SNH Recrutement',
     heroTitle: 'Rejoignez la SNH', heroSub: 'et participez à l\'avenir énergétique du Cameroun',
@@ -320,8 +396,109 @@ const TR = {
     jobs: 'Offres d\'emploi', spontaneous: 'Candidature spontanée', applications: 'Mes candidatures',
     notifications: 'Notifications', logout: 'Déconnexion', menu: 'Menu',
     home: 'Accueil', notifs: 'Notifs', more: 'Plus',
+    // Public landing
+    statsPublished: 'Offres publiées', statsContracts: 'Types de contrats',
+    statsLocation: 'Localisation', statsCountry: 'Cameroun',
+    alreadyCandidate: 'Déjà candidat ?', accessMySpace: 'Accéder à mon espace',
+    results: 'résultat', resultsPlural: 'résultats', allPositions: 'Toutes les offres',
+    reset: 'Réinitialiser', closing: 'Clôture :', details: 'Détails',
+    jobDescription: 'Description du poste', profileSought: 'Profil recherché',
+    experience: 'Expérience', year: 'an', years: 'ans', min: 'min.',
+    formation: 'Formation', reference: 'Référence', applyToOffer: 'Postuler à cette offre',
+    footer: 'Société Nationale des Hydrocarbures', rights: 'Tous droits réservés',
+    // Auth modal
+    connectBtn: 'Se connecter', createAccountBtn: 'Créer mon compte',
+    errorNameRequired: 'Prénom et nom requis',
+    errorCredentials: 'Email ou mot de passe incorrect',
+    errorGeneric: 'Une erreur est survenue',
+    // Portal general
+    loadingSpace: 'Chargement de votre espace…', candidate: 'Candidat', profileLabel: 'Profil',
+    mySpace: 'Mon espace', snhRecruitment: 'Recrutement SNH', account: 'Compte',
+    // Dashboard
+    statApplications: 'Candidatures soumises', statJobs: 'Offres disponibles',
+    statInterviews: 'Entretiens planifiés', statProfileComplete: 'Profil complété',
+    completionTitle: 'Complétion du profil', completionBtn: 'Compléter mon profil',
+    itemPersonalInfo: 'Informations personnelles', itemEducation: 'Formations académiques',
+    itemExperience: 'Expériences professionnelles', itemSkills: 'Compétences',
+    itemDocuments: 'Documents justificatifs',
+    activityTitle: 'Activité récente', activityEmpty: 'Aucune activité récente',
+    activitySubmitted: 'Candidature soumise', activityUpdate: 'Mise à jour de statut',
+    matchesTitle: 'Offres recommandées', applied: 'Postulé',
+    // Documents
+    docsExpiredTitle: 'Documents expirés',
+    docsExpiredMsg: 'Veuillez mettre à jour ces documents.',
+    docsSoonTitle: 'Documents expirant bientôt (dans 30 jours)',
+    docsSoonMsg: 'Pensez à renouveler ces documents.',
+    docsInfoTitle: 'À cette étape, seul votre CV est requis',
+    docsInfoMsg: 'Les autres documents (diplômes, CNI, attestations d\'emploi, etc.) vous seront demandés aux étapes suivantes du processus de recrutement.',
+    docsUploadTitle: 'Téléverser votre CV',
+    docsType: 'Type de document', docsExpiry: 'Date d\'expiration (si applicable)',
+    docsUploading: 'Envoi en cours...', docsChooseFile: 'Choisir et téléverser un fichier',
+    docsFormats: 'PDF, Word, JPG, PNG — max 10 Mo',
+    docsMyDocs: 'Mes documents', docsEmpty: 'Aucun document téléversé',
+    docsFileTooLarge: 'Fichier trop volumineux (max 10 Mo)',
+    docsUploadError: 'Erreur upload : ', docsSaveError: 'Erreur lors de l\'enregistrement : ',
+    docsExpiresOn: 'Expire le ', docsExpiredOn: '⚠ Expiré le ', docsSoonOn: '⚠ Expire le ',
+    docsCvLabel: 'CV / Curriculum Vitae',
+    // Job detail modal
+    jdContract: 'Type de contrat', jdLocation: 'Lieu', jdExperience: 'Expérience min.',
+    jdNotSpecified: 'Non précisé', jdEducation: 'Niveau d\'études',
+    jdPublished: 'Publiée le', jdClosing: 'Clôture le',
+    jdDescription: 'Description du poste', jdProfile: 'Profil recherché',
+    jdSkillsRequired: 'Compétences requises', jdSkillsNice: 'Compétences appréciées',
+    jdDocs: 'Documents complémentaires',
+    jdDocsInfo: 'Ces documents seront demandés aux étapes suivantes du processus de sélection.',
+    jdClose: 'Fermer', jdApplyBtn: 'Postuler à cette offre',
+    jdApplyError: 'Impossible de postuler : ', jdRef: 'Réf.',
+    // Jobs section
+    jobsTitle: 'Offres de la Société Nationale des Hydrocarbures',
+    jobsDesc: 'Cliquez sur une offre pour voir le détail. Assurez-vous que votre profil est complet avant de postuler.',
+    jobsSearchPh: 'Rechercher un poste...', jobsAllTypes: 'Tous types de contrat',
+    jobsEmpty: 'Aucune offre trouvée', jobsClosing: 'Clôture', jobsViewOffer: 'Voir l\'offre →',
+    // Spontaneous
+    spontSent: 'Candidature envoyée !',
+    spontSentMsg: 'Votre candidature spontanée a été transmise aux services de la SNH. Vous serez contacté(e) prochainement.',
+    spontBannerTitle: 'Candidature spontanée à la SNH',
+    spontBannerDesc: 'Soumettez votre dossier directement même en l\'absence d\'une offre publiée. Précisez le type de candidature et le poste que vous visez.',
+    spontTypeTitle: 'Type de candidature',
+    spontTypeEmploi: 'Emploi', spontTypeEmploiSub: 'CDI ou CDD à la SNH',
+    spontTypeAcad: 'Stage académique', spontTypeAcadSub: 'Fin d\'études / mémoire',
+    spontTypePro: 'Stage professionnel', spontTypeProSub: 'Perfectionnement / insertion pro',
+    spontDocsTitle: 'Documents complémentaires',
+    spontDocsDesc: 'Vous pouvez soumettre votre candidature dès maintenant. Les pièces justificatives (diplômes, CNI, attestations, etc.) vous seront demandées aux étapes suivantes du processus de sélection.',
+    spontPosteTitle: 'Poste visé', spontPosteLbl: 'Intitulé du poste / fonction *',
+    spontPostePh: 'Ex: Ingénieur Réservoir, Comptable, Juriste...',
+    spontStageTitle: 'Informations sur le stage',
+    spontStageTopic: 'Thème / Sujet du stage',
+    spontStageTopicPh: 'Ex: Optimisation de la récupération assistée du pétrole...',
+    spontStageLevel: 'Niveau d\'études actuel', spontStageLevelPh: '— Sélectionner —',
+    spontStageDuration: 'Durée souhaitée', spontStageStart: 'Date de début souhaitée',
+    spontStageSupervisor: 'Encadreur académique (nom et contact)',
+    spontStageSupervisorPh: 'Ex: Pr. Olivier Kamdem — 699 000 000',
+    spontStageSchool: 'Institution actuelle',
+    spontStageSchoolPh: 'ENSP, Université de Yaoundé I, IUT...',
+    spontConditions: 'Conditions', spontAvail: 'Disponibilité',
+    spontSalary: 'Prétention salariale (FCFA/mois, optionnel)', spontSalaryPh: 'Ex: 600000',
+    spontCoverLetter: 'Lettre de motivation',
+    spontSubmitBtn: 'Envoyer ma candidature à la SNH',
+    spontAvailOptions: ['Immédiatement', 'Dans 1 mois', 'Dans 2 mois', 'Dans 3 mois'],
+    spontDurationAcadOptions: ['1 mois', '2 mois'],
+    spontDurationProOptions: ['1 mois', '2 mois', '3 mois', '4 mois', '6 mois', 'À définir avec la SNH'],
+    // Applications
+    appTitle: 'Mes candidatures SNH', appEmpty: 'Aucune candidature',
+    appAllStatuses: 'Tous les statuts', appPublished: 'Offre publiée',
+    appSpontaneous: 'Candidature spontanée',
+    appConfirm: 'Confirmer ?', appYes: 'Oui', appNo: 'Non',
+    appWithdraw: 'Dépostuler', appWithdrawError: 'Impossible de dépostuler : ',
+    statusNew: 'Soumis', statusReviewing: 'En examen', statusInterview: 'Entretien',
+    statusOffer: 'Offre', statusPreOnboarding: 'Pré-intégration', statusOnboarding: 'Intégration',
+    statusIntegrated: 'Intégré(e)', statusRejected: 'Refusé(e)', statusWithdrawn: 'Retiré(e)',
+    // Notifications
+    notifsNew: 'nouvelle', notifsNewPlural: 'nouvelles', notifsEmpty: 'Aucune notification',
+    notifsNewBadge: 'Nouveau',
   },
   en: {
+    // Auth / nav
     login: 'Log in', signup: 'Create account', loginTitle: 'Log in to my space',
     registerTitle: 'Create candidate account', snh: 'SNH Recruitment',
     heroTitle: 'Join the SNH', heroSub: 'and be part of Cameroon\'s energy future',
@@ -341,6 +518,106 @@ const TR = {
     jobs: 'Job openings', spontaneous: 'Spontaneous', applications: 'My applications',
     notifications: 'Notifications', logout: 'Log out', menu: 'Menu',
     home: 'Home', notifs: 'Notifs', more: 'More',
+    // Public landing
+    statsPublished: 'Open positions', statsContracts: 'Contract types',
+    statsLocation: 'Location', statsCountry: 'Cameroon',
+    alreadyCandidate: 'Already a candidate?', accessMySpace: 'Go to my space',
+    results: 'result', resultsPlural: 'results', allPositions: 'All positions',
+    reset: 'Reset', closing: 'Closing:', details: 'Details',
+    jobDescription: 'Job description', profileSought: 'Required profile',
+    experience: 'Experience', year: 'year', years: 'years', min: 'min.',
+    formation: 'Education', reference: 'Reference', applyToOffer: 'Apply for this position',
+    footer: 'Société Nationale des Hydrocarbures', rights: 'All rights reserved',
+    // Auth modal
+    connectBtn: 'Log in', createAccountBtn: 'Create account',
+    errorNameRequired: 'First and last name required',
+    errorCredentials: 'Incorrect email or password',
+    errorGeneric: 'An error occurred',
+    // Portal general
+    loadingSpace: 'Loading your space…', candidate: 'Candidate', profileLabel: 'Profile',
+    mySpace: 'My space', snhRecruitment: 'SNH Recruitment', account: 'Account',
+    // Dashboard
+    statApplications: 'Applications submitted', statJobs: 'Available positions',
+    statInterviews: 'Interviews scheduled', statProfileComplete: 'Profile completed',
+    completionTitle: 'Profile completion', completionBtn: 'Complete my profile',
+    itemPersonalInfo: 'Personal information', itemEducation: 'Academic background',
+    itemExperience: 'Work experience', itemSkills: 'Skills',
+    itemDocuments: 'Supporting documents',
+    activityTitle: 'Recent activity', activityEmpty: 'No recent activity',
+    activitySubmitted: 'Application submitted', activityUpdate: 'Status update',
+    matchesTitle: 'Recommended positions', applied: 'Applied',
+    // Documents
+    docsExpiredTitle: 'Expired documents',
+    docsExpiredMsg: 'Please update these documents.',
+    docsSoonTitle: 'Documents expiring soon (within 30 days)',
+    docsSoonMsg: 'Remember to renew these documents.',
+    docsInfoTitle: 'At this stage, only your CV is required',
+    docsInfoMsg: 'Other documents (diplomas, ID, employment certificates, etc.) will be requested at subsequent stages of the recruitment process.',
+    docsUploadTitle: 'Upload your CV',
+    docsType: 'Document type', docsExpiry: 'Expiry date (if applicable)',
+    docsUploading: 'Uploading...', docsChooseFile: 'Choose and upload a file',
+    docsFormats: 'PDF, Word, JPG, PNG — max 10 MB',
+    docsMyDocs: 'My documents', docsEmpty: 'No documents uploaded',
+    docsFileTooLarge: 'File too large (max 10 MB)',
+    docsUploadError: 'Upload error: ', docsSaveError: 'Save error: ',
+    docsExpiresOn: 'Expires on ', docsExpiredOn: '⚠ Expired on ', docsSoonOn: '⚠ Expires on ',
+    docsCvLabel: 'CV / Curriculum Vitae',
+    // Job detail modal
+    jdContract: 'Contract type', jdLocation: 'Location', jdExperience: 'Min. experience',
+    jdNotSpecified: 'Not specified', jdEducation: 'Education level',
+    jdPublished: 'Published on', jdClosing: 'Closing on',
+    jdDescription: 'Job description', jdProfile: 'Required profile',
+    jdSkillsRequired: 'Required skills', jdSkillsNice: 'Nice-to-have skills',
+    jdDocs: 'Supporting documents',
+    jdDocsInfo: 'These documents will be requested at subsequent stages of the selection process.',
+    jdClose: 'Close', jdApplyBtn: 'Apply for this position',
+    jdApplyError: 'Unable to apply: ', jdRef: 'Ref.',
+    // Jobs section
+    jobsTitle: 'Société Nationale des Hydrocarbures Positions',
+    jobsDesc: 'Click on a position to view details. Make sure your profile is complete before applying.',
+    jobsSearchPh: 'Search for a position...', jobsAllTypes: 'All contract types',
+    jobsEmpty: 'No positions found', jobsClosing: 'Closing', jobsViewOffer: 'View position →',
+    // Spontaneous
+    spontSent: 'Application sent!',
+    spontSentMsg: 'Your spontaneous application has been forwarded to SNH. You will be contacted shortly.',
+    spontBannerTitle: 'Spontaneous application to SNH',
+    spontBannerDesc: 'Submit your application directly even without a published offer. Specify the type of application and the position you are targeting.',
+    spontTypeTitle: 'Application type',
+    spontTypeEmploi: 'Employment', spontTypeEmploiSub: 'Permanent or fixed-term at SNH',
+    spontTypeAcad: 'Academic internship', spontTypeAcadSub: 'End of studies / thesis',
+    spontTypePro: 'Professional internship', spontTypeProSub: 'Professional development / insertion',
+    spontDocsTitle: 'Supporting documents',
+    spontDocsDesc: 'You can submit your application right now. Supporting documents (diplomas, ID, certificates, etc.) will be requested at subsequent stages of the selection process.',
+    spontPosteTitle: 'Target position', spontPosteLbl: 'Position title / role *',
+    spontPostePh: 'E.g., Reservoir Engineer, Accountant, Lawyer...',
+    spontStageTitle: 'Internship information',
+    spontStageTopic: 'Topic / Subject',
+    spontStageTopicPh: 'E.g., Enhanced oil recovery optimization...',
+    spontStageLevel: 'Current education level', spontStageLevelPh: '— Select —',
+    spontStageDuration: 'Desired duration', spontStageStart: 'Desired start date',
+    spontStageSupervisor: 'Academic supervisor (name and contact)',
+    spontStageSupervisorPh: 'E.g., Prof. Olivier Kamdem — 699 000 000',
+    spontStageSchool: 'Current institution',
+    spontStageSchoolPh: 'ENSP, University of Yaoundé I, IUT...',
+    spontConditions: 'Conditions', spontAvail: 'Availability',
+    spontSalary: 'Salary expectation (FCFA/month, optional)', spontSalaryPh: 'E.g., 600000',
+    spontCoverLetter: 'Cover letter',
+    spontSubmitBtn: 'Send my application to SNH',
+    spontAvailOptions: ['Immediately', 'In 1 month', 'In 2 months', 'In 3 months'],
+    spontDurationAcadOptions: ['1 month', '2 months'],
+    spontDurationProOptions: ['1 month', '2 months', '3 months', '4 months', '6 months', 'To be defined with SNH'],
+    // Applications
+    appTitle: 'My SNH applications', appEmpty: 'No applications',
+    appAllStatuses: 'All statuses', appPublished: 'Published position',
+    appSpontaneous: 'Spontaneous application',
+    appConfirm: 'Confirm?', appYes: 'Yes', appNo: 'No',
+    appWithdraw: 'Withdraw', appWithdrawError: 'Unable to withdraw: ',
+    statusNew: 'Submitted', statusReviewing: 'Under review', statusInterview: 'Interview',
+    statusOffer: 'Offer', statusPreOnboarding: 'Pre-onboarding', statusOnboarding: 'Onboarding',
+    statusIntegrated: 'Integrated', statusRejected: 'Rejected', statusWithdrawn: 'Withdrawn',
+    // Notifications
+    notifsNew: 'new', notifsNewPlural: 'new', notifsEmpty: 'No notifications',
+    notifsNewBadge: 'New',
   },
 } as const;
 
@@ -501,7 +778,7 @@ export default function CandidatePortal() {
         <img src="/logoSNHFINAL.png" alt="SNH" className="h-12 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
       </div>
       <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: SNH_GREEN }} />
-      <p className="text-sm text-gray-500">Chargement de votre espace…</p>
+      <p className="text-sm text-gray-500">{TR[lang].loadingSpace}</p>
     </div>
   );
 
@@ -567,15 +844,15 @@ export default function CandidatePortal() {
 
         {/* Nav */}
         <nav className="flex-1 p-3 overflow-y-auto">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2">{lang === 'fr' ? 'Mon espace' : 'My space'}</p>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2">{TR[lang].mySpace}</p>
           <NavItem icon={LayoutDashboard} label={TR[lang].dashboard} active={section==='dashboard'} onClick={() => navTo('dashboard')} />
           <NavItem icon={User} label={TR[lang].profile} active={section==='profile'} onClick={() => navTo('profile')} />
           <NavItem icon={Folder} label={TR[lang].documents} active={section==='documents'} onClick={() => navTo('documents')} />
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">{lang === 'fr' ? 'Recrutement SNH' : 'SNH Recruitment'}</p>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">{TR[lang].snhRecruitment}</p>
           <NavItem icon={Briefcase} label={TR[lang].jobs} active={section==='jobs'} onClick={() => navTo('jobs')} />
           <NavItem icon={Send} label={TR[lang].spontaneous} active={section==='spontaneous'} onClick={() => navTo('spontaneous')} />
           <NavItem icon={FileText} label={TR[lang].applications} active={section==='applications'} badge={applications.length} onClick={() => navTo('applications')} />
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">{lang === 'fr' ? 'Compte' : 'Account'}</p>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">{TR[lang].account}</p>
           <NavItem icon={Bell} label={TR[lang].notifications} active={section==='notifications'} badge={unreadNotifs || undefined} onClick={() => { navTo('notifications'); setUnreadNotifs(0); }} />
           <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all mt-0.5">
             <LogOut size={16} /> {TR[lang].logout}
@@ -590,7 +867,7 @@ export default function CandidatePortal() {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-gray-900 truncate">{profile.first_name} {profile.last_name}</p>
-              <p className="text-xs text-gray-400">Candidat</p>
+              <p className="text-xs text-gray-400">{TR[lang].candidate}</p>
             </div>
           </div>
         )}
@@ -618,7 +895,7 @@ export default function CandidatePortal() {
             </button>
             <div className="hidden sm:flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
               <BarChart3 size={13} className="text-green-700" />
-              <span className="text-xs font-semibold text-green-800">{lang === 'fr' ? 'Profil' : 'Profile'} : {profilePct()}%</span>
+              <span className="text-xs font-semibold text-green-800">{TR[lang].profileLabel} : {profilePct()}%</span>
             </div>
             {/* Profile % compact on xs */}
             <div className="sm:hidden flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">
@@ -642,6 +919,7 @@ export default function CandidatePortal() {
               openJobs={openJobs} matches={matches} pct={profilePct()}
               onNav={setSection} candidateId={candidateId!}
               onApplied={(app) => setApplications(prev => [app, ...prev])}
+              lang={lang}
             />
           )}
           {section === 'profile' && profile && (
@@ -657,25 +935,26 @@ export default function CandidatePortal() {
             />
           )}
           {section === 'documents' && candidateId && (
-            <DocumentsSection candidateId={candidateId} documents={documents} setDocuments={setDocuments} />
+            <DocumentsSection candidateId={candidateId} documents={documents} setDocuments={setDocuments} lang={lang} />
           )}
           {section === 'jobs' && (
             <JobsSection openJobs={openJobs} matches={matches} candidateId={candidateId!}
               onApplied={(app) => setApplications(prev => [app, ...prev])} applications={applications}
-              documents={documents} />
+              documents={documents} lang={lang} />
           )}
           {section === 'spontaneous' && profile && candidateId && (
             <SpontaneousSection candidateId={candidateId} profile={profile} documents={documents}
-              onApplied={(app) => { setApplications(prev => [app, ...prev]); setSection('applications'); }} />
+              onApplied={(app) => { setApplications(prev => [app, ...prev]); setSection('applications'); }} lang={lang} />
           )}
           {section === 'applications' && (
             <ApplicationsSection applications={applications} openJobs={openJobs}
               documents={documents} candidateId={candidateId!}
               onApplied={(app) => setApplications(prev => [app, ...prev])}
-              onWithdrawn={(appId) => setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'withdrawn' } : a))} />
+              onWithdrawn={(appId) => setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'withdrawn' } : a))}
+              lang={lang} />
           )}
           {section === 'notifications' && (
-            <NotificationsSection notifications={notifications} onView={markNotificationsAsRead} />
+            <NotificationsSection notifications={notifications} onView={markNotificationsAsRead} lang={lang} />
           )}
         </div>
 
@@ -817,9 +1096,9 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-8 flex-wrap">
           {[
-            { label: lang === 'fr' ? 'Offres publiées' : 'Open positions', value: openJobs.length },
-            { label: lang === 'fr' ? 'Types de contrats' : 'Contract types', value: contracts.length },
-            { label: lang === 'fr' ? 'Localisation' : 'Location', value: 'Cameroun' },
+            { label: lang === 'fr' ? TR.fr.statsPublished : TR.en.statsPublished, value: openJobs.length },
+            { label: lang === 'fr' ? TR.fr.statsContracts : TR.en.statsContracts, value: contracts.length },
+            { label: lang === 'fr' ? TR.fr.statsLocation : TR.en.statsLocation, value: TR[lang].statsCountry },
           ].map(s => (
             <div key={s.label} className="flex items-center gap-2 text-sm text-gray-600">
               <CheckCircle size={14} style={{ color: SNH_GREEN }} />
@@ -827,9 +1106,9 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
             </div>
           ))}
           <div className="ml-auto flex items-center gap-2 text-sm text-gray-500">
-            <span>{lang === 'fr' ? 'Déjà candidat ?' : 'Already a candidate?'}</span>
+            <span>{TR[lang].alreadyCandidate}</span>
             <button onClick={onLogin} className="font-bold hover:underline" style={{ color: SNH_GREEN }}>
-              {lang === 'fr' ? 'Accéder à mon espace' : 'Go to my space'}
+              {TR[lang].accessMySpace}
             </button>
           </div>
         </div>
@@ -839,7 +1118,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold text-gray-900">
-            {search || filterContract ? `${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}` : 'Toutes les offres'}
+            {search || filterContract ? `${filtered.length} ${filtered.length !== 1 ? TR[lang].resultsPlural : TR[lang].results}` : TR[lang].allPositions}
           </h2>
         </div>
 
@@ -850,9 +1129,9 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-gray-200">
             <Briefcase size={40} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500 font-medium">Aucune offre ne correspond à votre recherche</p>
+            <p className="text-gray-500 font-medium">{TR[lang].noJobs}</p>
             <button onClick={() => { setSearch(''); setFilterContract(''); }} className="mt-3 text-sm font-semibold hover:underline" style={{ color: SNH_GREEN }}>
-              Réinitialiser
+              {TR[lang].reset}
             </button>
           </div>
         ) : (
@@ -870,7 +1149,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
                           <h3 className="font-bold text-gray-900 text-base leading-tight">{job.title}</h3>
                           <div className="flex items-center gap-3 mt-1 flex-wrap">
                             <span className="text-xs text-gray-500 flex items-center gap-1"><MapPin size={11} />{job.location}</span>
-                            <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={11} />Clôture : {fmtDate(job.closing_date)}</span>
+                            <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={11} />{TR[lang].closing} {fmtDate(job.closing_date)}</span>
                             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: `${SNH_RED}12`, color: SNH_RED }}>{job.contract_type}</span>
                           </div>
                         </div>
@@ -879,12 +1158,12 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
                             onClick={() => setExpandedJob(expandedJob === job.id ? null : job.id)}
                             className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition">
                             {expandedJob === job.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                            Détails
+                            {TR[lang].details}
                           </button>
                           <button onClick={() => onApply(job.id)}
                             className="flex items-center gap-1.5 px-4 py-1.5 text-white rounded-lg text-xs font-bold transition hover:opacity-90"
                             style={{ background: SNH_GREEN }}>
-                            <Send size={13} /> Postuler
+                            <Send size={13} /> {TR[lang].apply}
                           </button>
                         </div>
                       </div>
@@ -909,38 +1188,38 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
                   <div className="border-t border-gray-100 px-5 py-4 bg-gray-50 space-y-3">
                     {job.description && (
                       <div>
-                        <p className="text-xs font-semibold text-gray-700 uppercase mb-1.5">Description du poste</p>
+                        <p className="text-xs font-semibold text-gray-700 uppercase mb-1.5">{TR[lang].jobDescription}</p>
                         <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{job.description}</p>
                       </div>
                     )}
                     {job.requirements && (
                       <div>
-                        <p className="text-xs font-semibold text-gray-700 uppercase mb-1.5">Profil recherché</p>
+                        <p className="text-xs font-semibold text-gray-700 uppercase mb-1.5">{TR[lang].profileSought}</p>
                         <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{job.requirements}</p>
                       </div>
                     )}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                       {job.min_experience_years > 0 && (
                         <div className="bg-white rounded-lg p-2.5 border border-gray-200">
-                          <p className="text-gray-500 mb-0.5">Expérience</p>
-                          <p className="font-semibold text-gray-900">{job.min_experience_years} an{job.min_experience_years > 1 ? 's' : ''} min.</p>
+                          <p className="text-gray-500 mb-0.5">{TR[lang].experience}</p>
+                          <p className="font-semibold text-gray-900">{job.min_experience_years} {job.min_experience_years > 1 ? TR[lang].years : TR[lang].year} {TR[lang].min}</p>
                         </div>
                       )}
                       {job.education_level && (
                         <div className="bg-white rounded-lg p-2.5 border border-gray-200">
-                          <p className="text-gray-500 mb-0.5">Formation</p>
+                          <p className="text-gray-500 mb-0.5">{TR[lang].formation}</p>
                           <p className="font-semibold text-gray-900">{job.education_level}</p>
                         </div>
                       )}
                       <div className="bg-white rounded-lg p-2.5 border border-gray-200">
-                        <p className="text-gray-500 mb-0.5">Référence</p>
+                        <p className="text-gray-500 mb-0.5">{TR[lang].reference}</p>
                         <p className="font-semibold text-gray-900">{job.reference}</p>
                       </div>
                     </div>
                     <button onClick={() => onApply(job.id)}
                       className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl text-sm font-bold transition hover:opacity-90"
                       style={{ background: SNH_GREEN }}>
-                      <Send size={15} /> Postuler à cette offre
+                      <Send size={15} /> {TR[lang].applyToOffer}
                     </button>
                   </div>
                 )}
@@ -974,8 +1253,8 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
           <div className="flex items-center gap-3">
             <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
             <div>
-              <p className="text-white/90 text-xs font-semibold">Société Nationale des Hydrocarbures</p>
-              <p className="text-white/50 text-xs">© {new Date().getFullYear()} — Tous droits réservés</p>
+              <p className="text-white/90 text-xs font-semibold">{TR[lang].footer}</p>
+              <p className="text-white/50 text-xs">© {new Date().getFullYear()} — {TR[lang].rights}</p>
             </div>
           </div>
           <p className="text-xs font-medium" style={{ color: SNH_GOLD }}>{lang === 'fr' ? 'Portail de recrutement officiel' : 'Official recruitment portal'}</p>
@@ -993,6 +1272,7 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose, lang = 'fr' }: {
   onClose: () => void;
   lang?: Lang;
 }) {
+  const tAuth = TR[lang ?? 'fr'];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -1006,7 +1286,7 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose, lang = 'fr' }: {
     setError(''); setLoading(true);
     try {
       if (authMode === 'register') {
-        if (!firstName.trim() || !lastName.trim()) { setError('Prénom et nom requis'); setLoading(false); return; }
+        if (!firstName.trim() || !lastName.trim()) { setError(tAuth.errorNameRequired); setLoading(false); return; }
         const { data, error: signUpErr } = await supabase.auth.signUp({ email, password });
         if (signUpErr) throw signUpErr;
         if (data.user) {
@@ -1023,7 +1303,7 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose, lang = 'fr' }: {
         if (data.user) onAuth(data.user.id);
       }
     } catch (err: any) {
-      setError(err.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect' : err.message || 'Une erreur est survenue');
+      setError(err.message === 'Invalid login credentials' ? tAuth.errorCredentials : err.message || tAuth.errorGeneric);
     } finally {
       setLoading(false);
     }
@@ -1083,7 +1363,7 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose, lang = 'fr' }: {
             className="w-full py-3 text-white rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition text-sm"
             style={{ background: SNH_GREEN }}>
             {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
-              authMode === 'login' ? <><LogIn size={15} /> {lang === 'fr' ? 'Se connecter' : 'Log in'}</> : <><UserPlus size={15} /> {lang === 'fr' ? 'Créer mon compte' : 'Create account'}</>}
+              authMode === 'login' ? <><LogIn size={15} /> {TR[lang].connectBtn}</> : <><UserPlus size={15} /> {TR[lang].createAccountBtn}</>}
           </button>
           <div className="text-center">
             <button type="button" onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setError(''); }}
@@ -1098,18 +1378,19 @@ function AuthModal({ onAuth, authMode, setAuthMode, onClose, lang = 'fr' }: {
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-function DashboardSection({ profile, experiences, educations, skills, documents, applications, openJobs, matches, pct, onNav, candidateId, onApplied }: {
+function DashboardSection({ profile, experiences, educations, skills, documents, applications, openJobs, matches, pct, onNav, candidateId, onApplied, lang }: {
   profile: CandidateProfile; experiences: Experience[]; educations: Education[];
   skills: Skill[]; documents: CandidateDoc[]; applications: Application[];
   openJobs: JobOpening[]; matches: JobMatch[]; pct: number; onNav: (s: Section) => void;
-  candidateId: string; onApplied: (app: Application) => void;
+  candidateId: string; onApplied: (app: Application) => void; lang: Lang;
 }) {
+  const t = TR[lang];
   const completionItems = [
-    { label: 'Informations personnelles', done: !!(profile.phone && profile.location), pct: profile.phone && profile.location ? 100 : 50 },
-    { label: 'Formations académiques', done: educations.length > 0, pct: educations.length > 0 ? 100 : 0 },
-    { label: 'Expériences professionnelles', done: experiences.length > 0, pct: experiences.length > 0 ? 100 : 0 },
-    { label: 'Compétences', done: skills.length >= 5, pct: Math.min(100, (skills.length / 5) * 100) },
-    { label: 'Documents justificatifs', done: documents.length > 0, pct: documents.length > 0 ? 100 : 0 },
+    { label: t.itemPersonalInfo, done: !!(profile.phone && profile.location), pct: profile.phone && profile.location ? 100 : 50 },
+    { label: t.itemEducation, done: educations.length > 0, pct: educations.length > 0 ? 100 : 0 },
+    { label: t.itemExperience, done: experiences.length > 0, pct: experiences.length > 0 ? 100 : 0 },
+    { label: t.itemSkills, done: skills.length >= 5, pct: Math.min(100, (skills.length / 5) * 100) },
+    { label: t.itemDocuments, done: documents.length > 0, pct: documents.length > 0 ? 100 : 0 },
   ];
 
   const [applying, setApplying] = useState<string | null>(null);
@@ -1126,7 +1407,7 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
   };
 
   const recentActivities = applications.slice(0, 4).map(a => ({
-    title: a.status === 'new' ? 'Candidature soumise' : 'Mise à jour de statut',
+    title: a.status === 'new' ? t.activitySubmitted : t.activityUpdate,
     sub: a.desired_position || a.job_opening?.title || '—',
     date: fmtDate(a.created_at),
   }));
@@ -1136,10 +1417,10 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: '📋', value: applications.length, label: 'Candidatures soumises' },
-          { icon: '💼', value: openJobs.length, label: 'Offres disponibles' },
-          { icon: '📅', value: applications.filter(a => a.status === 'interview').length, label: 'Entretiens planifiés' },
-          { icon: '⭐', value: `${pct}%`, label: 'Profil complété' },
+          { icon: '📋', value: applications.length, label: t.statApplications },
+          { icon: '💼', value: openJobs.length, label: t.statJobs },
+          { icon: '📅', value: applications.filter(a => a.status === 'interview').length, label: t.statInterviews },
+          { icon: '⭐', value: `${pct}%`, label: t.statProfileComplete },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             <div className="text-2xl mb-1">{s.icon}</div>
@@ -1152,7 +1433,7 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Profile completion */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Complétion du profil</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">{t.completionTitle}</h3>
           <div className="space-y-3">
             {completionItems.map(item => (
               <div key={item.label}>
@@ -1168,15 +1449,15 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
             ))}
           </div>
           <button onClick={() => onNav('profile')} className="mt-4 flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg text-white transition" style={{ background: SNH_GREEN }}>
-            Compléter mon profil <ChevronRight size={14} />
+            {t.completionBtn} <ChevronRight size={14} />
           </button>
         </div>
 
         {/* Recent activity */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Activité récente</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">{t.activityTitle}</h3>
           {recentActivities.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">Aucune activité récente</p>
+            <p className="text-sm text-gray-400 text-center py-4">{t.activityEmpty}</p>
           ) : (
             <div className="relative border-l-2 border-gray-200 pl-4 ml-2 space-y-4">
               {recentActivities.map((a, i) => (
@@ -1197,7 +1478,7 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles size={16} style={{ color: SNH_GOLD }} />
-            <h3 className="text-sm font-semibold text-gray-900">Offres recommandées</h3>
+            <h3 className="text-sm font-semibold text-gray-900">{t.matchesTitle}</h3>
           </div>
           <div className="space-y-3">
             {matches.filter(m => m.match_score >= 60).slice(0, 3).map(m => (
@@ -1210,13 +1491,13 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
                   </div>
                 </div>
                 {applied.has(m.job_opening_id) ? (
-                  <span className="text-xs text-green-700 font-medium flex items-center gap-1"><CheckCircle size={12} />Postulé</span>
+                  <span className="text-xs text-green-700 font-medium flex items-center gap-1"><CheckCircle size={12} />{t.applied}</span>
                 ) : (
                   <button onClick={() => handleApply(m.job_opening.id, m.job_opening.title)} disabled={applying === m.job_opening.id}
                     className="text-xs px-3 py-1.5 rounded-lg text-white font-medium flex items-center gap-1 disabled:opacity-60"
                     style={{ background: SNH_BLUE }}>
                     {applying === m.job_opening.id ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <ArrowRight size={11} />}
-                    Postuler
+                    {t.apply}
                   </button>
                 )}
               </div>
@@ -1358,13 +1639,14 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
         {tab === 'infos' && <InfosTab profile={profile} setProfile={setProfile} t={t} />}
         {tab === 'formations' && <FormationsTab items={educations} setItems={setEducations} t={t} />}
         {tab === 'experiences' && <ExperiencesTab items={experiences} setItems={setExperiences} t={t} />}
-        {tab === 'competences' && <CompetencesTab items={skills} setItems={setSkills} masterSkills={masterSkills} />}
-        {tab === 'langues' && <LanguesTab items={languages} setItems={setLanguages} />}
+        {tab === 'competences' && <CompetencesTab items={skills} setItems={setSkills} masterSkills={masterSkills} lang={lang} />}
+        {tab === 'langues' && <LanguesTab items={languages} setItems={setLanguages} lang={lang} />}
         {tab === 'cv' && (
           <CVGeneratorPanel
             profile={profile} experiences={experiences} educations={educations}
             skills={skills} languages={languages} candidateId={candidateId}
             onPhotoUpdate={(url) => setProfile({ ...profile, photo_url: url })}
+            lang={lang}
           />
         )}
 
@@ -1384,12 +1666,14 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
 }
 
 // ── CV Generator Panel ────────────────────────────────────────────────────────
-function CVGeneratorPanel({ profile, experiences, educations, skills, languages, candidateId, onPhotoUpdate }: {
+function CVGeneratorPanel({ profile, experiences, educations, skills, languages, candidateId, onPhotoUpdate, lang }: {
   profile: CandidateProfile;
   experiences: any[]; educations: any[]; skills: any[]; languages: any[];
   candidateId: string;
   onPhotoUpdate: (url: string) => void;
+  lang: 'fr' | 'en';
 }) {
+  const t = PROFILE_TR[lang];
   const [template, setTemplate] = useState<'classic' | 'modern'>('classic');
   const [instructions, setInstructions] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -1401,12 +1685,12 @@ function CVGeneratorPanel({ profile, experiences, educations, skills, languages,
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert('Photo trop volumineuse (max 5 Mo)'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert(t.cvPhotoTooLarge); return; }
     setUploadingPhoto(true);
     const ext = file.name.split('.').pop();
     const path = `${candidateId}/profile.${ext}`;
     const { error: upErr } = await supabase.storage.from('candidate-photos').upload(path, file, { upsert: true });
-    if (upErr) { alert('Erreur upload : ' + upErr.message); setUploadingPhoto(false); return; }
+    if (upErr) { alert(t.cvPhotoError + upErr.message); setUploadingPhoto(false); return; }
     const { data: urlData } = supabase.storage.from('candidate-photos').getPublicUrl(path);
     const photoUrl = urlData.publicUrl + '?t=' + Date.now();
     await supabase.from('candidates').update({ photo_url: photoUrl }).eq('id', candidateId);
@@ -1423,8 +1707,8 @@ function CVGeneratorPanel({ profile, experiences, educations, skills, languages,
         headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
       });
       if (res.data?.aiSummary) { setAiSummary(res.data.aiSummary); setAiMsg(res.data.message || ''); }
-      else setAiMsg(res.data?.message || 'Génération IA terminée.');
-    } catch { setAiMsg('Erreur lors de la génération IA.'); }
+      else setAiMsg(res.data?.message || t.cvAIDone);
+    } catch { setAiMsg(t.cvAIError); }
     setGenerating(false);
   };
 
@@ -1441,7 +1725,7 @@ function CVGeneratorPanel({ profile, experiences, educations, skills, languages,
     <div className="space-y-6">
       {/* Photo upload */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2"><Camera size={15} /> Photo de profil (CV)</h3>
+        <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2"><Camera size={15} /> {t.cvPhotoTitle}</h3>
         <div className="flex items-center gap-5">
           <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-200 flex-shrink-0 bg-gray-50 flex items-center justify-center">
             {profile.photo_url
@@ -1449,12 +1733,12 @@ function CVGeneratorPanel({ profile, experiences, educations, skills, languages,
               : <Camera size={28} className="text-gray-300" />}
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-2">Format : JPG, PNG, WEBP — max 5 Mo<br />Privilégiez une photo professionnelle (fond neutre, tenue formelle)</p>
+            <p className="text-xs text-gray-500 mb-2">{t.cvPhotoHint.split('\n').map((line, i) => <span key={i}>{line}{i === 0 && <br />}</span>)}</p>
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
             <button onClick={() => fileRef.current?.click()} disabled={uploadingPhoto}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-50">
               {uploadingPhoto ? <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" /> : <Upload size={14} />}
-              {uploadingPhoto ? 'Téléversement...' : 'Choisir une photo'}
+              {uploadingPhoto ? t.cvPhotoUploading : t.cvPhotoBtn}
             </button>
           </div>
         </div>
@@ -1462,19 +1746,19 @@ function CVGeneratorPanel({ profile, experiences, educations, skills, languages,
 
       {/* Template choice */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2"><FileText size={15} /> Modèle de CV</h3>
+        <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2"><FileText size={15} /> {t.cvTemplateTitle}</h3>
         <div className="grid grid-cols-2 gap-3">
           {([
-            { value: 'classic', label: 'SNH Classique', desc: 'Colonne latérale marine, photo, style institutionnel' },
-            { value: 'modern', label: 'Moderne', desc: 'En-tête plein, bicolonne, épuré et contemporain' },
-          ] as const).map(t => (
-            <button key={t.value} onClick={() => setTemplate(t.value)}
-              className={`p-3 rounded-xl border-2 text-left transition ${template === t.value ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
+            { value: 'classic', label: t.cvTemplateClassicLabel, desc: t.cvTemplateClassicDesc },
+            { value: 'modern', label: t.cvTemplateModernLabel, desc: t.cvTemplateModernDesc },
+          ] as const).map(tp => (
+            <button key={tp.value} onClick={() => setTemplate(tp.value)}
+              className={`p-3 rounded-xl border-2 text-left transition ${template === tp.value ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
               <div className="flex items-center gap-2 mb-1">
-                <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${template === t.value ? 'border-green-600 bg-green-600' : 'border-gray-300'}`} />
-                <span className="text-sm font-semibold text-gray-900">{t.label}</span>
+                <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${template === tp.value ? 'border-green-600 bg-green-600' : 'border-gray-300'}`} />
+                <span className="text-sm font-semibold text-gray-900">{tp.label}</span>
               </div>
-              <p className="text-xs text-gray-500 ml-5">{t.desc}</p>
+              <p className="text-xs text-gray-500 ml-5">{tp.desc}</p>
             </button>
           ))}
         </div>
@@ -1482,24 +1766,24 @@ function CVGeneratorPanel({ profile, experiences, educations, skills, languages,
 
       {/* AI instructions */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-800 mb-1 flex items-center gap-2"><Sparkles size={15} className="text-amber-500" /> Amélioration IA (optionnel)</h3>
-        <p className="text-xs text-gray-500 mb-2">Décrivez le style souhaité, le poste visé ou les points à mettre en avant. L'IA améliorera votre résumé professionnel.</p>
+        <h3 className="text-sm font-semibold text-gray-800 mb-1 flex items-center gap-2"><Sparkles size={15} className="text-amber-500" /> {t.cvAITitle}</h3>
+        <p className="text-xs text-gray-500 mb-2">{t.cvAIDesc}</p>
         <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-          placeholder="Ex : Mets en avant mes compétences en forage et production pétrolière. Rédige un résumé percutant orienté SNH, en 4 phrases, style professionnel et formel..." />
+          placeholder={t.cvAIPh} />
         <div className="flex items-center gap-3 mt-2">
           <button onClick={handleGenerate} disabled={generating}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50"
             style={{ background: '#f59e0b' }}>
             {generating ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Sparkles size={14} />}
-            {generating ? 'Génération IA...' : 'Améliorer avec l\'IA'}
+            {generating ? t.cvAIGenerating : t.cvAIBtn}
           </button>
-          {aiSummary && <span className="text-xs text-green-600 font-medium flex items-center gap-1"><CheckCircle size={12} /> Résumé IA généré</span>}
+          {aiSummary && <span className="text-xs text-green-600 font-medium flex items-center gap-1"><CheckCircle size={12} /> {t.cvAIGenerated}</span>}
         </div>
         {aiMsg && <p className="text-xs text-gray-500 mt-1">{aiMsg}</p>}
         {aiSummary && (
           <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-xs font-semibold text-amber-800 mb-1">Résumé IA :</p>
+            <p className="text-xs font-semibold text-amber-800 mb-1">{t.cvAISummaryLabel}</p>
             <p className="text-sm text-gray-700 leading-relaxed">{aiSummary}</p>
           </div>
         )}
@@ -1510,9 +1794,9 @@ function CVGeneratorPanel({ profile, experiences, educations, skills, languages,
         <button onClick={handleExport}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition hover:opacity-90"
           style={{ background: 'linear-gradient(135deg, #0f2d52, #1e4a7a)' }}>
-          <Download size={16} /> Générer et télécharger le CV (PDF)
+          <Download size={16} /> {t.cvExportBtn}
         </button>
-        <p className="text-xs text-center text-gray-400 mt-2">Le CV s'ouvre dans un nouvel onglet — utilisez "Imprimer" → "Enregistrer en PDF"</p>
+        <p className="text-xs text-center text-gray-400 mt-2">{t.cvExportHint}</p>
       </div>
     </div>
   );
@@ -1665,9 +1949,13 @@ function ExperiencesTab({ items, setItems, t }: { items: Experience[]; setItems:
   );
 }
 
-const CAT_LABEL: Record<string, string> = {
-  technical: 'Technique', soft: 'Soft Skills', language: 'Langues', certification: 'Certifications', other: 'Autres',
-};
+function getCatLabel(cat: string, t: typeof PROFILE_TR['fr']): string {
+  const map: Record<string, string> = {
+    technical: t.catTechnical, soft: t.catSoft, language: t.catLanguage,
+    certification: t.catCertification, other: t.catOther,
+  };
+  return map[cat] ?? cat;
+}
 
 function StarLevel({ value, onChange }: { value: Skill['level']; onChange: (v: Skill['level']) => void }) {
   const map: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 };
@@ -1692,9 +1980,10 @@ function StarLevel({ value, onChange }: { value: Skill['level']; onChange: (v: S
   );
 }
 
-function CompetencesTab({ items, setItems, masterSkills }: {
-  items: Skill[]; setItems: (v: Skill[]) => void; masterSkills: MasterSkill[];
+function CompetencesTab({ items, setItems, masterSkills, lang }: {
+  items: Skill[]; setItems: (v: Skill[]) => void; masterSkills: MasterSkill[]; lang: 'fr' | 'en';
 }) {
+  const t = PROFILE_TR[lang];
   const [search, setSearch] = useState('');
   const [newName, setNewName] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -1737,8 +2026,8 @@ function CompetencesTab({ items, setItems, masterSkills }: {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">Compétences</h3>
-        <span className="text-xs text-gray-500">{items.length} sélectionnée{items.length !== 1 ? 's' : ''}</span>
+        <h3 className="text-sm font-semibold text-gray-900">{t.skillsTitle}</h3>
+        <span className="text-xs text-gray-500">{items.length} {items.length !== 1 ? t.skillsSelectedPlural : t.skillsSelected}</span>
       </div>
 
       {/* Selected skills chips */}
@@ -1757,14 +2046,14 @@ function CompetencesTab({ items, setItems, masterSkills }: {
       <button type="button" onClick={() => setPickerOpen(v => !v)}
         className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-green-400 hover:text-green-700 transition">
         <Plus size={15} className={`transition-transform ${pickerOpen ? 'rotate-45' : ''}`} />
-        {pickerOpen ? 'Fermer le catalogue' : 'Parcourir le catalogue de compétences'}
+        {pickerOpen ? t.closeCatalogue : t.browseCatalogue}
       </button>
 
       {/* Inline picker */}
       {pickerOpen && (
         <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
           <div className="p-3 bg-gray-50 border-b border-gray-200">
-            <input value={search} onChange={e => setSearch(e.target.value)} className={inp() + ' bg-white'} placeholder="Rechercher dans le catalogue..." autoFocus />
+            <input value={search} onChange={e => setSearch(e.target.value)} className={inp() + ' bg-white'} placeholder={t.browseCatalogue + '...'} autoFocus />
           </div>
           <div className="max-h-72 overflow-y-auto p-3 space-y-4">
             {hasResults ? catOrder.map(cat => {
@@ -1772,7 +2061,7 @@ function CompetencesTab({ items, setItems, masterSkills }: {
               if (!list || list.length === 0) return null;
               return (
                 <div key={cat}>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">{CAT_LABEL[cat] ?? cat}</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">{getCatLabel(cat, t)}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {list.map(ms => (
                       <button key={ms.id} type="button" onClick={() => toggle(ms)}
@@ -1785,13 +2074,13 @@ function CompetencesTab({ items, setItems, masterSkills }: {
                 </div>
               );
             }) : (
-              <p className="text-sm text-gray-400 text-center py-6">Aucun résultat pour « {search} »</p>
+              <p className="text-sm text-gray-400 text-center py-6">{t.noResultFor} « {search} »</p>
             )}
           </div>
           <div className="flex gap-2 p-3 bg-gray-50 border-t border-gray-200">
-            <input value={newName} onChange={e => setNewName(e.target.value)} className={inp() + ' flex-1 bg-white text-sm'} placeholder="Compétence personnalisée non listée..." onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())} />
+            <input value={newName} onChange={e => setNewName(e.target.value)} className={inp() + ' flex-1 bg-white text-sm'} placeholder={t.customSkillPh} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())} />
             <button type="button" onClick={addCustom} className="px-4 py-2 rounded-lg text-white font-semibold text-sm flex items-center gap-1" style={{ background: SNH_BLUE }}>
-              <Plus size={14} /> Ajouter
+              <Plus size={14} /> {t.addBtn}
             </button>
           </div>
         </div>
@@ -1801,12 +2090,12 @@ function CompetencesTab({ items, setItems, masterSkills }: {
       {items.length > 0 && (
         <div className="border border-gray-100 rounded-xl overflow-hidden">
           <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-            <p className="text-xs font-semibold text-gray-500">Niveau par compétence</p>
+            <p className="text-xs font-semibold text-gray-500">{t.skillLevelTitle}</p>
             <div className="flex items-center gap-1 text-[10px] text-gray-400">
-              <span className="text-amber-400">★</span> Déb &nbsp;
-              <span className="text-amber-400">★★</span> Int &nbsp;
-              <span className="text-amber-400">★★★</span> Av &nbsp;
-              <span className="text-amber-400">★★★★</span> Exp
+              <span className="text-amber-400">★</span> {lang === 'fr' ? 'Déb' : 'Beg'} &nbsp;
+              <span className="text-amber-400">★★</span> {lang === 'fr' ? 'Int' : 'Int'} &nbsp;
+              <span className="text-amber-400">★★★</span> {lang === 'fr' ? 'Av' : 'Adv'} &nbsp;
+              <span className="text-amber-400">★★★★</span> {lang === 'fr' ? 'Exp' : 'Exp'}
             </div>
           </div>
           <div className="divide-y divide-gray-50">
@@ -1832,7 +2121,8 @@ const LANGUAGE_CATALOGUE = [
 
 const DEFAULT_LANGS = ['Français', 'Anglais'];
 
-function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Language[]) => void }) {
+function LanguesTab({ items, setItems, lang }: { items: Language[]; setItems: (v: Language[]) => void; lang: 'fr' | 'en' }) {
+  const t = PROFILE_TR[lang];
   const [customName, setCustomName] = useState('');
   const selectedNames = new Set(items.map(l => l.name));
 
@@ -1860,7 +2150,7 @@ function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Lang
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Langues parlées</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">{t.langTitle}</h3>
         {/* Default languages: FR + EN */}
         <div className="flex flex-wrap gap-2 mb-4">
           {DEFAULT_LANGS.map(name => (
@@ -1876,29 +2166,30 @@ function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Lang
         {/* Add other language */}
         <div className="flex gap-2">
           <input value={customName} onChange={e => setCustomName(e.target.value)} className={inp() + ' flex-1'}
-            placeholder="Ajouter une autre langue (Ex : Espagnol, Arabe…)" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())} />
+            placeholder={t.langAddPh} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustom())} />
           <button type="button" onClick={addCustom} className="px-4 py-2 text-sm rounded-lg text-white font-semibold flex items-center gap-1.5" style={{ background: SNH_GREEN }}>
-            <Plus size={14} /> Ajouter
+            <Plus size={14} /> {t.addBtn}
           </button>
         </div>
       </div>
 
       {items.length > 0 && (
         <div className="space-y-3 pt-4 border-t border-gray-100">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Évaluation du niveau</p>
-          {items.map(lang => {
-            const stars = currentStars(lang.level);
-            const levelLabel = LANG_LEVELS.find(l => l.value === lang.level)?.label ?? '';
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t.langLevelTitle}</p>
+          {items.map(langItem => {
+            const stars = currentStars(langItem.level);
+            const lvEntry = LANG_LEVELS.find(l => l.value === langItem.level);
+            const levelLabel = lvEntry ? (lang === 'fr' ? lvEntry.labelFr : lvEntry.labelEn) : '';
             return (
-              <div key={lang.name} className="bg-gray-50 rounded-xl p-3 flex items-center gap-3 flex-wrap">
-                <span className="text-sm font-semibold text-gray-800 min-w-[80px]">{lang.name}</span>
+              <div key={langItem.name} className="bg-gray-50 rounded-xl p-3 flex items-center gap-3 flex-wrap">
+                <span className="text-sm font-semibold text-gray-800 min-w-[80px]">{langItem.name}</span>
                 {/* Star rating */}
                 <div className="flex gap-1 flex-1">
                   {[1, 2, 3, 4, 5].map(n => {
                     const lv = LANG_LEVELS[n - 1];
                     return (
-                      <button key={n} type="button" title={lv.label}
-                        onClick={() => updateLevel(lang.name, lv.value)}
+                      <button key={n} type="button" title={lang === 'fr' ? lv.labelFr : lv.labelEn}
+                        onClick={() => updateLevel(langItem.name, lv.value)}
                         className="transition-transform hover:scale-110">
                         <Star size={20} fill={n <= stars ? SNH_GREEN : 'none'} stroke={n <= stars ? SNH_GREEN : '#d1d5db'} />
                       </button>
@@ -1906,7 +2197,7 @@ function LanguesTab({ items, setItems }: { items: Language[]; setItems: (v: Lang
                   })}
                 </div>
                 <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: `${SNH_GREEN}15`, color: SNH_GREEN }}>{levelLabel}</span>
-                <button type="button" onClick={() => toggle(lang.name)} className="text-red-400 hover:text-red-600 ml-auto"><X size={14} /></button>
+                <button type="button" onClick={() => toggle(langItem.name)} className="text-red-400 hover:text-red-600 ml-auto"><X size={14} /></button>
               </div>
             );
           })}
@@ -1927,9 +2218,10 @@ function docExpiryStatus(expDate: string | null | undefined): 'expired' | 'soon'
   return 'ok';
 }
 
-function DocumentsSection({ candidateId, documents, setDocuments }: {
-  candidateId: string; documents: CandidateDoc[]; setDocuments: (d: CandidateDoc[]) => void;
+function DocumentsSection({ candidateId, documents, setDocuments, lang }: {
+  candidateId: string; documents: CandidateDoc[]; setDocuments: (d: CandidateDoc[]) => void; lang: Lang;
 }) {
+  const t = TR[lang];
   const [selectedType, setSelectedType] = useState('cv');
   const [expirationDate, setExpirationDate] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -1938,6 +2230,7 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
 
   const expiredDocs = documents.filter(d => docExpiryStatus(d.expiration_date) === 'expired');
   const soonDocs = documents.filter(d => docExpiryStatus(d.expiration_date) === 'soon');
+  const docTypes = getDocTypes(lang);
 
   const getDocPath = (fileUrl: string) => {
     const parts = fileUrl.split('/candidates-documents/');
@@ -1953,12 +2246,12 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { setError('Fichier trop volumineux (max 10 Mo)'); e.target.value = ''; return; }
+    if (file.size > 10 * 1024 * 1024) { setError(t.docsFileTooLarge); e.target.value = ''; return; }
     setError(''); setUploading(true);
     const ext = file.name.split('.').pop();
     const path = `${candidateId}/${selectedType}-${Date.now()}.${ext}`;
     const { error: upErr } = await supabase.storage.from('candidates-documents').upload(path, file, { upsert: false });
-    if (upErr) { setError('Erreur upload : ' + upErr.message); setUploading(false); e.target.value = ''; return; }
+    if (upErr) { setError(t.docsUploadError + upErr.message); setUploading(false); e.target.value = ''; return; }
     const { data: urlData } = supabase.storage.from('candidates-documents').getPublicUrl(path);
     const { data: docData, error: insertErr } = await supabase.from('candidate_documents').insert({
       candidate_id: candidateId, type: selectedType, file_name: file.name,
@@ -1966,7 +2259,7 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
       expiration_date: expirationDate || null,
     }).select().maybeSingle();
     if (insertErr) {
-      setError('Erreur lors de l\'enregistrement : ' + insertErr.message);
+      setError(t.docsSaveError + insertErr.message);
       setUploading(false); e.target.value = ''; return;
     }
     if (docData) setDocuments([docData as CandidateDoc, ...documents]);
@@ -1989,8 +2282,8 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-red-800">Documents expirés</p>
-            <p className="text-xs text-red-700 mt-1">{expiredDocs.map(d => DOC_TYPES.find(t => t.value === d.type)?.label ?? d.type).join(', ')} — Veuillez mettre à jour ces documents.</p>
+            <p className="text-sm font-semibold text-red-800">{t.docsExpiredTitle}</p>
+            <p className="text-xs text-red-700 mt-1">{expiredDocs.map(d => docTypes.find(t2 => t2.value === d.type)?.label ?? d.type).join(', ')} — {t.docsExpiredMsg}</p>
           </div>
         </div>
       )}
@@ -1998,8 +2291,8 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-amber-800">Documents expirant bientôt (dans 30 jours)</p>
-            <p className="text-xs text-amber-700 mt-1">{soonDocs.map(d => DOC_TYPES.find(t => t.value === d.type)?.label ?? d.type).join(', ')} — Pensez à renouveler ces documents.</p>
+            <p className="text-sm font-semibold text-amber-800">{t.docsSoonTitle}</p>
+            <p className="text-xs text-amber-700 mt-1">{soonDocs.map(d => docTypes.find(t2 => t2.value === d.type)?.label ?? d.type).join(', ')} — {t.docsSoonMsg}</p>
           </div>
         </div>
       )}
@@ -2007,40 +2300,40 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
         <AlertCircle size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-blue-800">À cette étape, seul votre CV est requis</p>
-          <p className="text-xs text-blue-700 mt-1">Les autres documents (diplômes, CNI, attestations d'emploi, etc.) vous seront demandés aux étapes suivantes du processus de recrutement.</p>
+          <p className="text-sm font-semibold text-blue-800">{t.docsInfoTitle}</p>
+          <p className="text-xs text-blue-700 mt-1">{t.docsInfoMsg}</p>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Téléverser votre CV</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">{t.docsUploadTitle}</h3>
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <Lbl>Type de document *</Lbl>
+            <Lbl>{t.docsType} *</Lbl>
             <select value={selectedType} onChange={e => setSelectedType(e.target.value)} className={inp()}>
-              <option value="cv">CV / Curriculum Vitae</option>
+              <option value="cv">{t.docsCvLabel}</option>
             </select>
           </div>
           <div>
-            <Lbl>Date d'expiration (si applicable)</Lbl>
+            <Lbl>{t.docsExpiry}</Lbl>
             <input type="date" value={expirationDate} onChange={e => setExpirationDate(e.target.value)} className={inp()} min={new Date().toISOString().split('T')[0]} />
           </div>
         </div>
         <label className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer transition ${uploading ? 'opacity-60 cursor-not-allowed' : ''}`}
           style={{ background: SNH_GREEN }}>
-          {uploading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Envoi en cours...</> : <><Upload size={14} />Choisir et téléverser un fichier</>}
+          {uploading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{t.docsUploading}</> : <><Upload size={14} />{t.docsChooseFile}</>}
           <input type="file" className="hidden" disabled={uploading} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleFile} />
         </label>
-        <p className="text-xs text-gray-400 mt-2 text-center">PDF, Word, JPG, PNG — max 10 Mo</p>
+        <p className="text-xs text-gray-400 mt-2 text-center">{t.docsFormats}</p>
         {error && <p className="text-red-600 text-xs mt-2">{error}</p>}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-900">Mes documents ({documents.length})</h3>
+          <h3 className="text-sm font-semibold text-gray-900">{t.docsMyDocs} ({documents.length})</h3>
         </div>
         {documents.length === 0 ? (
-          <div className="py-10 text-center text-gray-400 text-sm"><FileText size={32} className="mx-auto mb-2 opacity-30" />Aucun document téléversé</div>
+          <div className="py-10 text-center text-gray-400 text-sm"><FileText size={32} className="mx-auto mb-2 opacity-30" />{t.docsEmpty}</div>
         ) : (
           <div>
             {documents.map(doc => {
@@ -2058,7 +2351,7 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
                     </p>
                     {doc.expiration_date && (
                       <p className={`text-xs font-semibold mt-0.5 ${expStatus === 'expired' ? 'text-red-600' : expStatus === 'soon' ? 'text-amber-600' : 'text-gray-500'}`}>
-                        {expStatus === 'expired' ? '⚠ Expiré le ' : expStatus === 'soon' ? '⚠ Expire le ' : 'Expire le '}{fmtDate(doc.expiration_date)}
+                        {expStatus === 'expired' ? t.docsExpiredOn : expStatus === 'soon' ? t.docsSoonOn : t.docsExpiresOn}{fmtDate(doc.expiration_date)}
                       </p>
                     )}
                   </div>
@@ -2079,11 +2372,12 @@ function DocumentsSection({ candidateId, documents, setDocuments }: {
 }
 
 // ── Job Detail Modal ──────────────────────────────────────────────────────────
-function JobDetailModal({ job, match, isApplied, documents, candidateId, onApplied, onClose, readOnly }: {
+function JobDetailModal({ job, match, isApplied, documents, candidateId, onApplied, onClose, readOnly, lang = 'fr' }: {
   job: JobOpening; match?: JobMatch; isApplied: boolean;
   documents: CandidateDoc[]; candidateId: string;
-  onApplied: (app: Application) => void; onClose: () => void; readOnly?: boolean;
+  onApplied: (app: Application) => void; onClose: () => void; readOnly?: boolean; lang?: Lang;
 }) {
+  const t = TR[lang];
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState('');
 
@@ -2092,7 +2386,7 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
     : job.contract_type?.toLowerCase().includes('professionnel') ? 'stage_professionnel'
     : 'emploi';
   const uploadedTypes = new Set(documents.map(d => d.type));
-  const requiredDocs = REQUIRED_DOCS_BY_TYPE[docKey] ?? [];
+  const requiredDocs = getRequiredDocs(docKey, lang);
 
   const handleApplyClick = async () => {
     setApplying(true);
@@ -2102,7 +2396,7 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
       desired_position: job.title, status: 'new',
     }).select().maybeSingle();
     if (error) {
-      setApplyError('Impossible de postuler : ' + error.message);
+      setApplyError(t.jdApplyError + error.message);
     } else if (data) {
       onApplied(data as Application);
       onClose();
@@ -2127,7 +2421,7 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
                 <p className="text-sm text-gray-500 mt-0.5">SNH · {job.location}</p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   <Tag variant={isStage ? 'amber' : 'green'}>{job.contract_type}</Tag>
-                  {job.reference && <Tag variant="gray">Réf. {job.reference}</Tag>}
+                  {job.reference && <Tag variant="gray">{t.jdRef} {job.reference}</Tag>}
                 </div>
               </div>
             </div>
@@ -2140,10 +2434,10 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
           {/* Key info grid */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: 'Type de contrat', value: job.contract_type },
-              { label: 'Lieu', value: job.location },
-              { label: 'Expérience min.', value: job.min_experience_years ? `${job.min_experience_years} an(s)` : 'Non précisé' },
-              { label: 'Niveau d\'études', value: job.education_level || 'Non précisé' },
+              { label: t.jdContract, value: job.contract_type },
+              { label: t.jdLocation, value: job.location },
+              { label: t.jdExperience, value: job.min_experience_years ? `${job.min_experience_years} ${lang === 'fr' ? 'an(s)' : 'year(s)'}` : t.jdNotSpecified },
+              { label: t.jdEducation, value: job.education_level || t.jdNotSpecified },
             ].map(item => (
               <div key={item.label} className="bg-gray-50 rounded-xl p-3">
                 <p className="text-xs text-gray-500 mb-0.5">{item.label}</p>
@@ -2154,32 +2448,30 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
 
           {/* Dates */}
           <div className="flex gap-4 text-xs text-gray-500">
-            <span className="flex items-center gap-1"><Calendar size={12} />Publiée le {fmtDate(job.publication_date)}</span>
+            <span className="flex items-center gap-1"><Calendar size={12} />{t.jdPublished} {fmtDate(job.publication_date)}</span>
             <span className={`flex items-center gap-1 font-semibold ${new Date(job.closing_date) < new Date() ? 'text-red-600' : 'text-amber-600'}`}>
-              <Clock size={12} />Clôture le {fmtDate(job.closing_date)}
+              <Clock size={12} />{t.jdClosing} {fmtDate(job.closing_date)}
             </span>
           </div>
 
           {/* Description */}
           {job.description && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Description du poste</p>
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{job.description}</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t.jdDescription}</p>
             </div>
           )}
 
           {/* Requirements */}
           {job.requirements && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Profil recherché</p>
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{job.requirements}</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t.jdProfile}</p>
             </div>
           )}
 
           {/* Required skills */}
           {job.required_skills?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Compétences requises</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t.jdSkillsRequired}</p>
               <div className="flex flex-wrap gap-2">
                 {job.required_skills.map(s => <Tag key={s} variant="blue">{s}</Tag>)}
               </div>
@@ -2189,7 +2481,7 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
           {/* Nice-to-have skills */}
           {job.nice_to_have_skills?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Compétences appréciées</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t.jdSkillsNice}</p>
               <div className="flex flex-wrap gap-2">
                 {job.nice_to_have_skills.map(s => <Tag key={s} variant="gray">{s}</Tag>)}
               </div>
@@ -2199,7 +2491,7 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
           {/* Documents info */}
           {!readOnly && requiredDocs.length > 0 && (
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-blue-700">Documents complémentaires</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-blue-700">{t.jdDocs}</p>
               <div className="space-y-1.5">
                 {requiredDocs.map(doc => {
                   const ok = uploadedTypes.has(doc.value);
@@ -2213,7 +2505,7 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
                   );
                 })}
               </div>
-              <p className="text-xs text-blue-600 mt-3">Ces documents seront demandés aux étapes suivantes du processus de sélection.</p>
+              <p className="text-xs text-blue-600 mt-3">{t.jdDocsInfo}</p>
             </div>
           )}
         </div>
@@ -2228,22 +2520,22 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
         {/* Footer */}
         {!readOnly && (
           <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
-            <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition">Fermer</button>
+            <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition">{t.jdClose}</button>
             {isApplied ? (
-              <span className="flex items-center gap-1.5 text-sm text-green-700 font-semibold"><CheckCircle size={15} />Candidature soumise</span>
+              <span className="flex items-center gap-1.5 text-sm text-green-700 font-semibold"><CheckCircle size={15} />{t.applied}</span>
             ) : (
               <button onClick={handleApplyClick} disabled={applying}
                 className="flex items-center gap-2 px-5 py-2 text-sm rounded-xl text-white font-semibold disabled:opacity-60 transition hover:opacity-90"
                 style={{ background: SNH_BLUE }}>
                 {applying ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={14} />}
-                Postuler à cette offre
+                {t.jdApplyBtn}
               </button>
             )}
           </div>
         )}
         {readOnly && (
           <div className="px-6 py-4 border-t border-gray-100">
-            <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition">Fermer</button>
+            <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition">{t.jdClose}</button>
           </div>
         )}
       </div>
@@ -2252,11 +2544,12 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
 }
 
 // ── Jobs ──────────────────────────────────────────────────────────────────────
-function JobsSection({ openJobs, matches, candidateId, onApplied, applications, documents }: {
+function JobsSection({ openJobs, matches, candidateId, onApplied, applications, documents, lang }: {
   openJobs: JobOpening[]; matches: JobMatch[]; candidateId: string;
   onApplied: (app: Application) => void; applications: Application[];
-  documents: CandidateDoc[];
+  documents: CandidateDoc[]; lang: Lang;
 }) {
+  const t = TR[lang];
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [selectedJob, setSelectedJob] = useState<JobOpening | null>(null);
@@ -2273,24 +2566,24 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications, 
         <div className="rounded-xl p-4 flex items-start gap-3 border" style={{ background: `${SNH_GREEN}0D`, borderColor: `${SNH_GREEN}30` }}>
           <Building2 size={16} className="flex-shrink-0 mt-0.5" style={{ color: SNH_GREEN }} />
           <div>
-            <p className="text-sm font-semibold" style={{ color: SNH_GREEN }}>Offres de la Société Nationale des Hydrocarbures</p>
-            <p className="text-xs mt-0.5" style={{ color: `${SNH_GREEN}CC` }}>Cliquez sur une offre pour voir le détail. Assurez-vous que votre profil est complet avant de postuler.</p>
+            <p className="text-sm font-semibold" style={{ color: SNH_GREEN }}>{t.jobsTitle}</p>
+            <p className="text-xs mt-0.5" style={{ color: `${SNH_GREEN}CC` }}>{t.jobsDesc}</p>
           </div>
         </div>
 
         <div className="flex gap-3 flex-wrap">
           <div className="relative flex-1 min-w-40">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} className={inp() + ' pl-9'} placeholder="Rechercher un poste..." />
+            <input value={search} onChange={e => setSearch(e.target.value)} className={inp() + ' pl-9'} placeholder={t.jobsSearchPh} />
           </div>
           <select value={filterType} onChange={e => setFilterType(e.target.value)} className={`${inp()} w-48`}>
-            <option value="all">Tous types de contrat</option>
+            <option value="all">{t.jobsAllTypes}</option>
             {['CDI','CDD','Stage académique','Stage professionnel'].map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-gray-400"><Briefcase size={40} className="mx-auto mb-2 opacity-20" />Aucune offre trouvée</div>
+          <div className="text-center py-12 text-gray-400"><Briefcase size={40} className="mx-auto mb-2 opacity-20" />{t.jobsEmpty}</div>
         ) : (
           <div className="space-y-3">
             {filtered.map(job => {
@@ -2314,13 +2607,13 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications, 
                       <Tag variant={isStage ? 'amber' : 'green'}>{job.contract_type}</Tag>
                       {job.required_skills?.slice(0, 3).map(s => <Tag key={s} variant="blue">{s}</Tag>)}
                       {(job.required_skills?.length || 0) > 3 && <Tag variant="gray">+{job.required_skills.length - 3}</Tag>}
-                      <Tag variant="gray"><Clock size={10} className="mr-1" />Clôture {fmtDate(job.closing_date)}</Tag>
+                      <Tag variant="gray"><Clock size={10} className="mr-1" />{t.jobsClosing} {fmtDate(job.closing_date)}</Tag>
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0 items-end">
                     {isApplied
-                      ? <span className="flex items-center gap-1 text-xs text-green-700 font-medium"><CheckCircle size={12} />Postulé</span>
-                      : <span className="flex items-center gap-1 text-xs text-blue-600 font-medium">Voir l'offre →</span>
+                      ? <span className="flex items-center gap-1 text-xs text-green-700 font-medium"><CheckCircle size={12} />{t.applied}</span>
+                      : <span className="flex items-center gap-1 text-xs text-blue-600 font-medium">{t.jobsViewOffer}</span>
                     }
                   </div>
                 </div>
@@ -2339,6 +2632,7 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications, 
           candidateId={candidateId}
           onApplied={(app) => { onApplied(app); }}
           onClose={() => setSelectedJob(null)}
+          lang={lang}
         />
       )}
     </>
@@ -2346,7 +2640,7 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications, 
 }
 
 // ── Spontaneous Application ───────────────────────────────────────────────────
-const REQUIRED_DOCS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
+const REQUIRED_DOCS_BY_TYPE_FR: Record<string, { value: string; label: string }[]> = {
   emploi: [
     { value: 'cv',              label: 'CV / Curriculum Vitae' },
     { value: 'cover_letter',    label: 'Lettre de motivation' },
@@ -2367,30 +2661,57 @@ const REQUIRED_DOCS_BY_TYPE: Record<string, { value: string; label: string }[]> 
     { value: 'cni_passport', label: 'CNI / Passeport' },
   ],
 };
+const REQUIRED_DOCS_BY_TYPE_EN: Record<string, { value: string; label: string }[]> = {
+  emploi: [
+    { value: 'cv',              label: 'CV / Curriculum Vitae' },
+    { value: 'cover_letter',    label: 'Cover letter' },
+    { value: 'diploma',         label: 'Diploma / Degree certificate' },
+    { value: 'cni_passport',    label: 'National ID / Passport' },
+    { value: 'employment_cert', label: 'Employment certificate' },
+    { value: 'work_cert',       label: 'Work certificate' },
+  ],
+  stage_academique: [
+    { value: 'cv',           label: 'CV / Curriculum Vitae' },
+    { value: 'cover_letter', label: 'Cover letter' },
+    { value: 'diploma',      label: 'Diploma / Enrolment certificate' },
+    { value: 'cni_passport', label: 'National ID / Passport' },
+  ],
+  stage_professionnel: [
+    { value: 'cv',           label: 'CV / Curriculum Vitae' },
+    { value: 'cover_letter', label: 'Cover letter' },
+    { value: 'cni_passport', label: 'National ID / Passport' },
+  ],
+};
+function getRequiredDocs(type: string, lang: 'fr' | 'en') {
+  const map = lang === 'fr' ? REQUIRED_DOCS_BY_TYPE_FR : REQUIRED_DOCS_BY_TYPE_EN;
+  return map[type] ?? [];
+}
 
-function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
+function SpontaneousSection({ candidateId, profile, documents, onApplied, lang }: {
   candidateId: string;
   profile: CandidateProfile;
   documents: CandidateDoc[];
   onApplied: (app: Application) => void;
+  lang: Lang;
 }) {
+  const t = TR[lang];
   const [type, setType] = useState<'emploi' | 'stage_academique' | 'stage_professionnel'>('emploi');
   const [poste, setPoste] = useState('');
   const [coverLetter, setCoverLetter] = useState('');
   const [stageTopic, setStageTopic] = useState('');
-  const [stageDuration, setStageDuration] = useState('1 mois');
+  const [stageDuration, setStageDuration] = useState('');
   const [stageStart, setStageStart] = useState('');
   const [stageSchool, setStageSchool] = useState('');
   const [stageSupervisor, setStageSupervisor] = useState('');
   const [stageEduLevel, setStageEduLevel] = useState('');
-  const [availability, setAvailability] = useState('Immédiatement');
+  const [availability, setAvailability] = useState('');
   const [salaryExpectation, setSalaryExpectation] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
   const isStage = type !== 'emploi';
   const uploadedTypes = new Set(documents.map(d => d.type));
-  const requiredDocs = REQUIRED_DOCS_BY_TYPE[type] ?? [];
+  const requiredDocs = getRequiredDocs(type, lang);
   const missingDocs = requiredDocs.filter(d => !uploadedTypes.has(d.value));
   const hasMissingDocs = missingDocs.length > 0;
 
@@ -2434,8 +2755,8 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
         <CheckCircle size={32} className="text-green-600" />
       </div>
-      <h2 className="text-xl font-bold text-gray-900 mb-2">Candidature envoyée !</h2>
-      <p className="text-gray-500 text-sm">Votre candidature spontanée a été transmise aux services de la SNH. Vous serez contacté(e) prochainement.</p>
+      <h2 className="text-xl font-bold text-gray-900 mb-2">{t.spontSent}</h2>
+      <p className="text-gray-500 text-sm">{t.spontSentMsg}</p>
     </div>
   );
 
@@ -2444,27 +2765,27 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
       <div className="rounded-xl p-4 flex items-start gap-3 mb-5 border" style={{ background: `${SNH_GREEN}0D`, borderColor: `${SNH_GREEN}30` }}>
         <Send size={16} className="flex-shrink-0 mt-0.5" style={{ color: SNH_GREEN }} />
         <div>
-          <p className="text-sm font-semibold" style={{ color: SNH_GREEN }}>Candidature spontanée à la SNH</p>
-          <p className="text-xs mt-0.5" style={{ color: `${SNH_GREEN}CC` }}>Soumettez votre dossier directement même en l'absence d'une offre publiée. Précisez le type de candidature et le poste que vous visez.</p>
+          <p className="text-sm font-semibold" style={{ color: SNH_GREEN }}>{t.spontBannerTitle}</p>
+          <p className="text-xs mt-0.5" style={{ color: `${SNH_GREEN}CC` }}>{t.spontBannerDesc}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Type selector */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Type de candidature <span className="text-red-500">*</span></h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">{t.spontTypeTitle} <span className="text-red-500">*</span></h3>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { value: 'emploi', icon: Briefcase, label: 'Emploi', sub: 'CDI ou CDD à la SNH' },
-              { value: 'stage_academique', icon: GraduationCap, label: 'Stage académique', sub: "Fin d'études / mémoire" },
-              { value: 'stage_professionnel', icon: BookOpen, label: 'Stage professionnel', sub: 'Perfectionnement / insertion pro' },
-            ].map(t => (
-              <button key={t.value} type="button" onClick={() => setType(t.value as typeof type)}
-                className={`p-4 rounded-xl border-2 text-center transition cursor-pointer ${type === t.value ? 'bg-green-50' : 'border-gray-200 bg-white hover:border-green-400'}`}
-                style={type === t.value ? { borderColor: SNH_GREEN } : {}}>
-                <t.icon size={22} className="mx-auto mb-1.5" style={{ color: type === t.value ? SNH_GREEN : '#9ca3af' }} />
-                <p className="text-xs font-semibold text-gray-900">{t.label}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{t.sub}</p>
+              { value: 'emploi', icon: Briefcase, label: t.spontTypeEmploi, sub: t.spontTypeEmploiSub },
+              { value: 'stage_academique', icon: GraduationCap, label: t.spontTypeAcad, sub: t.spontTypeAcadSub },
+              { value: 'stage_professionnel', icon: BookOpen, label: t.spontTypePro, sub: t.spontTypeProSub },
+            ].map(tp => (
+              <button key={tp.value} type="button" onClick={() => setType(tp.value as typeof type)}
+                className={`p-4 rounded-xl border-2 text-center transition cursor-pointer ${type === tp.value ? 'bg-green-50' : 'border-gray-200 bg-white hover:border-green-400'}`}
+                style={type === tp.value ? { borderColor: SNH_GREEN } : {}}>
+                <tp.icon size={22} className="mx-auto mb-1.5" style={{ color: type === tp.value ? SNH_GREEN : '#9ca3af' }} />
+                <p className="text-xs font-semibold text-gray-900">{tp.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{tp.sub}</p>
               </button>
             ))}
           </div>
@@ -2474,9 +2795,9 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
           <AlertCircle size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-blue-800">Documents complémentaires</p>
+            <p className="text-sm font-semibold text-blue-800">{t.spontDocsTitle}</p>
             <p className="text-xs text-blue-700 mt-1">
-              Vous pouvez soumettre votre candidature dès maintenant. Les pièces justificatives (diplômes, CNI, attestations, etc.) vous seront demandées aux étapes suivantes du processus de sélection.
+              {t.spontDocsDesc}
             </p>
             {requiredDocs.length > 0 && (
               <div className="mt-2 grid grid-cols-2 gap-1.5">
@@ -2498,10 +2819,10 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
 
         {/* Poste */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Poste visé <span className="text-red-500">*</span></h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">{t.spontPosteTitle} <span className="text-red-500">*</span></h3>
           <div>
-            <Lbl>Intitulé du poste / fonction *</Lbl>
-            <input value={poste} onChange={e => setPoste(e.target.value)} className={inp()} placeholder="Ex: Ingénieur Réservoir, Comptable, Juriste..." required />
+            <Lbl>{t.spontPosteLbl}</Lbl>
+            <input value={poste} onChange={e => setPoste(e.target.value)} className={inp()} placeholder={t.spontPostePh} required />
           </div>
         </div>
 
@@ -2509,37 +2830,37 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
         {isStage && (
           <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
             <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <GraduationCap size={15} /> Informations sur le stage
+              <GraduationCap size={15} /> {t.spontStageTitle}
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <Lbl>Thème / Sujet du stage</Lbl>
-                <input value={stageTopic} onChange={e => setStageTopic(e.target.value)} className={inp()} placeholder="Ex: Optimisation de la récupération assistée du pétrole..." />
+                <Lbl>{t.spontStageTopic}</Lbl>
+                <input value={stageTopic} onChange={e => setStageTopic(e.target.value)} className={inp()} placeholder={t.spontStageTopicPh} />
               </div>
               <div className="col-span-2">
-                <Lbl>Niveau d'études actuel</Lbl>
+                <Lbl>{t.spontStageLevel}</Lbl>
                 <select value={stageEduLevel} onChange={e => setStageEduLevel(e.target.value)} className={inp()}>
-                  <option value="">— Sélectionner —</option>
+                  <option value="">{t.spontStageLevelPh}</option>
                   {EDU_LEVELS.map(l => <option key={l}>{l}</option>)}
                 </select>
               </div>
               <div>
-                <Lbl>Durée souhaitée</Lbl>
+                <Lbl>{t.spontStageDuration}</Lbl>
                 <select value={stageDuration} onChange={e => setStageDuration(e.target.value)} className={inp()}>
-                  {(type === 'stage_academique' ? ['1 mois','2 mois'] : ['1 mois','2 mois','3 mois','4 mois','6 mois','À définir avec la SNH']).map(d => <option key={d}>{d}</option>)}
+                  {(type === 'stage_academique' ? t.spontDurationAcadOptions : t.spontDurationProOptions).map(d => <option key={d}>{d}</option>)}
                 </select>
               </div>
               <div>
-                <Lbl>Date de début souhaitée</Lbl>
+                <Lbl>{t.spontStageStart}</Lbl>
                 <input type="date" value={stageStart} onChange={e => setStageStart(e.target.value)} className={inp()} />
               </div>
               <div>
-                <Lbl>Encadreur académique (nom et contact)</Lbl>
-                <input value={stageSupervisor} onChange={e => setStageSupervisor(e.target.value)} className={inp()} placeholder="Ex: Pr. Olivier Kamdem — 699 000 000" />
+                <Lbl>{t.spontStageSupervisor}</Lbl>
+                <input value={stageSupervisor} onChange={e => setStageSupervisor(e.target.value)} className={inp()} placeholder={t.spontStageSupervisorPh} />
               </div>
               <div className="col-span-2">
-                <Lbl>Institution actuelle</Lbl>
-                <input value={stageSchool} onChange={e => setStageSchool(e.target.value)} className={inp()} placeholder="ENSP, Université de Yaoundé I, IUT..." />
+                <Lbl>{t.spontStageSchool}</Lbl>
+                <input value={stageSchool} onChange={e => setStageSchool(e.target.value)} className={inp()} placeholder={t.spontStageSchoolPh} />
               </div>
             </div>
           </div>
@@ -2548,17 +2869,17 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
         {/* Emploi-specific fields */}
         {!isStage && (
           <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Conditions</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">{t.spontConditions}</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Lbl>Disponibilité</Lbl>
+                <Lbl>{t.spontAvail}</Lbl>
                 <select value={availability} onChange={e => setAvailability(e.target.value)} className={inp()}>
-                  {['Immédiatement','Dans 1 mois','Dans 2 mois','Dans 3 mois'].map(d => <option key={d}>{d}</option>)}
+                  {t.spontAvailOptions.map(d => <option key={d}>{d}</option>)}
                 </select>
               </div>
               <div>
-                <Lbl>Prétention salariale (FCFA/mois, optionnel)</Lbl>
-                <input type="number" value={salaryExpectation} onChange={e => setSalaryExpectation(e.target.value)} className={inp()} placeholder="Ex: 600000" />
+                <Lbl>{t.spontSalary}</Lbl>
+                <input type="number" value={salaryExpectation} onChange={e => setSalaryExpectation(e.target.value)} className={inp()} placeholder={t.spontSalaryPh} />
               </div>
             </div>
           </div>
@@ -2566,16 +2887,19 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
 
         {/* Cover letter */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Lettre de motivation <span className="text-red-500">*</span></h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">{t.spontCoverLetter} <span className="text-red-500">*</span></h3>
           <textarea value={coverLetter} onChange={e => setCoverLetter(e.target.value)} rows={9} className={inp()} required
-            placeholder={`Madame, Monsieur le Directeur des Ressources Humaines,\n\nJe me permets de vous adresser ma candidature spontanée auprès de la Société Nationale des Hydrocarbures du Cameroun (SNH) pour un poste de [poste visé].\n\n[Développez vos motivations et votre valeur ajoutée pour la SNH]\n\nDans l'espoir d'une réponse favorable, je reste disponible pour tout entretien à votre convenance.\n\nVeuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${profile.first_name} ${profile.last_name}`} />
+            placeholder={lang === 'fr'
+              ? `Madame, Monsieur le Directeur des Ressources Humaines,\n\nJe me permets de vous adresser ma candidature spontanée auprès de la Société Nationale des Hydrocarbures du Cameroun (SNH) pour un poste de [poste visé].\n\n[Développez vos motivations et votre valeur ajoutée pour la SNH]\n\nDans l'espoir d'une réponse favorable, je reste disponible pour tout entretien à votre convenance.\n\nVeuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${profile.first_name} ${profile.last_name}`
+              : `Dear HR Director,\n\nI am writing to submit my spontaneous application to the Société Nationale des Hydrocarbures (SNH) for the position of [desired position].\n\n[Describe your motivations and the value you would bring to SNH]\n\nI remain available for an interview at your convenience.\n\nYours sincerely,\n\n${profile.first_name} ${profile.last_name}`
+            } />
 
           <div className="flex gap-3 mt-4">
             <button type="submit" disabled={submitting || !coverLetter.trim() || !poste}
               className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60 transition"
               style={{ background: SNH_BLUE }}>
               {submitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={14} />}
-              Envoyer ma candidature à la SNH
+              {t.spontSubmitBtn}
             </button>
           </div>
         </div>
@@ -2585,12 +2909,14 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied }: {
 }
 
 // ── Applications ──────────────────────────────────────────────────────────────
-function ApplicationsSection({ applications, openJobs, documents, candidateId, onApplied, onWithdrawn }: {
+function ApplicationsSection({ applications, openJobs, documents, candidateId, onApplied, onWithdrawn, lang }: {
   applications: Application[]; openJobs: JobOpening[];
   documents: CandidateDoc[]; candidateId: string;
   onApplied: (app: Application) => void;
   onWithdrawn: (appId: string) => void;
+  lang: Lang;
 }) {
+  const t = TR[lang];
   const [filter, setFilter] = useState('all');
   const [selectedJob, setSelectedJob] = useState<JobOpening | null>(null);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
@@ -2600,9 +2926,9 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
   const applied = new Set(applications.map(a => a.job_opening_id || '').filter(Boolean));
 
   const STATUS_LABELS: Record<string, string> = {
-    new: 'Soumis', reviewing: 'En examen', interview: 'Entretien',
-    offer: 'Offre', pre_onboarding: 'Pré-intégration', onboarding: 'Intégration',
-    integrated: 'Intégré(e)', rejected: 'Refusé(e)', withdrawn: 'Retiré(e)',
+    new: t.statusNew, reviewing: t.statusReviewing, interview: t.statusInterview,
+    offer: t.statusOffer, pre_onboarding: t.statusPreOnboarding, onboarding: t.statusOnboarding,
+    integrated: t.statusIntegrated, rejected: t.statusRejected, withdrawn: t.statusWithdrawn,
   };
 
   const canWithdraw = (status: string) => ['new', 'reviewing'].includes(status);
@@ -2615,7 +2941,7 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
       .update({ status: 'withdrawn' })
       .eq('id', appId);
     if (error) {
-      setWithdrawError('Impossible de dépostuler : ' + error.message);
+      setWithdrawError(t.appWithdrawError + error.message);
       setWithdrawing(null);
       return;
     }
@@ -2629,7 +2955,7 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <select value={filter} onChange={e => setFilter(e.target.value)} className={`${inp()} w-52`}>
-            <option value="all">Tous les statuts</option>
+          <option value="all">{t.appAllStatuses}</option>
             {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
@@ -2643,10 +2969,10 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3.5 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-900">Mes candidatures SNH ({filtered.length})</h3>
+            <h3 className="text-sm font-semibold text-gray-900">{t.appTitle} ({filtered.length})</h3>
           </div>
           {filtered.length === 0 ? (
-            <div className="py-12 text-center text-gray-400"><FileText size={36} className="mx-auto mb-2 opacity-20" />Aucune candidature</div>
+            <div className="py-12 text-center text-gray-400"><FileText size={36} className="mx-auto mb-2 opacity-20" />{t.appEmpty}</div>
           ) : (
             <div>
               {filtered.map(app => {
@@ -2665,7 +2991,7 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
                       <p className="text-sm font-semibold text-gray-900">{app.desired_position || app.job_opening?.title || '—'}</p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="text-xs text-gray-400 flex items-center gap-1"><Building2 size={10} />SNH</span>
-                        {app.job_opening_id ? <Tag variant="blue">Offre publiée</Tag> : <Tag variant="purple">Candidature spontanée</Tag>}
+                        {app.job_opening_id ? <Tag variant="blue">{t.appPublished}</Tag> : <Tag variant="purple">{t.appSpontaneous}</Tag>}
                         <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={10} />{fmtDate(app.created_at)}</span>
                       </div>
                     </div>
@@ -2675,20 +3001,20 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
                       {canWithdraw(app.status) && (
                         isConfirming ? (
                           <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
-                            <span className="text-xs text-red-700 font-medium">Confirmer ?</span>
+                            <span className="text-xs text-red-700 font-medium">{t.appConfirm}</span>
                             <button onClick={() => handleWithdraw(app.id)} disabled={withdrawing === app.id}
                               className="text-xs px-2 py-0.5 bg-red-600 text-white rounded font-semibold hover:bg-red-700 transition disabled:opacity-50">
-                              {withdrawing === app.id ? '...' : 'Oui'}
+                              {withdrawing === app.id ? '...' : t.appYes}
                             </button>
                             <button onClick={() => setConfirmWithdrawId(null)}
                               className="text-xs px-2 py-0.5 border border-red-200 text-red-600 rounded hover:bg-red-100 transition">
-                              Non
+                              {t.appNo}
                             </button>
                           </div>
                         ) : (
                           <button onClick={(e) => { e.stopPropagation(); setConfirmWithdrawId(app.id); }}
                             className="text-xs px-2.5 py-1 border border-slate-200 text-slate-500 rounded-lg hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition font-medium">
-                            Dépostuler
+                            {t.appWithdraw}
                           </button>
                         )
                       )}
@@ -2710,6 +3036,7 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
           onApplied={onApplied}
           onClose={() => setSelectedJob(null)}
           readOnly
+          lang={lang}
         />
       )}
     </>
@@ -2717,7 +3044,8 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────
-function NotificationsSection({ notifications, onView }: { notifications: Notification[]; onView: () => void }) {
+function NotificationsSection({ notifications, onView, lang }: { notifications: Notification[]; onView: () => void; lang: Lang }) {
+  const t = TR[lang];
   const unreadCount = notifications.filter(n => !n.read).length;
 
   // Mark all as read shortly after the section is opened
@@ -2731,15 +3059,15 @@ function NotificationsSection({ notifications, onView }: { notifications: Notifi
     <div>
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+          <h3 className="text-sm font-semibold text-gray-900">{t.notifications}</h3>
           {unreadCount > 0 && (
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-              {unreadCount} nouvelle{unreadCount > 1 ? 's' : ''}
+              {unreadCount} {unreadCount > 1 ? t.notifsNewPlural : t.notifsNew}
             </span>
           )}
         </div>
         {notifications.length === 0 ? (
-          <div className="py-12 text-center text-gray-400"><Bell size={32} className="mx-auto mb-2 opacity-20" />Aucune notification</div>
+          <div className="py-12 text-center text-gray-400"><Bell size={32} className="mx-auto mb-2 opacity-20" />{t.notifsEmpty}</div>
         ) : (
           <div>
             {notifications.map(n => (
@@ -2753,7 +3081,7 @@ function NotificationsSection({ notifications, onView }: { notifications: Notifi
                   <p className="text-xs text-gray-400 mt-1 flex items-center gap-1"><Clock size={10} />{fmtDate(n.created_at)}</p>
                 </div>
                 {!n.read && (
-                  <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">Nouveau</span>
+                  <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">{t.notifsNewBadge}</span>
                 )}
               </div>
             ))}

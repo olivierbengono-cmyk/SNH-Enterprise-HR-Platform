@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { User, Briefcase, GraduationCap, FileText, CheckCircle, XCircle, Plus, Trash2, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, ArrowRight, X, LogIn, UserPlus, LogOut, Sparkles, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Bell, LayoutDashboard, Send, Search, Plane as PaperPlane, ChevronRight, Home, Folder, BarChart3, Settings, Camera, Download } from 'lucide-react';
+import { User, Briefcase, GraduationCap, FileText, CheckCircle, XCircle, Plus, Trash2, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, ArrowRight, X, LogIn, UserPlus, LogOut, Sparkles, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Bell, LayoutDashboard, Send, Search, Plane as PaperPlane, ChevronRight, Home, Folder, BarChart3, Settings, Camera, Download, Monitor, Scale, Shield, DollarSign, Layers, Flame, Wrench, Zap, Users, Package, Cpu, TrendingUp, FlaskConical, Truck, HeartPulse } from 'lucide-react';
 import { generateCV, CVData } from '../../utils/cvPDF';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -1481,8 +1481,14 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
             <h3 className="text-sm font-semibold text-gray-900">{t.matchesTitle}</h3>
           </div>
           <div className="space-y-3">
-            {matches.filter(m => m.match_score >= 60).slice(0, 3).map(m => (
+            {matches.filter(m => m.match_score >= 60).slice(0, 3).map(m => {
+              const { Icon: JobIcon, color: iconColor, bg: iconBg } = getJobIcon(m.job_opening.title, m.job_opening.contract_type);
+              return (
               <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: iconBg }}>
+                  <JobIcon size={15} style={{ color: iconColor }} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900">{m.job_opening.title}</p>
                   <div className="flex items-center gap-2 flex-wrap mt-1">
@@ -1501,7 +1507,8 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
                   </button>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -2412,10 +2419,15 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
           style={!isStage ? { background: `${SNH_GREEN}08` } : {}}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex gap-3 items-start">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${isStage ? 'bg-amber-100' : ''}`}
-                style={!isStage ? { background: `${SNH_GREEN}20` } : {}}>
-                {isStage ? '🎓' : '💼'}
-              </div>
+              {(() => {
+                const { Icon: JobIcon, color: iconColor, bg: iconBg } = getJobIcon(job.title, job.contract_type);
+                return (
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: iconBg }}>
+                    <JobIcon size={22} style={{ color: iconColor }} />
+                  </div>
+                );
+              })()}
               <div>
                 <h2 className="text-lg font-bold text-gray-900">{job.title}</h2>
                 <p className="text-sm text-gray-500 mt-0.5">SNH · {job.location}</p>
@@ -2544,6 +2556,80 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
 }
 
 // ── Jobs ──────────────────────────────────────────────────────────────────────
+
+function getJobIcon(title: string, contractType?: string): { Icon: React.FC<any>; color: string; bg: string } {
+  const t = (title + ' ' + (contractType ?? '')).toLowerCase();
+
+  if (t.includes('stage') || t.includes('intern'))
+    return { Icon: GraduationCap, color: '#7c3aed', bg: '#ede9fe' };
+
+  if (t.includes('informati') || t.includes(' si ') || t.includes('système') || t.includes('systeme') ||
+      t.includes('développ') || t.includes('develop') || t.includes('logiciel') || t.includes('réseau') ||
+      t.includes('reseau') || t.includes('cyber') || t.includes('data') || t.includes('digital') ||
+      t.includes('web') || t.includes('cloud') || t.includes('erp') || t.includes('base de données'))
+    return { Icon: Monitor, color: '#2563eb', bg: '#dbeafe' };
+
+  if (t.includes('financ') || t.includes('compt') || t.includes('audit') || t.includes('budget') ||
+      t.includes('trésor') || t.includes('fiscal') || t.includes('sysco') || t.includes('analys') ||
+      t.includes('économ') || t.includes('econom') || t.includes('sap'))
+    return { Icon: DollarSign, color: '#d97706', bg: '#fef3c7' };
+
+  if (t.includes('jurist') || t.includes('juridique') || t.includes('droit') || t.includes('légal') ||
+      t.includes('legal') || t.includes('contrat pétrol') || t.includes('ohada'))
+    return { Icon: Scale, color: '#6d28d9', bg: '#ede9fe' };
+
+  if (t.includes('hse') || t.includes('hygiène') || t.includes('hygiene') || t.includes('sécurité') ||
+      t.includes('securit') || t.includes('environn') || t.includes('iso 14001') || t.includes('ohsas'))
+    return { Icon: Shield, color: '#0891b2', bg: '#cffafe' };
+
+  if (t.includes('santé') || t.includes('sante') || t.includes('médic') || t.includes('medic') ||
+      t.includes('infirm'))
+    return { Icon: HeartPulse, color: '#e11d48', bg: '#ffe4e6' };
+
+  if (t.includes('géolog') || t.includes('geolog') || t.includes('explor') || t.includes('réservoir') ||
+      t.includes('reserv') || t.includes('bassin') || t.includes('sismique') || t.includes('pétroph') ||
+      t.includes('stratig') || t.includes('géophysi') || t.includes('geophysi'))
+    return { Icon: Layers, color: '#059669', bg: '#d1fae5' };
+
+  if (t.includes('pétrole') || t.includes('petrol') || t.includes('product') || t.includes('forage') ||
+      t.includes('drill') || t.includes('pipeline') || t.includes('raffin') || t.includes('hydrocarbure') ||
+      t.includes('gaz') || t.includes('gas'))
+    return { Icon: Flame, color: '#dc2626', bg: '#fee2e2' };
+
+  if (t.includes('ressources humaines') || t.includes('ressource humaine') || t.includes(' rh') ||
+      t.includes('recrutement') || t.includes('talent') || t.includes('paie') || t.includes('payroll'))
+    return { Icon: Users, color: '#db2777', bg: '#fce7f3' };
+
+  if (t.includes('logistique') || t.includes('approvision') || t.includes('achat') ||
+      t.includes('supply') || t.includes('transport') || t.includes('stock'))
+    return { Icon: Package, color: '#92400e', bg: '#fef3c7' };
+
+  if (t.includes('mécan') || t.includes('mecan') || t.includes('mainten') || t.includes('maintenan') ||
+      t.includes('electromécani') || t.includes('réparation'))
+    return { Icon: Wrench, color: '#475569', bg: '#f1f5f9' };
+
+  if (t.includes('électr') || t.includes('electr') || t.includes('instrument') ||
+      t.includes('automat') || t.includes('énergie'))
+    return { Icon: Zap, color: '#ca8a04', bg: '#fef9c3' };
+
+  if (t.includes('chimi') || t.includes('labora') || t.includes('matériau') || t.includes('materiau'))
+    return { Icon: FlaskConical, color: '#0284c7', bg: '#e0f2fe' };
+
+  if (t.includes('directeur') || t.includes('manager') || t.includes('chef de') ||
+      t.includes('responsable') || t.includes('directi') || t.includes('général'))
+    return { Icon: Building2, color: '#374151', bg: '#f3f4f6' };
+
+  if (t.includes('relations') || t.includes('coopérat') || t.includes('diplomati') ||
+      t.includes('communication') || t.includes('marketing'))
+    return { Icon: Globe, color: '#0369a1', bg: '#e0f2fe' };
+
+  if (t.includes('cpu') || t.includes('architecture') || t.includes('infrastructure') ||
+      t.includes('réseaux') || t.includes('telecom') || t.includes('télécom'))
+    return { Icon: Cpu, color: '#4f46e5', bg: '#e0e7ff' };
+
+  return { Icon: Briefcase, color: SNH_GREEN, bg: `${SNH_GREEN}15` };
+}
+
 function JobsSection({ openJobs, matches, candidateId, onApplied, applications, documents, lang }: {
   openJobs: JobOpening[]; matches: JobMatch[]; candidateId: string;
   onApplied: (app: Application) => void; applications: Application[];
@@ -2590,11 +2676,12 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications, 
               const m = matches.find(x => x.job_opening_id === job.id);
               const isStage = job.contract_type?.toLowerCase().includes('stage');
               const isApplied = applied.has(job.id);
+              const { Icon: JobIcon, color: iconColor, bg: iconBg } = getJobIcon(job.title, job.contract_type);
               return (
                 <div key={job.id} onClick={() => setSelectedJob(job)} className={`bg-white rounded-xl border p-4 shadow-sm flex gap-4 items-start transition hover:shadow-md cursor-pointer ${isStage ? 'border-l-4 border-l-amber-400 border-gray-200' : 'border-l-4 border-l-blue-500 border-gray-200'}`}>
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${isStage ? 'bg-amber-50' : ''}`}
-                    style={!isStage ? { background: `${SNH_GREEN}15` } : {}}>
-                    {isStage ? '🎓' : '💼'}
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: iconBg }}>
+                    <JobIcon size={20} style={{ color: iconColor }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -2982,11 +3069,17 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
                 return (
                   <div key={app.id}
                     className="flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0 cursor-pointer ${isStage ? 'bg-amber-50' : ''}`}
-                      style={!isStage ? { background: `${SNH_GREEN}10` } : {}}
-                      onClick={() => job && setSelectedJob(job)}>
-                      {isStage ? '🎓' : '💼'}
-                    </div>
+                    {(() => {
+                      const title = app.desired_position || app.job_opening?.title || '';
+                      const { Icon: JobIcon, color: iconColor, bg: iconBg } = getJobIcon(title, job?.contract_type);
+                      return (
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 cursor-pointer"
+                          style={{ background: iconBg }}
+                          onClick={() => job && setSelectedJob(job)}>
+                          <JobIcon size={16} style={{ color: iconColor }} />
+                        </div>
+                      );
+                    })()}
                     <div className="flex-1 min-w-0 cursor-pointer" onClick={() => job && setSelectedJob(job)}>
                       <p className="text-sm font-semibold text-gray-900">{app.desired_position || app.job_opening?.title || '—'}</p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">

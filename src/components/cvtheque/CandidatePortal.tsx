@@ -490,6 +490,7 @@ const TR = {
     appSpontaneous: 'Candidature spontanée',
     appConfirm: 'Confirmer ?', appYes: 'Oui', appNo: 'Non',
     appWithdraw: 'Dépostuler', appWithdrawError: 'Impossible de dépostuler : ',
+    appDelete: 'Supprimer', appDeleteError: 'Impossible de supprimer : ',
     appReapply: 'Repostuler',
     appReapplyLimitTitle: 'Limite de candidatures atteinte',
     appReapplyLimitMsg: 'Vous avez déjà postulé 3 fois à cette offre (la limite autorisée). Il n\'est plus possible de repostuler à ce poste.',
@@ -616,6 +617,7 @@ const TR = {
     appSpontaneous: 'Spontaneous application',
     appConfirm: 'Confirm?', appYes: 'Yes', appNo: 'No',
     appWithdraw: 'Withdraw', appWithdrawError: 'Unable to withdraw: ',
+    appDelete: 'Delete', appDeleteError: 'Unable to delete: ',
     appReapply: 'Re-apply',
     appReapplyLimitTitle: 'Application limit reached',
     appReapplyLimitMsg: 'You have already applied 3 times to this position (the maximum allowed). Further applications for this role are not possible.',
@@ -959,6 +961,7 @@ export default function CandidatePortal() {
               documents={documents} candidateId={candidateId!}
               onApplied={(app) => setApplications(prev => [app, ...prev])}
               onWithdrawn={(appId) => setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'withdrawn' } : a))}
+              onDeleted={(appId) => setApplications(prev => prev.filter(a => a.id !== appId))}
               lang={lang} />
           )}
           {section === 'notifications' && (
@@ -3067,11 +3070,12 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied, lang }
 }
 
 // ── Applications ──────────────────────────────────────────────────────────────
-function ApplicationsSection({ applications, openJobs, documents, candidateId, onApplied, onWithdrawn, lang }: {
+function ApplicationsSection({ applications, openJobs, documents, candidateId, onApplied, onWithdrawn, onDeleted, lang }: {
   applications: Application[]; openJobs: JobOpening[];
   documents: CandidateDoc[]; candidateId: string;
   onApplied: (app: Application) => void;
   onWithdrawn: (appId: string) => void;
+  onDeleted: (appId: string) => void;
   lang: Lang;
 }) {
   const t = TR[lang];
@@ -3079,7 +3083,9 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
   const [selectedJob, setSelectedJob] = useState<JobOpening | null>(null);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
   const [confirmWithdrawId, setConfirmWithdrawId] = useState<string | null>(null);
-  const [withdrawError, setWithdrawError] = useState('');
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState('');
   const filtered = filter === 'all' ? applications : applications.filter(a => a.status === filter);
   // Exclude withdrawn so "isApplied" check in modal allows re-apply
   const applied = new Set(applications.filter(a => a.status !== 'withdrawn').map(a => a.job_opening_id || '').filter(Boolean));
@@ -3091,22 +3097,40 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
   };
 
   const canWithdraw = (status: string) => ['new', 'reviewing'].includes(status);
+  const canDelete  = (status: string) => ['withdrawn', 'rejected'].includes(status);
 
   const handleWithdraw = async (appId: string) => {
     setWithdrawing(appId);
-    setWithdrawError('');
+    setActionError('');
     const { error } = await supabase
       .from('candidate_applications')
       .update({ status: 'withdrawn' })
       .eq('id', appId);
     if (error) {
-      setWithdrawError(t.appWithdrawError + error.message);
+      setActionError(t.appWithdrawError + error.message);
       setWithdrawing(null);
       return;
     }
     onWithdrawn(appId);
     setWithdrawing(null);
     setConfirmWithdrawId(null);
+  };
+
+  const handleDelete = async (appId: string) => {
+    setDeleting(appId);
+    setActionError('');
+    const { error } = await supabase
+      .from('candidate_applications')
+      .delete()
+      .eq('id', appId);
+    if (error) {
+      setActionError(t.appDeleteError + error.message);
+      setDeleting(null);
+      return;
+    }
+    onDeleted(appId);
+    setDeleting(null);
+    setConfirmDeleteId(null);
   };
 
   return (
@@ -3119,10 +3143,10 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
           </select>
         </div>
 
-        {withdrawError && (
+        {actionError && (
           <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-            <span>{withdrawError}</span>
-            <button onClick={() => setWithdrawError('')} className="ml-auto text-red-400 hover:text-red-600">✕</button>
+            <span>{actionError}</span>
+            <button onClick={() => setActionError('')} className="ml-auto text-red-400 hover:text-red-600">✕</button>
           </div>
         )}
 
@@ -3137,7 +3161,6 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
               {filtered.map(app => {
                 const job = openJobs.find(j => j.id === app.job_opening_id);
                 const isStage = job?.contract_type?.toLowerCase().includes('stage');
-                const isConfirming = confirmWithdrawId === app.id;
                 return (
                   <div key={app.id}
                     className="flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0">
@@ -3160,11 +3183,13 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
                         <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={10} />{fmtDate(app.created_at)}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <AppStatus status={app.status} />
                       {job && <ChevronRight size={14} className="text-gray-300 cursor-pointer" onClick={() => setSelectedJob(job)} />}
+
+                      {/* Withdraw button — active applications only */}
                       {canWithdraw(app.status) && (
-                        isConfirming ? (
+                        confirmWithdrawId === app.id ? (
                           <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
                             <span className="text-xs text-red-700 font-medium">{t.appConfirm}</span>
                             <button onClick={() => handleWithdraw(app.id)} disabled={withdrawing === app.id}
@@ -3180,6 +3205,29 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
                           <button onClick={(e) => { e.stopPropagation(); setConfirmWithdrawId(app.id); }}
                             className="text-xs px-2.5 py-1 border border-slate-200 text-slate-500 rounded-lg hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition font-medium">
                             {t.appWithdraw}
+                          </button>
+                        )
+                      )}
+
+                      {/* Delete button — withdrawn / rejected only */}
+                      {canDelete(app.status) && (
+                        confirmDeleteId === app.id ? (
+                          <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                            <span className="text-xs text-red-700 font-medium">{t.appConfirm}</span>
+                            <button onClick={() => handleDelete(app.id)} disabled={deleting === app.id}
+                              className="text-xs px-2 py-0.5 bg-red-600 text-white rounded font-semibold hover:bg-red-700 transition disabled:opacity-50">
+                              {deleting === app.id ? '...' : t.appYes}
+                            </button>
+                            <button onClick={() => setConfirmDeleteId(null)}
+                              className="text-xs px-2 py-0.5 border border-red-200 text-red-600 rounded hover:bg-red-100 transition">
+                              {t.appNo}
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(app.id); }}
+                            className="text-xs px-2.5 py-1 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 hover:text-red-700 transition font-medium flex items-center gap-1">
+                            <Trash2 size={11} />
+                            {t.appDelete}
                           </button>
                         )
                       )}

@@ -561,31 +561,6 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
         </div>
       </div>
 
-      {/* ── Accès rapide ───────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-slate-200">
-        <div className="p-5 border-b border-slate-200">
-          <h2 className="text-base font-bold text-slate-900">Acces rapide</h2>
-        </div>
-        <div className="p-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { id: 'jobs',       name: "Offres d'emploi", icon: Briefcase,  color: 'bg-blue-50 text-blue-600 hover:bg-blue-100',     route: 'recruitment' },
-            { id: 'candidates', name: 'Candidats',       icon: Users,      color: 'bg-green-50 text-green-600 hover:bg-green-100',   route: 'cvtheque' },
-            { id: 'interviews', name: 'Entretiens',      icon: Calendar,   color: 'bg-orange-50 text-orange-600 hover:bg-orange-100', route: 'recruitment' },
-            { id: 'documents',  name: 'Dossiers RH',    icon: FileText,   color: 'bg-slate-50 text-slate-600 hover:bg-slate-100',   route: 'employees' },
-            { id: 'onboarding', name: 'Integration',    icon: UserPlus,   color: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100', route: 'recruitment' },
-            { id: 'analytics',  name: 'Statistiques',  icon: TrendingUp, color: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100', route: 'analytics' },
-          ].map((module) => {
-            const Icon = module.icon;
-            return (
-              <button key={module.id} onClick={() => onNavigate?.(module.route)}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl transition ${module.color}`}>
-                <Icon className="w-6 h-6" />
-                <span className="text-xs font-medium text-center text-slate-900">{module.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }

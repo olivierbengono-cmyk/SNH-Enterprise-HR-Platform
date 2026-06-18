@@ -490,6 +490,10 @@ const TR = {
     appSpontaneous: 'Candidature spontanée',
     appConfirm: 'Confirmer ?', appYes: 'Oui', appNo: 'Non',
     appWithdraw: 'Dépostuler', appWithdrawError: 'Impossible de dépostuler : ',
+    appReapply: 'Repostuler',
+    appReapplyLimitTitle: 'Limite de candidatures atteinte',
+    appReapplyLimitMsg: 'Vous avez déjà postulé 3 fois à cette offre (la limite autorisée). Il n\'est plus possible de repostuler à ce poste.',
+    appReapplyLimitBtn: 'Compris',
     statusNew: 'Soumis', statusReviewing: 'En examen', statusInterview: 'Entretien',
     statusOffer: 'Offre', statusPreOnboarding: 'Pré-intégration', statusOnboarding: 'Intégration',
     statusIntegrated: 'Intégré(e)', statusRejected: 'Refusé(e)', statusWithdrawn: 'Retiré(e)',
@@ -612,6 +616,10 @@ const TR = {
     appSpontaneous: 'Spontaneous application',
     appConfirm: 'Confirm?', appYes: 'Yes', appNo: 'No',
     appWithdraw: 'Withdraw', appWithdrawError: 'Unable to withdraw: ',
+    appReapply: 'Re-apply',
+    appReapplyLimitTitle: 'Application limit reached',
+    appReapplyLimitMsg: 'You have already applied 3 times to this position (the maximum allowed). Further applications for this role are not possible.',
+    appReapplyLimitBtn: 'Understood',
     statusNew: 'Submitted', statusReviewing: 'Under review', statusInterview: 'Interview',
     statusOffer: 'Offer', statusPreOnboarding: 'Pre-onboarding', statusOnboarding: 'Onboarding',
     statusIntegrated: 'Integrated', statusRejected: 'Rejected', statusWithdrawn: 'Withdrawn',
@@ -851,7 +859,7 @@ export default function CandidatePortal() {
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">{TR[lang].snhRecruitment}</p>
           <NavItem icon={Briefcase} label={TR[lang].jobs} active={section==='jobs'} onClick={() => navTo('jobs')} />
           <NavItem icon={Send} label={TR[lang].spontaneous} active={section==='spontaneous'} onClick={() => navTo('spontaneous')} />
-          <NavItem icon={FileText} label={TR[lang].applications} active={section==='applications'} badge={applications.length} onClick={() => navTo('applications')} />
+          <NavItem icon={FileText} label={TR[lang].applications} active={section==='applications'} badge={applications.filter(a => a.status !== 'withdrawn').length} onClick={() => navTo('applications')} />
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 mt-2">{TR[lang].account}</p>
           <NavItem icon={Bell} label={TR[lang].notifications} active={section==='notifications'} badge={unreadNotifs || undefined} onClick={() => { navTo('notifications'); setUnreadNotifs(0); }} />
           <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all mt-0.5">
@@ -1394,10 +1402,23 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
   ];
 
   const [applying, setApplying] = useState<string | null>(null);
-  const [applied, setApplied] = useState<Set<string>>(new Set(applications.map(a => a.job_opening_id || '').filter(Boolean)));
+  // Exclude withdrawn so "Apply" button can reappear after withdrawal
+  const [applied, setApplied] = useState<Set<string>>(new Set(applications.filter(a => a.status !== 'withdrawn').map(a => a.job_opening_id || '').filter(Boolean)));
+  const [limitJobId, setLimitJobId] = useState<string | null>(null);
 
   const handleApply = async (jobId: string, jobTitle: string) => {
     setApplying(jobId);
+    // Check attempt count (including past withdrawn applications)
+    const { count } = await supabase
+      .from('candidate_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('candidate_id', candidateId)
+      .eq('job_opening_id', jobId);
+    if ((count ?? 0) >= 3) {
+      setApplying(null);
+      setLimitJobId(jobId);
+      return;
+    }
     const { data } = await supabase.from('candidate_applications').insert({
       candidate_id: candidateId, job_opening_id: jobId,
       desired_position: jobTitle, status: 'new',
@@ -1413,6 +1434,7 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
   }));
 
   return (
+    <>
     <div className="space-y-5">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1513,6 +1535,27 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
         </div>
       )}
     </div>
+
+    {/* Limit modal */}
+    {limitJobId && (
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+            <AlertCircle size={22} className="text-amber-600" />
+          </div>
+          <div className="text-center">
+            <p className="text-base font-bold text-gray-900">{t.appReapplyLimitTitle}</p>
+            <p className="text-sm text-gray-600 mt-2">{t.appReapplyLimitMsg}</p>
+          </div>
+          <button onClick={() => setLimitJobId(null)}
+            className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
+            style={{ background: SNH_GREEN }}>
+            {t.appReapplyLimitBtn}
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -2387,6 +2430,7 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
   const t = TR[lang];
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState('');
+  const [limitReached, setLimitReached] = useState(false);
 
   const isStage = job.contract_type?.toLowerCase().includes('stage');
   const docKey = job.contract_type?.toLowerCase().includes('académique') ? 'stage_academique'
@@ -2398,6 +2442,20 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
   const handleApplyClick = async () => {
     setApplying(true);
     setApplyError('');
+
+    // Count all previous attempts for this candidate+job (including withdrawn)
+    const { count } = await supabase
+      .from('candidate_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('candidate_id', candidateId)
+      .eq('job_opening_id', job.id);
+
+    if ((count ?? 0) >= 3) {
+      setApplying(false);
+      setLimitReached(true);
+      return;
+    }
+
     const { data, error } = await supabase.from('candidate_applications').insert({
       candidate_id: candidateId, job_opening_id: job.id,
       desired_position: job.title, status: 'new',
@@ -2529,6 +2587,18 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
           </div>
         )}
 
+        {/* Limit reached overlay */}
+        {limitReached && (
+          <div className="mx-6 mb-0 -mt-2 px-4 py-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5 text-amber-600" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">{t.appReapplyLimitTitle}</p>
+              <p className="text-xs text-amber-700 mt-1">{t.appReapplyLimitMsg}</p>
+            </div>
+            <button onClick={() => { setLimitReached(false); onClose(); }} className="text-amber-500 hover:text-amber-700 flex-shrink-0"><X size={14} /></button>
+          </div>
+        )}
+
         {/* Footer */}
         {!readOnly && (
           <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
@@ -2639,7 +2709,8 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications, 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [selectedJob, setSelectedJob] = useState<JobOpening | null>(null);
-  const applied = new Set(applications.map(a => a.job_opening_id || '').filter(Boolean));
+  // Only count non-withdrawn applications as "already applied" (so re-apply button can appear)
+  const applied = new Set(applications.filter(a => a.status !== 'withdrawn').map(a => a.job_opening_id || '').filter(Boolean));
 
   const filtered = openJobs.filter(j => {
     const txt = `${j.title} ${j.location} ${j.description}`.toLowerCase();
@@ -3010,7 +3081,8 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
   const [confirmWithdrawId, setConfirmWithdrawId] = useState<string | null>(null);
   const [withdrawError, setWithdrawError] = useState('');
   const filtered = filter === 'all' ? applications : applications.filter(a => a.status === filter);
-  const applied = new Set(applications.map(a => a.job_opening_id || '').filter(Boolean));
+  // Exclude withdrawn so "isApplied" check in modal allows re-apply
+  const applied = new Set(applications.filter(a => a.status !== 'withdrawn').map(a => a.job_opening_id || '').filter(Boolean));
 
   const STATUS_LABELS: Record<string, string> = {
     new: t.statusNew, reviewing: t.statusReviewing, interview: t.statusInterview,

@@ -2347,7 +2347,7 @@ function DocumentsSection({ candidateId, documents, setDocuments, lang }: {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{doc.file_name}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {DOC_TYPES.find(d => d.value === doc.type)?.label ?? doc.type} · {fmtSize(doc.file_size)} · Ajouté le {fmtDate(doc.uploaded_at)}
+                      {docTypes.find(d => d.value === doc.type)?.label ?? doc.type} · {fmtSize(doc.file_size)} · {lang === 'fr' ? 'Ajouté le' : 'Added on'} {fmtDate(doc.uploaded_at)}
                     </p>
                     {doc.expiration_date && (
                       <p className={`text-xs font-semibold mt-0.5 ${expStatus === 'expired' ? 'text-red-600' : expStatus === 'soon' ? 'text-amber-600' : 'text-gray-500'}`}>
@@ -3044,6 +3044,50 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────
+
+// Translate DB-stored French notification text to English.
+// The trigger stores fixed patterns — we translate by matching them.
+function translateNotif(title: string, body: string, lang: Lang): { title: string; body: string } {
+  if (lang === 'fr') return { title, body };
+
+  // Translate title
+  let enTitle = title;
+  if (title === 'Candidature reçue') enTitle = 'Application received';
+  else if (title === 'Mise à jour de votre dossier') enTitle = 'Application update';
+
+  // Translate body — extract the job position then rebuild in English
+  let enBody = body;
+
+  // Pattern: 'Votre candidature pour "X" a bien été reçue. L'équipe RH SNH la traitera dans les meilleurs délais.'
+  const receivedMatch = body.match(/^Votre candidature pour "(.+)" a bien été reçue\./);
+  if (receivedMatch) {
+    enBody = `Your application for "${receivedMatch[1]}" has been received. The SNH HR team will process it as soon as possible.`;
+    return { title: enTitle, body: enBody };
+  }
+
+  // Pattern: 'Votre candidature pour "X" a été mise à jour. Nouveau statut : Y.'
+  const updatedMatch = body.match(/^Votre candidature pour "(.+)" a été mise à jour\. Nouveau statut : (.+)\.$/);
+  if (updatedMatch) {
+    const position = updatedMatch[1];
+    const statusFr = updatedMatch[2];
+    const statusMap: Record<string, string> = {
+      'En cours d\'étude': 'Under review',
+      'Entretien planifié': 'Interview scheduled',
+      'Offre reçue': 'Offer received',
+      'Pré-intégration': 'Pre-onboarding',
+      'Intégration en cours': 'Onboarding',
+      'Intégré(e) — félicitations !': 'Integrated — congratulations!',
+      'Non retenu(e) à ce stade': 'Not selected at this stage',
+      'Candidature retirée': 'Application withdrawn',
+    };
+    const statusEn = statusMap[statusFr] ?? statusFr;
+    enBody = `Your application for "${position}" has been updated. New status: ${statusEn}.`;
+    return { title: enTitle, body: enBody };
+  }
+
+  return { title: enTitle, body: enBody };
+}
+
 function NotificationsSection({ notifications, onView, lang }: { notifications: Notification[]; onView: () => void; lang: Lang }) {
   const t = TR[lang];
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -3070,21 +3114,24 @@ function NotificationsSection({ notifications, onView, lang }: { notifications: 
           <div className="py-12 text-center text-gray-400"><Bell size={32} className="mx-auto mb-2 opacity-20" />{t.notifsEmpty}</div>
         ) : (
           <div>
-            {notifications.map(n => (
+            {notifications.map(n => {
+              const { title: nTitle, body: nBody } = translateNotif(n.title, n.body, lang);
+              return (
               <div key={n.id} className={`flex items-start gap-3 px-5 py-4 border-b border-gray-50 last:border-0 transition-colors ${n.read ? 'bg-green-50/30' : 'bg-red-50/40'}`}>
                 <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${n.read ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
                 <div className="flex-1">
                   <p className={`text-sm ${n.read ? 'text-gray-600' : 'text-gray-900 font-semibold'}`}>
-                    {n.title}
+                    {nTitle}
                   </p>
-                  <p className={`text-sm mt-0.5 ${n.read ? 'text-gray-500' : 'text-gray-700'}`}>{n.body}</p>
+                  <p className={`text-sm mt-0.5 ${n.read ? 'text-gray-500' : 'text-gray-700'}`}>{nBody}</p>
                   <p className="text-xs text-gray-400 mt-1 flex items-center gap-1"><Clock size={10} />{fmtDate(n.created_at)}</p>
                 </div>
                 {!n.read && (
                   <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">{t.notifsNewBadge}</span>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

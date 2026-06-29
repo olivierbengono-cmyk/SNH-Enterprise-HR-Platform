@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { logSecurityEvent } from '../../utils/auditLog';
 
 interface ChangePasswordFormProps {
   onPasswordChanged: () => void;
@@ -51,6 +52,13 @@ export function ChangePasswordForm({ onPasswordChanged }: ChangePasswordFormProp
           .eq('id', user.id);
 
         if (profileError) throw profileError;
+
+        await logSecurityEvent({
+          event_type: 'password_changed',
+          user_id: user.id,
+          user_email: user.email,
+          details: { context: 'first_login' },
+        });
       }
 
       onPasswordChanged();

@@ -40,6 +40,7 @@ import DocumentsManagement from './components/modules/DocumentsManagement';
 import { RolePermissionsManagement } from './components/modules/RolePermissionsManagement';
 import MyTeam from './components/modules/MyTeam';
 import OrgStructureManagement from './components/modules/OrgStructureManagement';
+import AuditLogsViewer from './components/modules/AuditLogsViewer';
 
 function AppContent() {
   const { user, profile, loading, reloadProfile } = useAuth();
@@ -124,6 +125,10 @@ function AppContent() {
 
     if (activeTab === 'role-permissions' && profile.role === 'admin') {
       return <RolePermissionsManagement />;
+    }
+
+    if (activeTab === 'audit-logs' && (profile.role === 'admin' || profile.role === 'drh')) {
+      return <AuditLogsViewer />;
     }
 
     if (activeTab === 'my-team' && profile.role === 'manager') {

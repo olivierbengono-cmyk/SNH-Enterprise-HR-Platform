@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { UserProfile } from '../lib/database.types';
+import { logSecurityEvent, logAudit } from '../utils/auditLog';
 
 interface AuthContextType {
   user: User | null;
@@ -63,8 +64,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      await logSecurityEvent({
+        event_type: 'login_failure',
+        user_email: email,
+        details: { reason: error.message },
+      });
+      throw error;
+    }
+    await logSecurityEvent({
+      event_type: 'login_success',
+      user_id: data.user?.id,
+      user_email: email,
+      details: { method: 'password' },
+    });
   };
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
@@ -90,6 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    if (user) {
+      await logSecurityEvent({
+        event_type: 'logout',
+        user_id: user.id,
+        user_email: user.email,
+      });
+    }
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };

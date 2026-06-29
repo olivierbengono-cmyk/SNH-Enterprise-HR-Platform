@@ -6,7 +6,8 @@ import {
   Home, Users, Calendar, GraduationCap, Target,
   FileText, TrendingUp, Settings, Bell, LogOut, Menu, X,
   Briefcase, UserCheck, Shield, Award, Key, Bot, Clock, DollarSign, Network,
-  ChevronDown, ChevronRight, Search, ArrowLeft, Lock, Building2, ExternalLink
+  ChevronDown, ChevronRight, Search, ArrowLeft, Lock, Building2, ExternalLink,
+  ScrollText
 } from 'lucide-react';
 import AIAssistant from '../ai/AIAssistant';
 import { CommandPalette } from './CommandPalette';
@@ -165,6 +166,7 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
             { id: 'user-roles', label: 'Gestion des roles', icon: Shield },
             { id: 'disciplinary', label: 'Disciplinaire', icon: Shield },
             { id: 'documents', label: 'Documents & Attestations', icon: FileText },
+            { id: 'audit-logs', label: 'Journaux de securite', icon: ScrollText },
           ],
         },
         {
@@ -210,6 +212,7 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
             { id: 'accounts', label: "Comptes d'acces", icon: Key },
             { id: 'user-roles', label: 'Gestion des roles', icon: Users },
             { id: 'role-permissions', label: 'Permissions & Acces', icon: Lock },
+            { id: 'audit-logs', label: 'Journaux de securite', icon: ScrollText },
           ],
         },
         {

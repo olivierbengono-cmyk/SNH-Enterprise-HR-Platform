@@ -22,6 +22,8 @@ interface JobOpening {
   required_skills: string[]; nice_to_have_skills: string[];
   min_experience_years: number; education_level: string | null;
   publication_date: string; closing_date: string;
+  title_en?: string | null; description_en?: string | null; requirements_en?: string | null;
+  translation_status?: string | null;
 }
 interface JobMatch {
   id: string; job_opening_id: string; match_score: number;
@@ -1157,7 +1159,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div>
-                          <h3 className="font-bold text-gray-900 text-base leading-tight">{job.title}</h3>
+                          <h3 className="font-bold text-gray-900 text-base leading-tight">{(lang === 'en' && job.title_en) ? job.title_en : job.title}</h3>
                           <div className="flex items-center gap-3 mt-1 flex-wrap">
                             <span className="text-xs text-gray-500 flex items-center gap-1"><MapPin size={11} />{job.location}</span>
                             <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={11} />{TR[lang].closing} {fmtDate(job.closing_date)}</span>
@@ -1200,13 +1202,13 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
                     {job.description && (
                       <div>
                         <p className="text-xs font-semibold text-gray-700 uppercase mb-1.5">{TR[lang].jobDescription}</p>
-                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{job.description}</p>
+                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{(lang === 'en' && job.description_en) ? job.description_en : job.description}</p>
                       </div>
                     )}
                     {job.requirements && (
                       <div>
                         <p className="text-xs font-semibold text-gray-700 uppercase mb-1.5">{TR[lang].profileSought}</p>
-                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{job.requirements}</p>
+                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{(lang === 'en' && job.requirements_en) ? job.requirements_en : job.requirements}</p>
                       </div>
                     )}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
@@ -2490,7 +2492,7 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
                 );
               })()}
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{job.title}</h2>
+                <h2 className="text-lg font-bold text-gray-900">{(lang === 'en' && job.title_en) ? job.title_en : job.title}</h2>
                 <p className="text-sm text-gray-500 mt-0.5">SNH · {job.location}</p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   <Tag variant={isStage ? 'amber' : 'green'}>{job.contract_type}</Tag>
@@ -2531,6 +2533,9 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
           {job.description && (
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t.jdDescription}</p>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                {(lang === 'en' && job.description_en) ? job.description_en : job.description}
+              </p>
             </div>
           )}
 
@@ -2538,6 +2543,9 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
           {job.requirements && (
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t.jdProfile}</p>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                {(lang === 'en' && job.requirements_en) ? job.requirements_en : job.requirements}
+              </p>
             </div>
           )}
 
@@ -2760,7 +2768,7 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications, 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
-                        <h3 className="text-sm font-bold text-gray-900 hover:underline">{job.title}</h3>
+                        <h3 className="text-sm font-bold text-gray-900 hover:underline">{(lang === 'en' && job.title_en) ? job.title_en : job.title}</h3>
                         <p className="text-xs text-gray-500 mt-0.5">SNH · {job.location}</p>
                       </div>
                     </div>

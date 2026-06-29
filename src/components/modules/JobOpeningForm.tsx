@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, ChevronRight, ChevronLeft, Search } from 'lucide-react';
+import { X, AlertCircle, ChevronRight, ChevronLeft, Search, Sparkles, Languages, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -17,12 +17,13 @@ interface JobOpeningFormProps {
   initialData?: any;
 }
 
-type Tab = 'infos' | 'candidat' | 'competences' | 'recapitulatif';
+type Tab = 'infos' | 'candidat' | 'competences' | 'traduction' | 'recapitulatif';
 
 const TABS: { value: Tab; label: string }[] = [
   { value: 'infos',          label: 'Informations' },
   { value: 'candidat',       label: 'Critères candidat' },
   { value: 'competences',    label: 'Compétences' },
+  { value: 'traduction',     label: 'Traduction EN' },
   { value: 'recapitulatif',  label: 'Récapitulatif' },
 ];
 
@@ -31,6 +32,12 @@ const EDU_LEVELS = [
   'BAC+2 (BTS/DUT)', 'BAC+3 (Licence)', 'BAC+4',
   'BAC+5 (Master)', 'Doctorat', 'Indifférent',
 ];
+
+const TRANSLATION_STATUS_CONFIG = {
+  none:          { label: 'Non traduit',          color: 'text-slate-500',  bg: 'bg-slate-100',  icon: Clock },
+  ai_generated:  { label: 'Traduction IA',         color: 'text-amber-700', bg: 'bg-amber-50',   icon: Sparkles },
+  validated:     { label: 'Validée par la cellule', color: 'text-green-700', bg: 'bg-green-50',   icon: CheckCircle },
+};
 
 function genRef() {
   return `SNH-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`;
@@ -41,6 +48,40 @@ function inp(err = false) {
 }
 function Lbl({ children, req }: { children: React.ReactNode; req?: boolean }) {
   return <label className="block text-sm font-medium text-slate-700 mb-1.5">{children}{req && <span className="text-red-500 ml-1">*</span>}</label>;
+}
+
+// Side-by-side FR/EN field
+function BilingualField({
+  label, frValue, enValue, onEnChange, placeholder, multiline, rows = 4,
+}: {
+  label: string; frValue: string; enValue: string; onEnChange: (v: string) => void;
+  placeholder?: string; multiline?: boolean; rows?: number;
+}) {
+  const cls = 'w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition focus:ring-2 focus:ring-snh-green focus:border-transparent border-slate-300 bg-white';
+  const roBase = 'w-full px-3 py-2.5 border rounded-lg text-sm bg-slate-50 border-slate-200 text-slate-600 leading-relaxed';
+  return (
+    <div>
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <p className="text-xs text-slate-400 mb-1 flex items-center gap-1">🇫🇷 Français (source)</p>
+          {multiline
+            ? <textarea readOnly value={frValue} rows={rows} className={roBase + ' resize-none'} />
+            : <input readOnly value={frValue} className={roBase} />
+          }
+        </div>
+        <div>
+          <p className="text-xs text-slate-400 mb-1 flex items-center gap-1">🇬🇧 English (traduction)</p>
+          {multiline
+            ? <textarea value={enValue} onChange={e => onEnChange(e.target.value)} rows={rows}
+                placeholder={placeholder} className={cls + ' resize-none'} />
+            : <input value={enValue} onChange={e => onEnChange(e.target.value)}
+                placeholder={placeholder} className={cls} />
+          }
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFormProps) {
@@ -79,6 +120,17 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
   const [masterSkills, setMasterSkills] = useState<MasterSkill[]>([]);
   const [skillSearch, setSkillSearch] = useState('');
 
+  // ── Tab 4: Traduction EN ──────────────────────────────────────────────────
+  const [titleEn, setTitleEn] = useState(() => initialData?.title_en || '');
+  const [descriptionEn, setDescriptionEn] = useState(() => initialData?.description_en || '');
+  const [requirementsEn, setRequirementsEn] = useState(() => initialData?.requirements_en || '');
+  const [translationStatus, setTranslationStatus] = useState<'none' | 'ai_generated' | 'validated'>(
+    () => initialData?.translation_status || 'none',
+  );
+  const [translating, setTranslating] = useState(false);
+  const [translateMsg, setTranslateMsg] = useState('');
+  const [translateMsgType, setTranslateMsgType] = useState<'info' | 'error' | 'warning'>('info');
+
   useEffect(() => {
     supabase.from('departments').select('id, name').order('name').then(({ data }) => {
       if (data) setDepartments(data);
@@ -98,6 +150,38 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
     if (pos) {
       setTitle(pos.title);
       if (pos.department_id && !departmentId) setDepartmentId(pos.department_id);
+    }
+  };
+
+  const handleTranslateAI = async () => {
+    if (!description.trim() || !requirements.trim()) {
+      setTranslateMsg("Remplissez d'abord la description et le profil recherché (onglet Informations / Critères candidat) avant de lancer la traduction.");
+      setTranslateMsgType('warning');
+      return;
+    }
+    setTranslating(true);
+    setTranslateMsg('');
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke('translate-job-opening', {
+        body: { title, description, requirements },
+      });
+      if (fnErr) throw fnErr;
+      if (data?.no_key) {
+        setTranslateMsg(data.message);
+        setTranslateMsgType('warning');
+        return;
+      }
+      if (data?.title_en) setTitleEn(data.title_en);
+      if (data?.description_en) setDescriptionEn(data.description_en);
+      if (data?.requirements_en) setRequirementsEn(data.requirements_en);
+      if (data?.title_en) setTranslationStatus('ai_generated');
+      setTranslateMsg(data?.message || 'Traduction générée. Vérifiez et corrigez si nécessaire.');
+      setTranslateMsgType('info');
+    } catch (e: any) {
+      setTranslateMsg('Erreur : ' + (e.message || 'inconnu'));
+      setTranslateMsgType('error');
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -145,6 +229,10 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
       openings_count: openingsCount,
       is_internal: isInternal,
       work_mode: workMode || null,
+      title_en: titleEn || null,
+      description_en: descriptionEn || null,
+      requirements_en: requirementsEn || null,
+      translation_status: translationStatus,
     };
     try {
       if (isEdit) {
@@ -164,10 +252,12 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
   };
 
   const dept = departments.find(d => d.id === departmentId);
+  const tsConf = TRANSLATION_STATUS_CONFIG[translationStatus];
+  const TransIcon = tsConf.icon;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+      <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="border-b border-slate-200 px-6 pt-5 pb-0">
           <div className="flex items-start justify-between mb-4">
@@ -180,11 +270,15 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
             </button>
           </div>
           {/* Tabs */}
-          <div className="flex gap-0 -mb-px">
+          <div className="flex gap-0 -mb-px overflow-x-auto">
             {TABS.map((t, i) => (
               <button key={t.value} onClick={() => { setError(''); setTab(t.value); }}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t.value ? 'border-snh-green text-snh-green' : 'border-transparent text-slate-500 hover:text-slate-700'} ${i > tabIdx ? 'opacity-60' : ''}`}>
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${tab === t.value ? 'border-snh-green text-snh-green' : 'border-transparent text-slate-500 hover:text-slate-700'} ${i > tabIdx ? 'opacity-60' : ''}`}>
+                {t.value === 'traduction' && <Languages size={13} />}
                 {t.label}
+                {t.value === 'traduction' && translationStatus !== 'none' && (
+                  <span className={`ml-0.5 w-1.5 h-1.5 rounded-full inline-block ${translationStatus === 'validated' ? 'bg-green-500' : 'bg-amber-400'}`} />
+                )}
               </button>
             ))}
           </div>
@@ -202,18 +296,11 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
           {/* ── Tab 1: Informations ─────────────────────────────────────── */}
           {tab === 'infos' && (
             <div className="space-y-4">
-              {/* Poste du référentiel */}
               <div>
                 <Lbl req>Poste (référentiel)</Lbl>
-                <select
-                  value={positionId}
-                  onChange={e => handlePositionSelect(e.target.value)}
-                  className={inp(!positionId && !!error)}
-                >
+                <select value={positionId} onChange={e => handlePositionSelect(e.target.value)} className={inp(!positionId && !!error)}>
                   <option value="">— Sélectionner un poste dans le référentiel —</option>
-                  {positions.map(p => (
-                    <option key={p.id} value={p.id}>{p.title}</option>
-                  ))}
+                  {positions.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                 </select>
                 {positionId && title && (
                   <p className="text-xs text-slate-500 mt-1">Intitulé retenu : <strong>{title}</strong></p>
@@ -307,7 +394,6 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
           {/* ── Tab 3: Compétences ──────────────────────────────────────── */}
           {tab === 'competences' && (
             <div className="space-y-5">
-              {/* Legend */}
               <div className="flex items-center gap-4 text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
@@ -324,14 +410,12 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
               </div>
               <p className="text-xs text-slate-500">Cliquez une fois pour marquer <strong>obligatoire</strong>, deux fois pour <strong>appréciée</strong>, trois fois pour désélectionner.</p>
 
-              {/* Search */}
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input value={skillSearch} onChange={e => setSkillSearch(e.target.value)}
                   className={inp() + ' pl-9'} placeholder="Rechercher dans le référentiel de compétences..." />
               </div>
 
-              {/* Skills grouped by category */}
               <div className="space-y-4">
                 {CAT_ORDER.map(cat => {
                   const f = skillSearch.toLowerCase();
@@ -373,7 +457,6 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
                 })}
               </div>
 
-              {/* Summary of selected */}
               {(requiredSkills.length > 0 || niceToHaveSkills.length > 0) && (
                 <div className="border-t border-slate-100 pt-4 space-y-3">
                   {requiredSkills.length > 0 && (
@@ -411,9 +494,117 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
             </div>
           )}
 
-          {/* ── Tab 4: Récapitulatif ────────────────────────────────────── */}
+          {/* ── Tab 4: Traduction EN ────────────────────────────────────── */}
+          {tab === 'traduction' && (
+            <div className="space-y-6">
+              {/* Header card */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+                <Languages size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-blue-900 mb-0.5">Traduction anglaise de l'offre</p>
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    Utilisez le bouton <strong>Traduire avec l'IA</strong> pour générer automatiquement une traduction, puis corrigez si nécessaire.
+                    La cellule de traduction peut aussi saisir ou valider directement dans les champs de droite.
+                  </p>
+                </div>
+              </div>
+
+              {/* AI Translate button + status */}
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <button
+                  onClick={handleTranslateAI}
+                  disabled={translating}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition disabled:opacity-60"
+                  style={{ background: translating ? '#94a3b8' : '#006B3C' }}>
+                  {translating
+                    ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Traduction en cours…</>
+                    : <><Sparkles size={15} /> Traduire avec l'IA</>
+                  }
+                </button>
+
+                {/* Translation status selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">Statut :</span>
+                  <div className="flex gap-1.5">
+                    {(Object.entries(TRANSLATION_STATUS_CONFIG) as [keyof typeof TRANSLATION_STATUS_CONFIG, typeof TRANSLATION_STATUS_CONFIG[keyof typeof TRANSLATION_STATUS_CONFIG]][]).map(([val, conf]) => {
+                      const Icon = conf.icon;
+                      return (
+                        <button key={val} onClick={() => setTranslationStatus(val)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                            translationStatus === val
+                              ? `${conf.bg} ${conf.color} border-current`
+                              : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                          }`}>
+                          <Icon size={12} /> {conf.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Feedback message */}
+              {translateMsg && (
+                <div className={`flex items-start gap-2 rounded-lg p-3 text-sm border ${
+                  translateMsgType === 'error'   ? 'bg-red-50 border-red-200 text-red-800' :
+                  translateMsgType === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                  'bg-green-50 border-green-200 text-green-800'
+                }`}>
+                  {translateMsgType === 'error'   ? <AlertCircle size={15} className="flex-shrink-0 mt-0.5" /> :
+                   translateMsgType === 'warning' ? <AlertTriangle size={15} className="flex-shrink-0 mt-0.5" /> :
+                   <CheckCircle size={15} className="flex-shrink-0 mt-0.5" />}
+                  {translateMsg}
+                </div>
+              )}
+
+              {/* Bilingual fields */}
+              <div className="space-y-5">
+                <BilingualField
+                  label="Intitulé du poste"
+                  frValue={title}
+                  enValue={titleEn}
+                  onEnChange={setTitleEn}
+                  placeholder="Job title in English…"
+                />
+                <BilingualField
+                  label="Description du poste"
+                  frValue={description}
+                  enValue={descriptionEn}
+                  onEnChange={setDescriptionEn}
+                  placeholder="Job description in English…"
+                  multiline rows={6}
+                />
+                <BilingualField
+                  label="Profil recherché / Exigences"
+                  frValue={requirements}
+                  enValue={requirementsEn}
+                  onEnChange={setRequirementsEn}
+                  placeholder="Required profile and qualifications in English…"
+                  multiline rows={6}
+                />
+              </div>
+
+              {/* Completion indicator */}
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-xs text-slate-500 mb-2 font-medium">Complétude de la traduction</p>
+                <div className="flex gap-3">
+                  {[
+                    { label: 'Titre', done: !!titleEn.trim() },
+                    { label: 'Description', done: !!descriptionEn.trim() },
+                    { label: 'Profil', done: !!requirementsEn.trim() },
+                  ].map(f => (
+                    <div key={f.label} className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${f.done ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
+                      {f.done ? <CheckCircle size={12} /> : <Clock size={12} />} {f.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Tab 5: Récapitulatif ────────────────────────────────────── */}
           {tab === 'recapitulatif' && (
-            <div>
+            <div className="space-y-4">
               <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
                 <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-4">Récapitulatif de l'offre</p>
                 <dl className="space-y-2.5 text-sm">
@@ -450,6 +641,42 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
                     </div>
                   )}
                 </dl>
+              </div>
+
+              {/* Translation recap */}
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+                    <Languages size={13} /> Traduction anglaise
+                  </p>
+                  <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${tsConf.bg} ${tsConf.color}`}>
+                    <TransIcon size={11} /> {tsConf.label}
+                  </span>
+                </div>
+                {titleEn || descriptionEn || requirementsEn ? (
+                  <dl className="space-y-2 text-sm">
+                    {titleEn && (
+                      <div className="flex gap-2">
+                        <dt className="text-slate-500 w-32 flex-shrink-0">Title (EN)</dt>
+                        <dd className="text-slate-800 font-medium">{titleEn}</dd>
+                      </div>
+                    )}
+                    {descriptionEn && (
+                      <div className="pt-2 border-t border-slate-200">
+                        <dt className="text-slate-500 mb-1">Description (EN)</dt>
+                        <dd className="text-slate-700 text-xs leading-relaxed whitespace-pre-wrap">{descriptionEn}</dd>
+                      </div>
+                    )}
+                    {requirementsEn && (
+                      <div className="pt-2 border-t border-slate-200">
+                        <dt className="text-slate-500 mb-1">Required profile (EN)</dt>
+                        <dd className="text-slate-700 text-xs leading-relaxed whitespace-pre-wrap">{requirementsEn}</dd>
+                      </div>
+                    )}
+                  </dl>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Aucune traduction saisie. L'offre sera affichée en français uniquement sur le portail.</p>
+                )}
               </div>
             </div>
           )}

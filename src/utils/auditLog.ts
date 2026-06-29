@@ -30,11 +30,66 @@ export interface SecurityEventEntry {
   details?: Record<string, unknown>;
 }
 
+// Cache the detected local LAN IP for the session
+let localIPCache: string | null | undefined = undefined;
+
+async function getLocalIP(): Promise<string | null> {
+  if (localIPCache !== undefined) return localIPCache;
+  localIPCache = null;
+
+  return new Promise((resolve) => {
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [] });
+      pc.createDataChannel('');
+      pc.createOffer()
+        .then((o) => pc.setLocalDescription(o))
+        .catch(() => {});
+
+      const found: string[] = [];
+
+      pc.onicecandidate = (e) => {
+        if (!e.candidate) {
+          pc.close();
+          const ip = pickBestIP(found);
+          localIPCache = ip;
+          resolve(ip);
+          return;
+        }
+        const m = /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/.exec(e.candidate.candidate);
+        if (m) found.push(m[1]);
+      };
+
+      // Fallback timeout in case ICE gathering stalls
+      setTimeout(() => {
+        try { pc.close(); } catch { /* */ }
+        const ip = pickBestIP(found);
+        localIPCache = ip;
+        resolve(ip);
+      }, 1500);
+    } catch {
+      localIPCache = null;
+      resolve(null);
+    }
+  });
+}
+
+function pickBestIP(ips: string[]): string | null {
+  if (ips.length === 0) return null;
+  // Prefer private network ranges (LAN addresses)
+  const privateIP = ips.find((ip) =>
+    /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(ip)
+  );
+  return privateIP ?? ips[0];
+}
+
 async function postLogEvent(payload: Record<string, unknown>): Promise<void> {
   try {
-    await supabase.functions.invoke('log-event', { body: payload });
+    const local_ip = await getLocalIP();
+    await supabase.functions.invoke('log-event', {
+      body: { ...payload, local_ip },
+    });
   } catch {
-    // Les logs ne doivent jamais faire échouer l'action principale
+    // Logs must never fail the main action
   }
 }
 

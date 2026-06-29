@@ -7,14 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-function extractIP(req: Request): string {
-  // Cloudflare (Bolt / production)
+function extractPublicIP(req: Request): string {
   const cf = req.headers.get("cf-connecting-ip");
   if (cf) return cf;
-  // Reverse proxy standard
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
-  // Direct
   const real = req.headers.get("x-real-ip");
   if (real) return real;
   return "unknown";
@@ -25,7 +22,7 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  const ip_address = extractIP(req);
+  const ip_address = extractPublicIP(req);
   const user_agent = req.headers.get("user-agent") ?? "unknown";
 
   let body: Record<string, unknown>;
@@ -38,7 +35,11 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const { type, ...payload } = body as { type: "security" | "audit"; [k: string]: unknown };
+  const { type, local_ip, ...payload } = body as {
+    type: "security" | "audit";
+    local_ip?: string;
+    [k: string]: unknown;
+  };
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -49,6 +50,7 @@ Deno.serve(async (req: Request) => {
   const { error } = await supabase.from(table).insert({
     ...payload,
     ip_address,
+    local_ip: local_ip ?? null,
     user_agent,
   });
 
@@ -59,7 +61,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  return new Response(JSON.stringify({ ok: true, ip_address }), {
+  return new Response(JSON.stringify({ ok: true, ip_address, local_ip: local_ip ?? null }), {
     status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });

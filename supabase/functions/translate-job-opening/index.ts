@@ -30,9 +30,13 @@ async function aiTranslate(
   title: string,
   description: string,
   requirements: string,
-  anthropicKey: string | undefined,
-  openaiKey: string | undefined,
 ): Promise<{ title_en: string | null; description_en: string | null; requirements_en: string | null } | null> {
+  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") || undefined;
+  const openaiKey = Deno.env.get("OPENAI_API_KEY") || undefined;
+  const googleKey = Deno.env.get("GOOGLE_AI_API_KEY") || undefined;
+
+  if (!anthropicKey && !openaiKey && !googleKey) return null;
+
   const systemPrompt =
     `You are a professional bilingual translator specialising in HR and oil & gas industry documents (French → English).
 Translate the provided French job opening content accurately and professionally.
@@ -44,6 +48,7 @@ Return ONLY a valid JSON object with keys: "title_en", "description_en", "requir
 
   let aiText: string | null = null;
 
+  // 1. Anthropic Claude
   if (anthropicKey) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -65,6 +70,7 @@ Return ONLY a valid JSON object with keys: "title_en", "description_en", "requir
     }
   }
 
+  // 2. OpenAI GPT-4o mini
   if (!aiText && openaiKey) {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -81,6 +87,26 @@ Return ONLY a valid JSON object with keys: "title_en", "description_en", "requir
     if (res.ok) {
       const d = await res.json();
       aiText = d.choices?.[0]?.message?.content || null;
+    }
+  }
+
+  // 3. Google Gemini 1.5 Flash (free tier)
+  if (!aiText && googleKey) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${googleKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig: { maxOutputTokens: 1500 },
+        }),
+      },
+    );
+    if (res.ok) {
+      const d = await res.json();
+      aiText = d.candidates?.[0]?.content?.parts?.[0]?.text || null;
     }
   }
 
@@ -111,10 +137,11 @@ Deno.serve(async (req: Request) => {
 
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") || undefined;
   const openaiKey = Deno.env.get("OPENAI_API_KEY") || undefined;
+  const googleKey = Deno.env.get("GOOGLE_AI_API_KEY") || undefined;
 
-  // 1. Try AI translation first (if key configured)
-  if (anthropicKey || openaiKey) {
-    const ai = await aiTranslate(title, description, requirements, anthropicKey, openaiKey);
+  // 1. Try AI translation first (if any key configured)
+  if (anthropicKey || openaiKey || googleKey) {
+    const ai = await aiTranslate(title, description, requirements);
     if (ai) {
       return new Response(
         JSON.stringify({ ...ai, message: "Traduction générée par l'IA. Vérifiez et corrigez si nécessaire.", source: "ai" }),

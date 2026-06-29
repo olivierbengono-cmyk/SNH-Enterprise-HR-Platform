@@ -166,17 +166,17 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
         body: { title, description, requirements },
       });
       if (fnErr) throw fnErr;
-      if (data?.no_key) {
-        setTranslateMsg(data.message);
+      const hasTranslation = data?.title_en || data?.description_en || data?.requirements_en;
+      if (hasTranslation) {
+        if (data.title_en) setTitleEn(data.title_en);
+        if (data.description_en) setDescriptionEn(data.description_en);
+        if (data.requirements_en) setRequirementsEn(data.requirements_en);
+        setTranslationStatus('ai_generated');
+        setTranslateMsgType('info');
+      } else {
         setTranslateMsgType('warning');
-        return;
       }
-      if (data?.title_en) setTitleEn(data.title_en);
-      if (data?.description_en) setDescriptionEn(data.description_en);
-      if (data?.requirements_en) setRequirementsEn(data.requirements_en);
-      if (data?.title_en) setTranslationStatus('ai_generated');
       setTranslateMsg(data?.message || 'Traduction générée. Vérifiez et corrigez si nécessaire.');
-      setTranslateMsgType('info');
     } catch (e: any) {
       setTranslateMsg('Erreur : ' + (e.message || 'inconnu'));
       setTranslateMsgType('error');

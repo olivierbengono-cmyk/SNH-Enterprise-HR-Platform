@@ -97,7 +97,7 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
       const { data: app } = await supabase
         .from('candidate_applications')
         .select(`id, status, created_at, cover_letter, desired_position, job_opening_id,
-          candidate:candidates (id, first_name, last_name, email, phone, location, professional_title, linkedin_url, summary, desired_position)`)
+          candidate:candidates (id, first_name, last_name, email, phone, location, professional_title, linkedin_url, summary, desired_position, photo_url)`)
         .eq('id', initialCandidateAppId)
         .maybeSingle();
       if (!app) return;
@@ -130,7 +130,8 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
         candidate:candidates (
           id, first_name, last_name, email, phone, location,
           professional_title, linkedin_url, summary, desired_position,
-          education_level, experience_years
+          desired_salary_min, desired_salary_max, availability_date, mobility,
+          source, photo_url, region, nationality, gender
         )
       `)
       .eq('job_opening_id', job.id)

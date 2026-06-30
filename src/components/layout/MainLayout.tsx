@@ -7,7 +7,7 @@ import {
   FileText, TrendingUp, Settings, Bell, LogOut, Menu, X,
   Briefcase, UserCheck, Shield, Award, Key, Bot, Clock, DollarSign, Network,
   ChevronDown, ChevronRight, Search, ArrowLeft, Lock, Building2, ExternalLink,
-  ScrollText
+  ScrollText, ClipboardList
 } from 'lucide-react';
 import AIAssistant from '../ai/AIAssistant';
 import { CommandPalette } from './CommandPalette';
@@ -174,6 +174,7 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
           label: 'Recrutement',
           icon: Briefcase,
           children: [
+            { id: 'recruitment-requests', label: 'Demandes de recrutement', icon: ClipboardList },
             { id: 'recruitment', label: 'Offres & candidats internes', icon: Briefcase },
             { id: 'cvtheque', label: 'CVtheque', icon: Users },
           ],
@@ -220,6 +221,7 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
           label: 'Recrutement',
           icon: Briefcase,
           children: [
+            { id: 'recruitment-requests', label: 'Demandes de recrutement', icon: ClipboardList },
             { id: 'recruitment', label: 'Offres & candidats internes', icon: Briefcase },
             { id: 'cvtheque', label: 'CVtheque', icon: Users },
           ],
@@ -256,6 +258,7 @@ export function MainLayout({ children, activeTab, onTabChange }: MainLayoutProps
       return [
         ...base,
         { id: 'my-info', label: 'Mes informations', icon: Users },
+        { id: 'recruitment-requests', label: 'Demandes de recrutement', icon: ClipboardList },
         { id: 'recruitment', label: 'Offres & candidats', icon: Briefcase },
         { id: 'cvtheque', label: 'CVtheque', icon: Users },
       ];

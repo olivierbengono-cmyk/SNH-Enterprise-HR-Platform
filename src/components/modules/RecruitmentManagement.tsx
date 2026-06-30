@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Pagination, paginate, PageSize } from '../shared/Pagination';
-import {
-  Briefcase, Plus, Users, Calendar, TrendingUp, X, MapPin, Mail, Phone,
-  FileText, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle,
-  Eye, Building2, GraduationCap, Star, Search, Filter, Pencil, Trash2
-} from 'lucide-react';
+import { Briefcase, Plus, Users, Calendar, TrendingUp, X, MapPin, Mail, Phone, FileText, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye, Building2, GraduationCap, Star, Search, Filter, Pencil, Trash2, ClipboardList, Dessert as SortDesc } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { JobOpeningForm } from './JobOpeningForm';
+import { computeMatchingScore, scoreColors, scoreLabel } from '../../utils/recruitmentScore';
+import JuryEvaluationModal from './JuryEvaluationModal';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   new:        { label: 'Soumis',         color: 'bg-blue-100 text-blue-800 border-blue-200' },
@@ -66,6 +64,8 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
   const [editingJob, setEditingJob] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [sortByScore, setSortByScore] = useState(false);
+  const [juryTarget, setJuryTarget] = useState<{ app: any; job: any } | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -118,6 +118,7 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
     setActiveTab('candidates');
     setSelectedApp(null);
     setFilterStatus('all');
+    setSortByScore(false);
     setLoadingApps(true);
     const { data, error } = await supabase
       .from('candidate_applications')
@@ -125,7 +126,8 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
         id, status, created_at, cover_letter, desired_position,
         candidate:candidates (
           id, first_name, last_name, email, phone, location,
-          professional_title, linkedin_url, summary, desired_position
+          professional_title, linkedin_url, summary, desired_position,
+          education_level, experience_years
         )
       `)
       .eq('job_opening_id', job.id)
@@ -177,9 +179,17 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
     }
   };
 
-  const filteredApps = filterStatus === 'all'
-    ? jobApplications
-    : jobApplications.filter(a => a.status === filterStatus);
+  const filteredApps = (() => {
+    let apps = filterStatus === 'all' ? jobApplications : jobApplications.filter(a => a.status === filterStatus);
+    if (sortByScore) {
+      apps = [...apps].sort((a, b) => {
+        const sa = computeMatchingScore(a.candidate, selectedJob).total;
+        const sb = computeMatchingScore(b.candidate, selectedJob).total;
+        return sb - sa;
+      });
+    }
+    return apps;
+  })();
 
   const filteredJobs = jobOpenings.filter(j => {
     if (jobFilterStatus !== 'all' && j.status !== jobFilterStatus) return false;
@@ -417,6 +427,18 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
                           <option key={v} value={v}>{c.label}</option>
                         ))}
                       </select>
+                      <button
+                        onClick={() => setSortByScore(s => !s)}
+                        title="Trier par score de présélection"
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition ${
+                          sortByScore
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <SortDesc size={12} />
+                        Score
+                      </button>
                       <span className="text-xs text-slate-400 ml-auto">
                         {filteredApps.length} candidat{filteredApps.length > 1 ? 's' : ''}
                       </span>
@@ -442,6 +464,8 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
                           const cand = app.candidate;
                           const fullName = cand ? `${cand.first_name || ''} ${cand.last_name || ''}`.trim() : '—';
                           const isSelected = selectedApp?.id === app.id;
+                          const score = cand ? computeMatchingScore(cand, selectedJob) : null;
+                          const sc = score ? scoreColors(score.total) : null;
                           return (
                             <div
                               key={app.id}
@@ -456,8 +480,12 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
                                 <p className="text-xs text-slate-400 truncate">{cand?.current_position || app.desired_position || 'Poste non précisé'}</p>
                               </div>
                               <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                {sc && score && (
+                                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md border ${sc.text} ${sc.bg} ${sc.border}`}>
+                                    {score.total}%
+                                  </span>
+                                )}
                                 <StatusBadge status={app.status} />
-                                <span className="text-xs text-slate-400">{fmtDate(app.created_at)}</span>
                               </div>
                             </div>
                           );
@@ -502,6 +530,52 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
                             <X size={14} className="text-slate-400" />
                           </button>
                         </div>
+
+                        {/* Matching score breakdown */}
+                        {(() => {
+                          const score = cand ? computeMatchingScore(cand, selectedJob) : null;
+                          if (!score) return null;
+                          const sc = scoreColors(score.total);
+                          return (
+                            <div className={`rounded-xl border p-4 ${sc.bg} ${sc.border}`}>
+                              <div className="flex items-center justify-between mb-3">
+                                <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Score de présélection</p>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xl font-bold ${sc.text}`}>{score.total}%</span>
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${sc.text} ${sc.bg} ${sc.border}`}>
+                                    {scoreLabel(score.total)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="w-full bg-white/60 rounded-full h-1.5 mb-3">
+                                <div className={`h-1.5 rounded-full ${sc.bar} transition-all`} style={{ width: `${score.total}%` }} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-1.5 text-xs">
+                                {[
+                                  { label: 'Diplôme', val: score.education, max: 25 },
+                                  { label: 'Expérience', val: score.experience, max: 30 },
+                                  { label: 'Compétences', val: score.skills, max: 25 },
+                                  { label: 'Langues', val: score.languages, max: 10 },
+                                  { label: 'Certifications', val: score.certifications, max: 10 },
+                                ].map(({ label, val, max }) => (
+                                  <div key={label} className="flex items-center justify-between bg-white/60 rounded-lg px-2.5 py-1.5">
+                                    <span className="text-slate-600">{label}</span>
+                                    <span className={`font-bold ${sc.text}`}>{val}<span className="font-normal text-slate-400">/{max}</span></span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Jury evaluation button */}
+                        <button
+                          onClick={() => setJuryTarget({ app: selectedApp, job: selectedJob })}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-teal-300 hover:text-teal-700 transition"
+                        >
+                          <ClipboardList size={15} />
+                          Grille d'évaluation jury
+                        </button>
 
                         {/* Pipeline progress */}
                         {!['rejected', 'withdrawn'].includes(selectedApp.status) && (
@@ -678,6 +752,22 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
           }}
         />
       )}
+
+      {/* Jury evaluation modal */}
+      {juryTarget && (() => {
+        const cand = juryTarget.app?.candidate;
+        const fullName = cand ? `${cand.first_name || ''} ${cand.last_name || ''}`.trim() : '—';
+        return (
+          <JuryEvaluationModal
+            candidateId={cand?.id ?? ''}
+            candidateName={fullName}
+            applicationId={juryTarget.app?.id}
+            jobOpeningId={juryTarget.job?.id}
+            jobTitle={juryTarget.job?.title}
+            onClose={() => setJuryTarget(null)}
+          />
+        );
+      })()}
 
       {/* Delete confirmation */}
       {deleteTarget && (

@@ -41,6 +41,7 @@ import { RolePermissionsManagement } from './components/modules/RolePermissionsM
 import MyTeam from './components/modules/MyTeam';
 import OrgStructureManagement from './components/modules/OrgStructureManagement';
 import AuditLogsViewer from './components/modules/AuditLogsViewer';
+import RecruitmentRequests from './components/modules/RecruitmentRequests';
 
 function AppContent() {
   const { user, profile, loading, reloadProfile } = useAuth();
@@ -145,6 +146,10 @@ function AppContent() {
 
     if (activeTab === 'training' || activeTab === 'training-admin') {
       return <TrainingManagement role={profile.role} />;
+    }
+
+    if (activeTab === 'recruitment-requests' && (profile.role === 'drh' || profile.role === 'admin' || profile.role === 'recruitment_manager')) {
+      return <RecruitmentRequests />;
     }
 
     if (activeTab === 'recruitment' && (profile.role === 'drh' || profile.role === 'admin' || profile.role === 'recruitment_manager')) {

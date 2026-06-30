@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, Briefcase, Calendar, FileText, CheckCircle, Clock, UserPlus,
   TrendingUp, AlertCircle, Search, ChevronRight, X, ArrowRight,
-  BarChart2, Target, Award
+  BarChart2, Target, Award, ClipboardList
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -86,10 +86,12 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
     hiredThisMonth: 0,
     conversionRate: 0,
     totalHired: 0,
+    pendingRequests: 0,
   });
   const [recentCandidates, setRecentCandidates] = useState<RecentApplication[]>([]);
   const [activeJobs, setActiveJobs] = useState<JobOpening[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pipeline, setPipeline] = useState<Record<string, number>>({});
 
   // Panel state
   const [activePanel, setActivePanel] = useState<PanelKey>(null);
@@ -115,7 +117,7 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
           .order('created_at', { ascending: false }).limit(8),
       ]);
 
-      const [interviewRes, hiredRes, extendedRes, totalHiredRes] = await Promise.all([
+      const [interviewRes, hiredRes, extendedRes, totalHiredRes, allAppsRes, pendingReqRes] = await Promise.all([
         supabase.from('candidate_applications').select('id', { count: 'exact' }).eq('status', 'interview'),
         supabase.from('candidate_applications').select('id', { count: 'exact' })
           .in('status', ['integrated', 'pre_onboarding'])
@@ -124,7 +126,15 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
           .eq('status', 'open').not('closing_date', 'is', null),
         supabase.from('candidate_applications').select('id', { count: 'exact' })
           .in('status', ['integrated', 'pre_onboarding']),
+        supabase.from('candidate_applications').select('status'),
+        supabase.from('recruitment_requests').select('id', { count: 'exact' })
+          .in('status', ['submitted', 'drh_review']),
       ]);
+
+      // Build pipeline map
+      const pipelineMap: Record<string, number> = {};
+      (allAppsRes.data || []).forEach((a: any) => { pipelineMap[a.status] = (pipelineMap[a.status] || 0) + 1; });
+      setPipeline(pipelineMap);
 
       const totalCandidates = candidatesRes.count || 0;
       const totalHired = totalHiredRes.count || 0;
@@ -140,6 +150,7 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
         hiredThisMonth: hiredRes.count || 0,
         conversionRate,
         totalHired,
+        pendingRequests: pendingReqRes.count || 0,
       });
     } catch (err) {
       console.error('Error loading stats:', err);
@@ -425,7 +436,7 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
       </div>
 
       {/* ── Metric cards ───────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
         <button type="button" onClick={() => openPanel('conversion')}
           className="bg-white rounded-xl p-5 border border-slate-200 hover:shadow-lg hover:border-green-300 transition text-left">
           <div className="flex items-center justify-between mb-3">
@@ -437,19 +448,19 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
             <div className="bg-green-500 h-2 rounded-full transition-all"
               style={{ width: `${stats.conversionRate}%` }} />
           </div>
-          <p className="text-xs text-slate-400 mt-1">candidats convertis en embauches</p>
+          <p className="text-xs text-slate-400 mt-1">candidats convertis</p>
         </button>
 
         <button type="button" onClick={() => openPanel('interviews-today')}
           className="bg-white rounded-xl p-5 border border-slate-200 hover:shadow-lg hover:border-orange-300 transition text-left">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-slate-500">Entretiens aujourd'hui</p>
+            <p className="text-sm text-slate-500">Entretiens programmés</p>
             <Clock className="w-4 h-4 text-orange-500" />
           </div>
           <p className="text-3xl font-bold text-slate-900">{stats.pendingInterviews}</p>
-          <p className="text-xs text-slate-400 mt-2">programmes au total</p>
+          <p className="text-xs text-slate-400 mt-2">en attente</p>
           {stats.pendingInterviews > 0 && (
-            <div className="mt-3 flex items-center gap-1 text-xs text-orange-600 font-medium">
+            <div className="mt-1 flex items-center gap-1 text-xs text-orange-600 font-medium">
               <AlertCircle className="w-3 h-3" />
               Action requise
             </div>
@@ -459,13 +470,81 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
         <button type="button" onClick={() => openPanel('extended')}
           className="bg-white rounded-xl p-5 border border-slate-200 hover:shadow-lg hover:border-blue-300 transition text-left">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-slate-500">Offres etendues</p>
+            <p className="text-sm text-slate-500">Offres avec clôture</p>
             <FileText className="w-4 h-4 text-blue-500" />
           </div>
           <p className="text-3xl font-bold text-slate-900">{stats.offersExtended}</p>
-          <p className="text-xs text-slate-400 mt-2">avec date de clôture définie</p>
+          <p className="text-xs text-slate-400 mt-2">date limite définie</p>
+        </button>
+
+        <button type="button" onClick={() => onNavigate?.('recruitment-requests')}
+          className={`bg-white rounded-xl p-5 border hover:shadow-lg transition text-left ${
+            stats.pendingRequests > 0 ? 'border-amber-300 hover:border-amber-400' : 'border-slate-200 hover:border-slate-300'
+          }`}>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm text-slate-500">Demandes en attente</p>
+            <ClipboardList className={`w-4 h-4 ${stats.pendingRequests > 0 ? 'text-amber-500' : 'text-slate-400'}`} />
+          </div>
+          <p className={`text-3xl font-bold ${stats.pendingRequests > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+            {stats.pendingRequests}
+          </p>
+          <p className="text-xs text-slate-400 mt-2">demandes NS193 soumises</p>
+          {stats.pendingRequests > 0 && (
+            <div className="mt-1 flex items-center gap-1 text-xs text-amber-600 font-medium">
+              <AlertCircle className="w-3 h-3" />
+              A traiter
+            </div>
+          )}
         </button>
       </div>
+
+      {/* ── Pipeline funnel ─────────────────────────────────── */}
+      {Object.keys(pipeline).length > 0 && (() => {
+        const FUNNEL_STEPS = ['new', 'reviewing', 'interview', 'offer', 'pre_onboarding', 'integrated'];
+        const maxCount = Math.max(...FUNNEL_STEPS.map(s => pipeline[s] || 0), 1);
+        const rejected = (pipeline['rejected'] || 0) + (pipeline['withdrawn'] || 0);
+        return (
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <BarChart2 className="w-5 h-5 text-slate-500" />
+                <h2 className="text-base font-bold text-slate-900">Pipeline de recrutement</h2>
+              </div>
+              {rejected > 0 && (
+                <span className="text-xs text-slate-400">{rejected} refusé(s) / retiré(s)</span>
+              )}
+            </div>
+            <div className="space-y-2">
+              {FUNNEL_STEPS.map((step, i) => {
+                const count = pipeline[step] || 0;
+                const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                const colors = [
+                  'bg-blue-400', 'bg-amber-400', 'bg-orange-400',
+                  'bg-teal-400', 'bg-cyan-400', 'bg-emerald-500',
+                ];
+                const textColors = [
+                  'text-blue-700', 'text-amber-700', 'text-orange-700',
+                  'text-teal-700', 'text-cyan-700', 'text-emerald-700',
+                ];
+                return (
+                  <div key={step} className="flex items-center gap-3">
+                    <span className="text-xs text-slate-500 w-28 flex-shrink-0 text-right">{STATUS_LABELS[step]}</span>
+                    <div className="flex-1 bg-slate-100 rounded-full h-5 relative overflow-hidden">
+                      <div
+                        className={`h-5 rounded-full ${colors[i]} transition-all duration-700`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className={`text-xs font-bold w-6 text-right ${count > 0 ? textColors[i] : 'text-slate-300'}`}>
+                      {count}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Lists ──────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

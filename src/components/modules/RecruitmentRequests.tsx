@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ClipboardList, Plus, ChevronRight, X, Search, CheckCircle, XCircle,
   Clock, Building2, GraduationCap, Calendar, Users, ArrowRight,
-  AlertCircle, FileText, Briefcase, Pencil, Filter
+  AlertCircle, FileText, Briefcase, Pencil, Filter, ChevronDown
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -84,6 +84,49 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// Inline quick-status picker shown in the list row
+function StatusQuickPicker({ current, onChange }: { current: string; onChange: (s: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const m = STATUS_META[current] ?? { label: current, color: 'text-slate-600', bg: 'bg-slate-100', border: 'border-slate-200' };
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0" onClick={e => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border transition hover:opacity-80 ${m.bg} ${m.color} ${m.border}`}
+        title="Changer le statut"
+      >
+        {m.label}
+        <ChevronDown className="w-3 h-3 opacity-60" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-30 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden min-w-[160px]">
+          {Object.entries(STATUS_META).map(([value, meta]) => (
+            <button
+              key={value}
+              onClick={() => { onChange(value); setOpen(false); }}
+              className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-left transition hover:bg-slate-50 ${value === current ? 'bg-slate-50' : ''}`}
+            >
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                meta.color.replace('text-', 'bg-').replace('-700', '-500').replace('-600', '-500')
+              }`} />
+              <span className={meta.color}>{meta.label}</span>
+              {value === current && <CheckCircle className="w-3 h-3 ml-auto text-green-500" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Form modal ───────────────────────────────────────────────────────────────
 
 interface FormModalProps {
@@ -122,6 +165,7 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
     justification: initial?.justification ?? '',
     job_description: initial?.job_description ?? '',
     desired_start_date: initial?.desired_start_date ?? '',
+    status: initial?.status ?? 'submitted',
   });
 
   const set = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
@@ -159,6 +203,7 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
           user_email: user?.email, action: 'UPDATE',
           resource_type: 'recruitment_request', resource_id: initial.id,
           resource_label: `${ref} — ${form.position_title}`,
+          details: form.status !== initial.status ? `Statut : ${initial.status} → ${form.status}` : undefined,
         });
       } else {
         await supabase.from('recruitment_requests').insert(payload);
@@ -304,6 +349,29 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
               Budget validé par la Direction Financière
             </label>
           </div>
+
+          {initial?.id && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Statut de la demande</label>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(STATUS_META).map(([value, meta]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => set('status', value)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition ${
+                      form.status === value
+                        ? `${meta.bg} ${meta.color} ${meta.border} ring-2 ring-offset-1 ring-green-400`
+                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    {form.status === value && <CheckCircle className="w-3 h-3" />}
+                    {meta.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 flex-shrink-0">
@@ -335,6 +403,24 @@ export default function RecruitmentRequests() {
   const [reviewComment, setReviewComment] = useState('');
 
   const canManage = profile?.role === 'drh' || profile?.role === 'admin';
+
+  const quickChangeStatus = async (req: RecruitmentRequest, newStatus: string) => {
+    if (newStatus === req.status) return;
+    await supabase.from('recruitment_requests').update({
+      status: newStatus,
+      reviewed_by_email: profile?.email,
+      updated_at: new Date().toISOString(),
+    }).eq('id', req.id);
+    logAudit({
+      user_email: profile?.email, user_role: profile?.role,
+      action: newStatus === 'approved' ? 'APPROVE' : newStatus === 'rejected' ? 'REJECT' : 'UPDATE',
+      resource_type: 'recruitment_request', resource_id: req.id,
+      resource_label: `${req.reference} — ${req.position_title}`,
+      details: `Statut rapide : ${req.status} → ${newStatus}`,
+    });
+    await load();
+    setSelected(prev => prev?.id === req.id ? { ...prev, status: newStatus } : prev);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -491,7 +577,11 @@ export default function RecruitmentRequests() {
                     <p className="text-xs text-slate-400 truncate">{req.direction}{req.service ? ` · ${req.service}` : ''}</p>
                     <p className="text-xs text-slate-300">{req.reference} · {fmtDate(req.created_at)}</p>
                   </div>
-                  <StatusBadge status={req.status} />
+                  {canManage ? (
+                    <StatusQuickPicker current={req.status} onChange={s => quickChangeStatus(req, s)} />
+                  ) : (
+                    <StatusBadge status={req.status} />
+                  )}
                 </div>
               ))}
             </div>
@@ -510,7 +600,7 @@ export default function RecruitmentRequests() {
                 <p className="text-xs text-slate-400 mt-0.5">{selected.reference} · {selected.direction}{selected.service ? ` / ${selected.service}` : ''}</p>
               </div>
               <div className="flex items-center gap-1.5">
-                {canManage && ['submitted','drh_review','approved'].includes(selected.status) && (
+                {canManage && (
                   <button onClick={() => setEditTarget(selected)}
                     className="flex items-center gap-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg hover:bg-slate-50 transition text-slate-600">
                     <Pencil className="w-3.5 h-3.5" /> Modifier

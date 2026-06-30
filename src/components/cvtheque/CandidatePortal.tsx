@@ -500,7 +500,6 @@ const TR = {
     statusNew: 'Soumis', statusReviewing: 'En examen', statusInterview: 'Entretien',
     statusOffer: 'Offre', statusPreOnboarding: 'En essai', statusOnboarding: 'Intégration',
     statusIntegrated: 'Titularisé(e)', statusRejected: 'Refusé(e)', statusWithdrawn: 'Retiré(e)',
-    pipelineTitle: 'Progression de votre candidature',
     // Notifications
     notifsNew: 'nouvelle', notifsNewPlural: 'nouvelles', notifsEmpty: 'Aucune notification',
     notifsNewBadge: 'Nouveau',
@@ -626,9 +625,8 @@ const TR = {
     appReapplyLimitMsg: 'You have already applied 3 times to this position (the maximum allowed). Further applications for this role are not possible.',
     appReapplyLimitBtn: 'Understood',
     statusNew: 'Submitted', statusReviewing: 'Under review', statusInterview: 'Interview',
-    statusOffer: 'Offer', statusPreOnboarding: 'Trial period', statusOnboarding: 'Onboarding',
-    statusIntegrated: 'Confirmed', statusRejected: 'Rejected', statusWithdrawn: 'Withdrawn',
-    pipelineTitle: 'Application progress',
+    statusOffer: 'Offer', statusPreOnboarding: 'Pre-onboarding', statusOnboarding: 'Onboarding',
+    statusIntegrated: 'Integrated', statusRejected: 'Rejected', statusWithdrawn: 'Withdrawn',
     // Notifications
     notifsNew: 'new', notifsNewPlural: 'new', notifsEmpty: 'No notifications',
     notifsNewBadge: 'New',
@@ -3171,20 +3169,9 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
               {filtered.map(app => {
                 const job = openJobs.find(j => j.id === app.job_opening_id);
                 const isStage = job?.contract_type?.toLowerCase().includes('stage');
-
-                // Pipeline steps for the progress bar
-                const ACTIVE_STEPS = ['new', 'reviewing', 'interview', 'offer', 'pre_onboarding', 'onboarding', 'integrated'];
-                const isTerminal = ['rejected', 'withdrawn'].includes(app.status);
-                const currentStepIdx = ACTIVE_STEPS.indexOf(app.status);
-                const stepLabels = [
-                  t.statusNew, t.statusReviewing, t.statusInterview,
-                  t.statusOffer, t.statusPreOnboarding, t.statusOnboarding, t.statusIntegrated,
-                ];
-
                 return (
-                  <div key={app.id} className="border-b border-gray-50 last:border-0">
-                    {/* Main row */}
-                    <div className="flex items-center gap-4 px-5 py-4">
+                  <div key={app.id}
+                    className="flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0">
                     {(() => {
                       const title = app.desired_position || app.job_opening?.title || '';
                       const { Icon: JobIcon, color: iconColor, bg: iconBg } = getJobIcon(title, job?.contract_type);
@@ -3245,7 +3232,7 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
                             </button>
                           </div>
                         ) : (
-                          <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); setConfirmDeleteId(app.id); }}
+                          <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(app.id); }}
                             className="text-xs px-2.5 py-1 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 hover:text-red-700 transition font-medium flex items-center gap-1">
                             <Trash2 size={11} />
                             {t.appDelete}
@@ -3253,52 +3240,6 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
                         )
                       )}
                     </div>
-                    </div>
-
-                    {/* Pipeline progress bar — active applications only */}
-                    {!isTerminal && currentStepIdx >= 0 && (
-                      <div className="px-5 pb-4">
-                        <div className="relative">
-                          {/* Track line */}
-                          <div className="absolute top-3 left-0 right-0 h-0.5 bg-gray-100 z-0" />
-                          <div
-                            className="absolute top-3 left-0 h-0.5 bg-gradient-to-r from-green-400 to-green-600 z-0 transition-all duration-700"
-                            style={{ width: `${currentStepIdx === 0 ? 0 : (currentStepIdx / (ACTIVE_STEPS.length - 1)) * 100}%` }}
-                          />
-                          {/* Step dots */}
-                          <div className="relative z-10 flex justify-between">
-                            {ACTIVE_STEPS.map((step, i) => {
-                              const done = i < currentStepIdx;
-                              const active = i === currentStepIdx;
-                              return (
-                                <div key={step} className="flex flex-col items-center gap-1.5" style={{ width: `${100 / ACTIVE_STEPS.length}%`, maxWidth: 60 }}>
-                                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                                    active
-                                      ? 'bg-green-600 border-green-600 shadow-md shadow-green-200'
-                                      : done
-                                      ? 'bg-green-500 border-green-500'
-                                      : 'bg-white border-gray-200'
-                                  }`}>
-                                    {done ? (
-                                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                    ) : active ? (
-                                      <div className="w-2 h-2 rounded-full bg-white" />
-                                    ) : (
-                                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                                    )}
-                                  </div>
-                                  <span className={`text-center leading-tight text-[9px] font-medium hidden sm:block ${
-                                    active ? 'text-green-700' : done ? 'text-green-600' : 'text-gray-300'
-                                  }`} style={{ maxWidth: 52 }}>
-                                    {stepLabels[i]}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}

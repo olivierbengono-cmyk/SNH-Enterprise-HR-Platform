@@ -2278,18 +2278,6 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
     if (newStatus === 'pre_onboarding' && (!app.onboarding_checklist || app.onboarding_checklist.length === 0)) {
       await supabase.from('candidate_applications').update({ onboarding_checklist: DEFAULT_CHECKLIST }).eq('id', app.id);
     }
-    // Send email notification to candidate
-    if (c.email) {
-      const jobTitle = app.job_opening?.title || app.desired_position || 'SNH';
-      supabase.functions.invoke('send-candidate-email', {
-        body: {
-          to: c.email,
-          candidateName: `${c.first_name} ${c.last_name}`.trim(),
-          jobTitle,
-          status: newStatus,
-        },
-      }).catch(() => {/* non-blocking */});
-    }
     await onRefresh(c.id);
     if (app) await loadPipelineEvents(app.id);
     setSaving(false);

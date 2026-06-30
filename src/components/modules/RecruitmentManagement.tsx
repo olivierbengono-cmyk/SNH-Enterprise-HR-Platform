@@ -154,19 +154,6 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
     await supabase.from('candidate_applications').update({ status: newStatus }).eq('id', appId);
     setJobApplications(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus } : a));
     if (selectedApp?.id === appId) setSelectedApp((prev: any) => ({ ...prev, status: newStatus }));
-    // Send email notification
-    const app = jobApplications.find(a => a.id === appId);
-    const cand = app?.candidate;
-    if (cand?.email) {
-      supabase.functions.invoke('send-candidate-email', {
-        body: {
-          to: cand.email,
-          candidateName: `${cand.first_name || ''} ${cand.last_name || ''}`.trim(),
-          jobTitle: selectedJob?.title || app?.desired_position || 'SNH',
-          status: newStatus,
-        },
-      }).catch(() => {/* non-blocking */});
-    }
     setUpdatingStatus(null);
   };
 

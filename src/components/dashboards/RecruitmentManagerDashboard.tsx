@@ -44,7 +44,7 @@ const STATUS_LABELS: Record<string, string> = {
   interview: 'Entretien',
   offer: 'Offre',
   pre_onboarding: 'En essai',
-  integrated: 'Intégré(e)',
+  integrated: 'Titularisé(e)',
   rejected: 'Refusé(e)',
   withdrawn: 'Retirée',
 };

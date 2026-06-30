@@ -11,8 +11,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   reviewing:  { label: 'En examen',      color: 'bg-amber-100 text-amber-800 border-amber-200' },
   interview:  { label: 'Entretien',      color: 'bg-violet-100 text-violet-800 border-violet-200' },
   offer:      { label: 'Offre',          color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  pre_onboarding: { label: 'Essai',      color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
-  integrated: { label: 'Titularisé(e)', color: 'bg-green-100 text-green-800 border-green-200' },
+  pre_onboarding: { label: 'En essai',      color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+  integrated: { label: 'Titularisé(e)', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   rejected:   { label: 'Refusé(e)',      color: 'bg-red-100 text-red-800 border-red-200' },
   withdrawn:  { label: 'Retiré(e)',      color: 'bg-slate-100 text-slate-600 border-slate-200' },
 };

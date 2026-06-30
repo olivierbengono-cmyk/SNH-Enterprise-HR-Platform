@@ -65,9 +65,9 @@ const PIPELINE_STAGES = [
   { value: 'reviewing',      label: 'Présélection',   color: 'bg-yellow-100 text-yellow-800', border: 'border-yellow-300',  dot: 'bg-yellow-500',  icon: Eye },
   { value: 'interview',      label: 'Entretien',      color: 'bg-orange-100 text-orange-800', border: 'border-orange-300',  dot: 'bg-orange-500',  icon: Calendar },
   { value: 'offer',          label: 'Offre',          color: 'bg-teal-100 text-teal-800',    border: 'border-teal-300',    dot: 'bg-teal-500',    icon: Send },
-  { value: 'pre_onboarding', label: 'Pré-intégration',color: 'bg-cyan-100 text-cyan-800',    border: 'border-cyan-300',    dot: 'bg-cyan-500',    icon: ClipboardList },
+  { value: 'pre_onboarding', label: 'En essai',        color: 'bg-cyan-100 text-cyan-800',    border: 'border-cyan-300',    dot: 'bg-cyan-500',    icon: ClipboardList },
   { value: 'onboarding',     label: 'Intégration',    color: 'bg-green-100 text-green-800',  border: 'border-green-300',   dot: 'bg-green-500',   icon: UserPlus },
-  { value: 'integrated',     label: 'Intégré(e)',     color: 'bg-emerald-100 text-emerald-800', border: 'border-emerald-300', dot: 'bg-emerald-600', icon: Award },
+  { value: 'integrated',     label: 'Titularisé(e)',  color: 'bg-emerald-100 text-emerald-800', border: 'border-emerald-300', dot: 'bg-emerald-600', icon: Award },
 ];
 const REJECTED_STAGES = [
   { value: 'rejected',  label: 'Refusé(e)', color: 'bg-red-100 text-red-800',     icon: XCircle },
@@ -2498,7 +2498,7 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
               {!['pre_onboarding', 'onboarding', 'integrated'].includes(app?.status || '') ? (
                 <div className="text-center py-12 bg-slate-50 rounded-xl">
                   <ClipboardList size={36} className="mx-auto text-slate-300 mb-3" />
-                  <p className="text-slate-500 font-medium">Checklist disponible à partir de l'étape "Pré-intégration"</p>
+                  <p className="text-slate-500 font-medium">Checklist disponible à partir de l'étape "En essai"</p>
                   <button onClick={() => moveToStage('pre_onboarding')}
                     className="mt-4 px-4 py-2 bg-teal-700 text-white rounded-xl text-sm hover:bg-teal-800 transition">
                     Passer en pré-intégration

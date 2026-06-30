@@ -93,8 +93,10 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
   const [error, setError] = useState('');
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [approvedRequests, setApprovedRequests] = useState<{ id: string; reference: string; position_title: string; direction: string }[]>([]);
 
   // ── Tab 1: Informations ───────────────────────────────────────────────────
+  const [recruitmentRequestId, setRecruitmentRequestId] = useState(() => initialData?.recruitment_request_id || '');
   const [positionId, setPositionId] = useState(() => initialData?.position_id || '');
   const [title, setTitle] = useState(() => initialData?.title || '');
   const [reference, setReference] = useState(() => initialData?.reference || genRef());
@@ -141,6 +143,14 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
     supabase.from('positions').select('id, title, department_id').order('title').then(({ data }) => {
       if (data) setPositions(data as Position[]);
     });
+    supabase
+      .from('recruitment_requests')
+      .select('id, reference, position_title, direction')
+      .in('status', ['approved'])
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setApprovedRequests(data);
+      });
   }, []);
 
   const handlePositionSelect = (pid: string) => {
@@ -214,6 +224,7 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
     const payload = {
       title,
       position_id: positionId || null,
+      recruitment_request_id: recruitmentRequestId || null,
       reference, contract_type: contractType,
       location: location || null,
       status,
@@ -296,6 +307,24 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
           {/* ── Tab 1: Informations ─────────────────────────────────────── */}
           {tab === 'infos' && (
             <div className="space-y-4">
+              {/* Demande de recrutement source */}
+              <div>
+                <Lbl>Demande de recrutement source</Lbl>
+                <select value={recruitmentRequestId} onChange={e => setRecruitmentRequestId(e.target.value)} className={inp()}>
+                  <option value="">— Aucune demande liée (offre libre) —</option>
+                  {approvedRequests.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.reference} — {r.position_title} ({r.direction})
+                    </option>
+                  ))}
+                </select>
+                {recruitmentRequestId && (
+                  <p className="text-xs text-emerald-700 mt-1 flex items-center gap-1">
+                    <CheckCircle size={11} /> Cette offre est rattachée à une demande approuvée.
+                  </p>
+                )}
+              </div>
+
               <div>
                 <Lbl req>Poste (référentiel)</Lbl>
                 <select value={positionId} onChange={e => handlePositionSelect(e.target.value)} className={inp(!positionId && !!error)}>

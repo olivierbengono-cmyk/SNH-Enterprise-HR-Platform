@@ -94,7 +94,19 @@ interface FormModalProps {
 function FormModal({ initial, onClose, onSaved }: FormModalProps) {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [skillInput, setSkillInput] = useState('');
+  const [skillSearch, setSkillSearch] = useState('');
+  const [skillDropOpen, setSkillDropOpen] = useState(false);
+  const [positions, setPositions] = useState<{ id: string; title: string }[]>([]);
+  const [masterSkills, setMasterSkills] = useState<{ id: string; name: string; category: string }[]>([]);
+
+  useEffect(() => {
+    supabase.from('positions').select('id, title').order('title').then(({ data }) => {
+      if (data) setPositions(data);
+    });
+    supabase.from('skills').select('id, name, category').order('category').order('name').then(({ data }) => {
+      if (data) setMasterSkills(data);
+    });
+  }, []);
 
   const [form, setForm] = useState({
     direction: initial?.direction ?? '',
@@ -113,15 +125,21 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
 
   const set = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
 
-  const addSkill = () => {
-    const s = skillInput.trim();
+  const addSkill = (name: string) => {
+    const s = name.trim();
     if (s && !form.required_skills.includes(s)) {
       set('required_skills', [...form.required_skills, s]);
     }
-    setSkillInput('');
+    setSkillSearch('');
+    setSkillDropOpen(false);
   };
 
   const removeSkill = (s: string) => set('required_skills', form.required_skills.filter(x => x !== s));
+
+  const filteredSkills = masterSkills.filter(sk =>
+    !form.required_skills.includes(sk.name) &&
+    sk.name.toLowerCase().includes(skillSearch.toLowerCase())
+  ).slice(0, 12);
 
   const handleSubmit = async () => {
     if (!form.direction || !form.position_title) return;
@@ -176,8 +194,13 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Intitulé du poste *</label>
-              <input value={form.position_title} onChange={e => set('position_title', e.target.value)}
-                placeholder="Ex: Ingénieur Géologue" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none" />
+              <select
+                value={form.position_title}
+                onChange={e => set('position_title', e.target.value)}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-white">
+                <option value="">— Sélectionner dans le référentiel —</option>
+                {positions.map(p => <option key={p.id} value={p.title}>{p.title}</option>)}
+              </select>
             </div>
 
             <div>
@@ -217,15 +240,28 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
 
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Compétences requises</label>
-            <div className="flex gap-2 mb-2">
-              <input value={skillInput} onChange={e => setSkillInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                placeholder="Ex: Python, Sismique, OHADA…" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none" />
-              <button onClick={addSkill} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition">
-                Ajouter
-              </button>
+            <div className="relative">
+              <input
+                value={skillSearch}
+                onChange={e => { setSkillSearch(e.target.value); setSkillDropOpen(true); }}
+                onFocus={() => setSkillDropOpen(true)}
+                onBlur={() => setTimeout(() => setSkillDropOpen(false), 150)}
+                placeholder="Rechercher dans le référentiel de compétences…"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none" />
+              {skillDropOpen && filteredSkills.length > 0 && (
+                <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredSkills.map(sk => (
+                    <button key={sk.id} type="button"
+                      onMouseDown={() => addSkill(sk.name)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 hover:text-green-700 flex items-center justify-between gap-2 transition">
+                      <span>{sk.name}</span>
+                      <span className="text-xs text-slate-400 flex-shrink-0">{sk.category}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5 mt-2">
               {form.required_skills.map(s => (
                 <span key={s} className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100">
                   {s}

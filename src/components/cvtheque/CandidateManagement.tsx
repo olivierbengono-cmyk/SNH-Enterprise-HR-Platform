@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Pagination, paginate, PageSize } from '../shared/Pagination';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
+import { logAudit } from '../../utils/auditLog';
 import {
   Users, Search, X, Eye, Star, Trash2, Briefcase, MapPin,
   Mail, Phone, Linkedin, Globe, Calendar, GraduationCap, Zap,
@@ -194,6 +196,7 @@ const SPONTANEOUS_TYPE_LABELS: Record<SpontaneousType, string> = {
 type MainView = 'candidates' | 'by-job' | 'search';
 
 export default function CandidateManagement() {
+  const { profile: authProfile } = useAuth();
   const [mainView, setMainView] = useState<MainView>('candidates');
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [jobs, setJobs] = useState<JobOpening[]>([]);
@@ -327,7 +330,13 @@ export default function CandidateManagement() {
 
   const deleteCandidate = async (id: string) => {
     if (!confirm('Supprimer définitivement ce candidat ?')) return;
+    const target = candidates.find(c => c.id === id);
     await supabase.from('candidates').delete().eq('id', id);
+    logAudit({
+      user_email: authProfile?.email, user_role: authProfile?.role,
+      action: 'DELETE', resource_type: 'candidate', resource_id: id,
+      resource_label: target ? `${target.first_name} ${target.last_name}` : id,
+    });
     setSelectedCandidate(null);
     await loadAll();
   };
@@ -2240,6 +2249,7 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
   onEdit: (c: Candidate) => void;
 }) {
   type Tab = 'profile' | 'experiences' | 'education' | 'skills' | 'documents' | 'pipeline' | 'onboarding' | 'cv';
+  const { profile: auditProfile } = useAuth();
   const [tab, setTab] = useState<Tab>('pipeline');
   const [saving, setSaving] = useState(false);
   const [noteText, setNoteText] = useState('');
@@ -2274,6 +2284,12 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
       candidate_id: c.id, application_id: app.id,
       from_status: from, to_status: newStatus,
       notes: `Passage de "${getStageInfo(from).label}" à "${getStageInfo(newStatus).label}"`,
+    });
+    logAudit({
+      user_email: auditProfile?.email, user_role: auditProfile?.role,
+      action: 'UPDATE', resource_type: 'candidate_pipeline', resource_id: app.id,
+      resource_label: `${c.first_name} ${c.last_name}`,
+      details: `Pipeline : ${getStageInfo(from).label} → ${getStageInfo(newStatus).label}`,
     });
     if (newStatus === 'pre_onboarding' && (!app.onboarding_checklist || app.onboarding_checklist.length === 0)) {
       await supabase.from('candidate_applications').update({ onboarding_checklist: DEFAULT_CHECKLIST }).eq('id', app.id);

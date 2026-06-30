@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, User } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
+import { logAudit } from '../../utils/auditLog';
 
 interface EmployeeFormProps {
   onClose: () => void;
@@ -9,6 +11,7 @@ interface EmployeeFormProps {
 }
 
 export function EmployeeForm({ onClose, onSuccess, employeeToEdit }: EmployeeFormProps) {
+  const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [departments, setDepartments] = useState<any[]>([]);
@@ -104,12 +107,24 @@ export function EmployeeForm({ onClose, onSuccess, employeeToEdit }: EmployeeFor
           .eq('id', employeeToEdit.id);
 
         if (updateError) throw updateError;
+        logAudit({
+          user_email: profile?.email, user_role: profile?.role,
+          action: 'UPDATE', resource_type: 'employee', resource_id: employeeToEdit.id,
+          resource_label: `${payload.first_name} ${payload.last_name}`,
+          details: `Matricule : ${payload.employee_number}`,
+        });
       } else {
         const { error: insertError } = await supabase
           .from('employees')
           .insert(payload);
 
         if (insertError) throw insertError;
+        logAudit({
+          user_email: profile?.email, user_role: profile?.role,
+          action: 'CREATE', resource_type: 'employee',
+          resource_label: `${payload.first_name} ${payload.last_name}`,
+          details: `Matricule : ${payload.employee_number} — Poste : ${payload.position_id ?? '—'}`,
+        });
       }
 
       onSuccess();

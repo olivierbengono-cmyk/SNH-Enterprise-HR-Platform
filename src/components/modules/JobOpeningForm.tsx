@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, AlertCircle, ChevronRight, ChevronLeft, Search, Sparkles, Languages, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { logAudit } from '../../utils/auditLog';
 
 interface MasterSkill { id: string; name: string; category: string; }
 interface Position { id: string; title: string; department_id: string | null; }
@@ -249,9 +250,21 @@ export function JobOpeningForm({ onClose, onSuccess, initialData }: JobOpeningFo
       if (isEdit) {
         const { error: upErr } = await supabase.from('job_openings').update(payload).eq('id', initialData.id);
         if (upErr) throw upErr;
+        logAudit({
+          user_email: authProfile?.email, user_role: authProfile?.role,
+          action: 'UPDATE', resource_type: 'job_opening', resource_id: initialData.id,
+          resource_label: title,
+          details: `Statut : ${status}`,
+        });
       } else {
         const { error: insertError } = await supabase.from('job_openings').insert(payload);
         if (insertError) throw insertError;
+        logAudit({
+          user_email: authProfile?.email, user_role: authProfile?.role,
+          action: 'CREATE', resource_type: 'job_opening',
+          resource_label: title,
+          details: `Contrat : ${contractType} — Statut : ${status}`,
+        });
       }
       onSuccess();
       onClose();

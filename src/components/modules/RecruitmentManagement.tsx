@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { JobOpeningForm } from './JobOpeningForm';
 import { computeMatchingScore, scoreColors, scoreLabel } from '../../utils/recruitmentScore';
 import JuryEvaluationModal from './JuryEvaluationModal';
+import { useAuth } from '../../contexts/AuthContext';
+import { logAudit } from '../../utils/auditLog';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   new:        { label: 'Soumis',         color: 'bg-blue-100 text-blue-800 border-blue-200' },
@@ -46,6 +48,7 @@ interface RecruitmentManagementProps {
 }
 
 export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: RecruitmentManagementProps = {}) {
+  const { profile } = useAuth();
   const [jobOpenings, setJobOpenings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -151,7 +154,14 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
 
   const updateStatus = async (appId: string, newStatus: string) => {
     setUpdatingStatus(appId);
+    const app = jobApplications.find(a => a.id === appId);
     await supabase.from('candidate_applications').update({ status: newStatus }).eq('id', appId);
+    logAudit({
+      user_email: profile?.email, user_role: profile?.role,
+      action: 'UPDATE', resource_type: 'candidate_application', resource_id: appId,
+      resource_label: app?.candidate ? `${app.candidate.first_name} ${app.candidate.last_name}` : appId,
+      details: `Statut pipeline : ${app?.status ?? '?'} → ${newStatus}`,
+    });
     setJobApplications(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus } : a));
     if (selectedApp?.id === appId) setSelectedApp((prev: any) => ({ ...prev, status: newStatus }));
     setUpdatingStatus(null);
@@ -171,6 +181,11 @@ export function RecruitmentManagement({ initialJobId, initialCandidateAppId }: R
     setDeleting(true);
     try {
       await supabase.from('job_openings').delete().eq('id', deleteTarget.id);
+      logAudit({
+        user_email: profile?.email, user_role: profile?.role,
+        action: 'DELETE', resource_type: 'job_opening', resource_id: deleteTarget.id,
+        resource_label: deleteTarget.title,
+      });
       setDeleteTarget(null);
       setSelectedJob(null);
       loadData();

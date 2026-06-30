@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { logAudit } from '../../utils/auditLog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -154,8 +155,19 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
 
       if (initial?.id) {
         await supabase.from('recruitment_requests').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', initial.id);
+        logAudit({
+          user_email: user?.email, action: 'UPDATE',
+          resource_type: 'recruitment_request', resource_id: initial.id,
+          resource_label: `${ref} — ${form.position_title}`,
+        });
       } else {
         await supabase.from('recruitment_requests').insert(payload);
+        logAudit({
+          user_email: user?.email, action: 'CREATE',
+          resource_type: 'recruitment_request',
+          resource_label: `${ref} — ${form.position_title}`,
+          details: `Direction : ${form.direction}`,
+        });
       }
       onSaved();
     } finally {
@@ -341,6 +353,13 @@ export default function RecruitmentRequests() {
       review_comment: reviewComment || null,
       updated_at: new Date().toISOString(),
     }).eq('id', req.id);
+    logAudit({
+      user_email: profile?.email, user_role: profile?.role,
+      action: newStatus === 'approved' ? 'APPROVE' : newStatus === 'rejected' ? 'REJECT' : 'UPDATE',
+      resource_type: 'recruitment_request', resource_id: req.id,
+      resource_label: `${req.reference} — ${req.position_title}`,
+      details: `Statut : ${req.status} → ${newStatus}${reviewComment ? ` | Commentaire : ${reviewComment}` : ''}`,
+    });
     setReviewComment('');
     await load();
     setSelected(prev => prev?.id === req.id ? { ...prev, status: newStatus } : prev);
@@ -367,6 +386,12 @@ export default function RecruitmentRequests() {
         job_opening_id: job.id,
         updated_at: new Date().toISOString(),
       }).eq('id', req.id);
+      logAudit({
+        user_email: profile?.email, user_role: profile?.role,
+        action: 'CREATE', resource_type: 'job_opening', resource_id: job.id,
+        resource_label: req.position_title,
+        details: `Créée depuis la demande ${req.reference}`,
+      });
     }
     await load();
     setSelected(prev => prev?.id === req.id ? { ...prev, status: 'published', job_opening_id: job?.id ?? null } : prev);

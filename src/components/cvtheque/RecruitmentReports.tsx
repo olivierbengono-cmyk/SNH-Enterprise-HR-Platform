@@ -130,7 +130,6 @@ interface AppRow {
   created_at: string;
   desired_position: string | null;
   cover_letter: string | null;
-  apply_attempt_count: number | null;
   job_opening_id: string | null;
   candidate: {
     id: string;
@@ -147,7 +146,7 @@ interface AppRow {
     candidate_experiences?: { company: string | null; position: string | null; duration_months: number | null; start_date: string | null; end_date: string | null }[];
   } | null;
   job_opening: { id: string; title: string } | null;
-  pipeline_events?: { stage: string; created_at: string; notes: string | null }[];
+  pipeline_events?: { to_status: string; created_at: string; notes: string | null }[];
   pipeline_stage_notes?: { stage: string; score: number | null; score_max: number | null; passed: boolean | null; evaluator_name: string | null; notes: string | null }[];
 }
 
@@ -219,18 +218,20 @@ export default function RecruitmentReports() {
     setLoading(true);
     const [appRes, jobRes] = await Promise.all([
       supabase.from('candidate_applications').select(`
-        id, status, created_at, desired_position, cover_letter, apply_attempt_count, job_opening_id,
+        id, status, created_at, desired_position, cover_letter, job_opening_id,
         candidate:candidates(
           id, first_name, last_name, email, phone, birth_date, location, professional_title, summary, photo_url,
           candidate_educations(degree, field_of_study, institution, end_year),
           candidate_experiences(company, position, duration_months, start_date, end_date)
         ),
         job_opening:job_openings(id, title),
-        pipeline_events:hiring_pipeline_events(stage, created_at, notes),
+        pipeline_events:hiring_pipeline_events(to_status, created_at, notes),
         pipeline_stage_notes(stage, score, score_max, passed, evaluator_name, notes)
       `).order('created_at', { ascending: false }),
       supabase.from('job_openings').select('id, title, status, contract_type, publication_date, closing_date').order('created_at', { ascending: false }),
     ]);
+    if (appRes.error) console.error('[RecruitmentReports] applications error:', appRes.error);
+    if (jobRes.error) console.error('[RecruitmentReports] jobs error:', jobRes.error);
     setApplications((appRes.data as AppRow[]) || []);
     setJobs((jobRes.data as JobOpening[]) || []);
     setLoading(false);
@@ -671,16 +672,16 @@ export default function RecruitmentReports() {
               <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-100" />
               <div className="space-y-3">
                 {events.map((ev, i) => {
-                  const step = PIPELINE_STEPS.find(s => s.value === ev.stage);
+                  const step = PIPELINE_STEPS.find(s => s.value === ev.to_status);
                   return (
                     <div key={i} className="flex items-start gap-4 relative">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 z-10 ring-2 ring-white"
-                        style={{ background: STATUS_COLOR[ev.stage] ?? SNH_GREEN }}>
+                        style={{ background: STATUS_COLOR[ev.to_status] ?? SNH_GREEN }}>
                         {i + 1}
                       </div>
                       <div className="flex-1 pb-3">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-slate-800">{step?.label ?? ev.stage}</span>
+                          <span className="text-sm font-semibold text-slate-800">{step?.label ?? ev.to_status}</span>
                           <span className="text-xs text-slate-400">{fmtDate(ev.created_at)}</span>
                         </div>
                         {ev.notes && <p className="text-xs text-slate-500 mt-1 italic">"{ev.notes}"</p>}
@@ -808,10 +809,10 @@ export default function RecruitmentReports() {
                 </thead>
                 <tbody>
                   {events.map((ev, i) => {
-                    const note = (app.pipeline_stage_notes || []).find(n => n.stage === ev.stage);
+                    const note = (app.pipeline_stage_notes || []).find(n => n.stage === ev.to_status);
                     return (
                       <tr key={i} className={i % 2 === 0 ? '' : 'bg-slate-50/40'}>
-                        <Td>{PIPELINE_STEPS.find(s => s.value === ev.stage)?.short ?? ev.stage}</Td>
+                        <Td>{PIPELINE_STEPS.find(s => s.value === ev.to_status)?.short ?? ev.to_status}</Td>
                         <Td center>
                           {note?.passed === true ? <span className="text-emerald-600 font-bold text-xs">Validé</span>
                             : note?.passed === false ? <span className="text-red-500 font-bold text-xs">Échec</span>
@@ -1131,7 +1132,7 @@ export default function RecruitmentReports() {
 
     const evRows = events.map((ev, i) => `<tr>
       <td>${i + 1}</td>
-      <td>${PIPELINE_STEPS.find(s => s.value === ev.stage)?.label ?? ev.stage}</td>
+      <td>${PIPELINE_STEPS.find(s => s.value === ev.to_status)?.label ?? ev.to_status}</td>
       <td style="text-align:center">${fmtDate(ev.created_at)}</td>
       <td>${ev.notes ?? '—'}</td>
     </tr>`).join('');
@@ -1175,9 +1176,9 @@ export default function RecruitmentReports() {
     </tr>`).join('');
 
     const evRows = events.map((ev, i) => {
-      const note = (app.pipeline_stage_notes || []).find(n => n.stage === ev.stage);
+      const note = (app.pipeline_stage_notes || []).find(n => n.stage === ev.to_status);
       return `<tr>
-        <td>${PIPELINE_STEPS.find(s => s.value === ev.stage)?.short ?? ev.stage}</td>
+        <td>${PIPELINE_STEPS.find(s => s.value === ev.to_status)?.short ?? ev.to_status}</td>
         <td style="text-align:center">${note?.passed === true ? 'Validé' : note?.passed === false ? 'Échec' : '—'}</td>
         <td style="text-align:center">${fmtDate(ev.created_at)}</td>
         <td>${note?.notes ?? ev.notes ?? '—'}</td>

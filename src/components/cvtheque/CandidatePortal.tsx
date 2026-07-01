@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { User, Briefcase, GraduationCap, FileText, CheckCircle, XCircle, Plus, Trash2, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, ArrowRight, X, LogIn, UserPlus, LogOut, Sparkles, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Bell, LayoutDashboard, Send, Search, Plane as PaperPlane, ChevronRight, Home, Folder, BarChart3, Settings, Camera, Download, Monitor, Scale, Shield, DollarSign, Layers, Flame, Wrench, Zap, Users, Package, Cpu, TrendingUp, FlaskConical, Truck, HeartPulse } from 'lucide-react';
+import { User, Briefcase, GraduationCap, FileText, CheckCircle, XCircle, Plus, Trash2, Upload, MapPin, Phone, Mail, Linkedin, Globe, Calendar, Building2, ArrowRight, X, LogIn, UserPlus, LogOut, Sparkles, Clock, Star, AlertCircle, ChevronDown, ChevronUp, Lock, Eye, EyeOff, MessageSquare, BookOpen, Bell, LayoutDashboard, Send, Search, Plane as PaperPlane, ChevronRight, Home, Folder, BarChart3, Settings, Camera, Download, Monitor, Scale, Shield, DollarSign, Layers, Flame, Wrench, Zap, Users, Package, Cpu, TrendingUp, FlaskConical, Truck, HeartPulse, Printer } from 'lucide-react';
 import { generateCV, CVData } from '../../utils/cvPDF';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -391,7 +391,7 @@ const SNH_PIPELINE_STEPS = [
 function SNHPipelineProgress({ status, lang }: { status: string; lang: Lang }) {
   const currentIdx = SNH_PIPELINE_STEPS.findIndex(s => s.value === status);
   const isTerminal = status === 'rejected' || status === 'withdrawn';
-  if (isTerminal) return null;
+  if (isTerminal || status === 'new' || currentIdx <= 0) return null;
   const pct = currentIdx >= 0 ? Math.round(((currentIdx + 1) / SNH_PIPELINE_STEPS.length) * 100) : 0;
   return (
     <div className="mt-2 space-y-1.5">
@@ -412,6 +412,74 @@ function SNHPipelineProgress({ status, lang }: { status: string; lang: Lang }) {
       </div>
     </div>
   );
+}
+
+function printApplicationFiche(app: any, candidateName: string) {
+  const steps = SNH_PIPELINE_STEPS;
+  const currentIdx = steps.findIndex(s => s.value === app.status);
+  const STATUS_FR: Record<string, string> = {
+    new: 'Candidature soumise', technical_tests: 'Tests techniques — Jury SNH',
+    interview: 'Entretien d\'embauche', psycho_tests: 'Tests professionnels & psychotechniques',
+    medical_visit: 'Visite médicale d\'embauche', morality_inquiry: 'Enquête de moralité',
+    diploma_check: 'Authentification diplômes & état civil', trial: 'Engagement à l\'essai',
+    assignment: 'Affectation et prise de service', integrated: 'Titularisation',
+    rejected: 'Candidature — décision finale', withdrawn: 'Candidature retirée',
+  };
+
+  const stepsHtml = steps.map((s, i) => {
+    const done = i < currentIdx;
+    const active = i === currentIdx;
+    const bg = active ? '#006B3C' : done ? '#10b981' : '#e5e7eb';
+    const col = active || done ? '#fff' : '#9ca3af';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid #f1f5f9;">
+      <div style="width:28px;height:28px;border-radius:50%;background:${bg};color:${col};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${done ? '✓' : i + 1}</div>
+      <span style="font-size:13px;font-weight:${active ? '700' : '400'};color:${active ? '#006B3C' : done ? '#059669' : '#94a3b8'};">${s.label}</span>
+      ${active ? `<span style="margin-left:auto;font-size:11px;background:#006B3C1a;color:#006B3C;border:1px solid #006B3C40;padding:2px 10px;border-radius:99px;font-weight:600;">Étape actuelle</span>` : ''}
+    </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <title>Fiche de progression — ${candidateName}</title>
+  <style>
+    body{margin:0;padding:32px;font-family:Arial,Helvetica,sans-serif;color:#111827;background:#fff;}
+    @media print{body{padding:16px;}}
+    h1{font-size:20px;color:#006B3C;margin:0 0 4px;}
+    .sub{color:#6b7280;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:24px;}
+    .card{border:1px solid #e5e7eb;border-radius:10px;padding:20px;margin-bottom:20px;}
+    .label{font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
+    .value{font-size:14px;font-weight:600;color:#111827;}
+    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;}
+  </style>
+  </head><body>
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+    <div style="width:48px;height:48px;background:#006B3C;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+      <span style="color:#fff;font-size:20px;font-weight:900;">S</span>
+    </div>
+    <div>
+      <h1>Fiche de progression — Recrutement SNH</h1>
+      <p class="sub">Société Nationale des Hydrocarbures du Cameroun</p>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div><p class="label">Candidat(e)</p><p class="value">${candidateName}</p></div>
+      <div><p class="label">Poste visé</p><p class="value">${app.desired_position || app.job_opening?.title || '—'}</p></div>
+      <div><p class="label">Date de candidature</p><p class="value">${app.created_at ? new Date(app.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</p></div>
+      <div><p class="label">Statut actuel</p><p class="value" style="color:#006B3C;">${STATUS_FR[app.status] ?? app.status}</p></div>
+    </div>
+  </div>
+  <div class="card">
+    <p class="label" style="margin-bottom:12px;">Progression du processus de recrutement</p>
+    ${stepsHtml}
+  </div>
+  <p class="footer">Document généré le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} — SNH Recrutement — Confidentiel</p>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.onload = () => w.print();
 }
 
 type Section = 'dashboard' | 'profile' | 'documents' | 'jobs' | 'spontaneous' | 'applications' | 'notifications';
@@ -1005,6 +1073,7 @@ export default function CandidatePortal() {
           {section === 'applications' && (
             <ApplicationsSection applications={applications} openJobs={openJobs}
               documents={documents} candidateId={candidateId!}
+              candidateName={profile ? `${profile.first_name} ${profile.last_name}` : ''}
               onApplied={(app) => setApplications(prev => [app, ...prev])}
               onWithdrawn={(appId) => setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'withdrawn' } : a))}
               onDeleted={(appId) => setApplications(prev => prev.filter(a => a.id !== appId))}
@@ -3122,9 +3191,9 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied, lang }
 }
 
 // ── Applications ──────────────────────────────────────────────────────────────
-function ApplicationsSection({ applications, openJobs, documents, candidateId, onApplied, onWithdrawn, onDeleted, lang }: {
+function ApplicationsSection({ applications, openJobs, documents, candidateId, candidateName, onApplied, onWithdrawn, onDeleted, lang }: {
   applications: Application[]; openJobs: JobOpening[];
-  documents: CandidateDoc[]; candidateId: string;
+  documents: CandidateDoc[]; candidateId: string; candidateName: string;
   onApplied: (app: Application) => void;
   onWithdrawn: (appId: string) => void;
   onDeleted: (appId: string) => void;
@@ -3262,6 +3331,18 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
                             {t.appWithdraw}
                           </button>
                         )
+                      )}
+
+                      {/* Print fiche — for applications that have progressed */}
+                      {!['new', 'withdrawn', 'rejected'].includes(app.status) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); printApplicationFiche(app, candidateName); }}
+                          className="text-xs px-2.5 py-1 border border-green-200 text-green-700 rounded-lg hover:bg-green-50 hover:border-green-400 transition font-medium flex items-center gap-1"
+                          title={lang === 'fr' ? 'Imprimer ma fiche de progression' : 'Print progression sheet'}
+                        >
+                          <Printer size={11} />
+                          {lang === 'fr' ? 'Imprimer' : 'Print'}
+                        </button>
                       )}
 
                       {/* Delete button — withdrawn / rejected only */}

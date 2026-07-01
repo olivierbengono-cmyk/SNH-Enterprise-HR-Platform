@@ -9,17 +9,21 @@ import { useAuth } from '../../contexts/AuthContext';
 import { logAudit } from '../../utils/auditLog';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  new:        { label: 'Soumis',         color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  reviewing:  { label: 'En examen',      color: 'bg-amber-100 text-amber-800 border-amber-200' },
-  interview:  { label: 'Entretien',      color: 'bg-violet-100 text-violet-800 border-violet-200' },
-  offer:      { label: 'Offre',          color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  pre_onboarding: { label: 'En essai',      color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
-  integrated: { label: 'Titularisé(e)', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  rejected:   { label: 'Refusé(e)',      color: 'bg-red-100 text-red-800 border-red-200' },
-  withdrawn:  { label: 'Retiré(e)',      color: 'bg-slate-100 text-slate-600 border-slate-200' },
+  new:              { label: 'Candidature',            color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  technical_tests:  { label: 'Tests techniques',       color: 'bg-amber-100 text-amber-800 border-amber-200' },
+  interview:        { label: 'Entretien',               color: 'bg-orange-100 text-orange-800 border-orange-200' },
+  psycho_tests:     { label: 'Tests psy.',              color: 'bg-violet-100 text-violet-800 border-violet-200' },
+  medical_visit:    { label: 'Visite médicale',         color: 'bg-teal-100 text-teal-800 border-teal-200' },
+  morality_inquiry: { label: 'Enquête moralité',        color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+  diploma_check:    { label: 'Auth. diplômes',          color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+  trial:            { label: 'Engagement à l\'essai',   color: 'bg-lime-100 text-lime-800 border-lime-200' },
+  assignment:       { label: 'Affectation',             color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  integrated:       { label: 'Titularisé(e)',           color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  rejected:         { label: 'Refusé(e)',               color: 'bg-red-100 text-red-800 border-red-200' },
+  withdrawn:        { label: 'Retiré(e)',               color: 'bg-slate-100 text-slate-600 border-slate-200' },
 };
 
-const PIPELINE_STEPS = ['new', 'reviewing', 'interview', 'offer', 'pre_onboarding', 'integrated'];
+const PIPELINE_STEPS = ['new', 'technical_tests', 'interview', 'psycho_tests', 'medical_visit', 'morality_inquiry', 'diploma_check', 'trial', 'assignment', 'integrated'];
 
 function StatusBadge({ status }: { status: string }) {
   const cfg = STATUS_CONFIG[status] || { label: status, color: 'bg-slate-100 text-slate-700 border-slate-200' };

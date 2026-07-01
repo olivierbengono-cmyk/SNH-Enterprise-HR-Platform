@@ -39,22 +39,30 @@ type PanelKey =
   | null;
 
 const STATUS_LABELS: Record<string, string> = {
-  new: 'Soumise',
-  reviewing: 'En examen',
+  new: 'Candidature',
+  technical_tests: 'Tests techniques',
   interview: 'Entretien',
-  offer: 'Offre',
-  pre_onboarding: 'En essai',
+  psycho_tests: 'Tests psy.',
+  medical_visit: 'Visite médicale',
+  morality_inquiry: 'Enquête moralité',
+  diploma_check: 'Auth. diplômes',
+  trial: 'Engagement essai',
+  assignment: 'Affectation',
   integrated: 'Titularisé(e)',
   rejected: 'Refusé(e)',
-  withdrawn: 'Retirée',
+  withdrawn: 'Retiré(e)',
 };
 
 const STATUS_STYLES: Record<string, string> = {
   new: 'bg-blue-100 text-blue-700',
-  reviewing: 'bg-amber-100 text-amber-700',
+  technical_tests: 'bg-amber-100 text-amber-700',
   interview: 'bg-orange-100 text-orange-700',
-  offer: 'bg-teal-100 text-teal-700',
-  pre_onboarding: 'bg-cyan-100 text-cyan-700',
+  psycho_tests: 'bg-violet-100 text-violet-700',
+  medical_visit: 'bg-teal-100 text-teal-700',
+  morality_inquiry: 'bg-cyan-100 text-cyan-700',
+  diploma_check: 'bg-indigo-100 text-indigo-700',
+  trial: 'bg-lime-100 text-lime-700',
+  assignment: 'bg-emerald-100 text-emerald-700',
   integrated: 'bg-emerald-100 text-emerald-700',
   rejected: 'bg-red-100 text-red-700',
   withdrawn: 'bg-gray-100 text-gray-600',
@@ -120,12 +128,12 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
       const [interviewRes, hiredRes, extendedRes, totalHiredRes, allAppsRes, pendingReqRes] = await Promise.all([
         supabase.from('candidate_applications').select('id', { count: 'exact' }).eq('status', 'interview'),
         supabase.from('candidate_applications').select('id', { count: 'exact' })
-          .in('status', ['integrated', 'pre_onboarding'])
+          .in('status', ['integrated', 'trial', 'assignment'])
           .gte('updated_at', monthStart.toISOString()),
         supabase.from('job_openings').select('id', { count: 'exact' })
           .eq('status', 'open').not('closing_date', 'is', null),
         supabase.from('candidate_applications').select('id', { count: 'exact' })
-          .in('status', ['integrated', 'pre_onboarding']),
+          .in('status', ['integrated', 'trial', 'assignment']),
         supabase.from('candidate_applications').select('status'),
         supabase.from('recruitment_requests').select('id', { count: 'exact' })
           .in('status', ['submitted', 'drh_review']),
@@ -183,7 +191,7 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
       } else if (key === 'hired') {
         const { data } = await supabase.from('candidate_applications')
           .select('id, status, updated_at, desired_position, candidate:candidates(id, first_name, last_name), job_opening:job_openings(title)')
-          .in('status', ['integrated', 'pre_onboarding'])
+          .in('status', ['integrated', 'trial', 'assignment'])
           .gte('updated_at', monthStart.toISOString())
           .order('updated_at', { ascending: false });
         setPanelData(data || []);
@@ -240,10 +248,10 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
       const total = panelData.length;
       const byStatus: Record<string, number> = {};
       panelData.forEach((a: any) => { byStatus[a.status] = (byStatus[a.status] || 0) + 1; });
-      const hired = (byStatus['integrated'] || 0) + (byStatus['pre_onboarding'] || 0);
+      const hired = (byStatus['integrated'] || 0) + (byStatus['trial'] || 0) + (byStatus['assignment'] || 0);
       const rate = total > 0 ? Math.round((hired / stats.totalCandidates) * 100) : 0;
 
-      const stagesOrder = ['new', 'reviewing', 'interview', 'offer', 'pre_onboarding', 'integrated', 'rejected', 'withdrawn'];
+      const stagesOrder = ['new', 'technical_tests', 'interview', 'psycho_tests', 'medical_visit', 'morality_inquiry', 'diploma_check', 'trial', 'assignment', 'integrated', 'rejected', 'withdrawn'];
       return (
         <div className="space-y-6">
           <div className="grid grid-cols-3 gap-4">
@@ -500,7 +508,7 @@ export default function RecruitmentManagerDashboard({ onNavigate }: RecruitmentM
 
       {/* ── Pipeline funnel ─────────────────────────────────── */}
       {Object.keys(pipeline).length > 0 && (() => {
-        const FUNNEL_STEPS = ['new', 'reviewing', 'interview', 'offer', 'pre_onboarding', 'integrated'];
+        const FUNNEL_STEPS = ['new', 'technical_tests', 'interview', 'psycho_tests', 'medical_visit', 'morality_inquiry', 'diploma_check', 'trial', 'assignment', 'integrated'];
         const maxCount = Math.max(...FUNNEL_STEPS.map(s => pipeline[s] || 0), 1);
         const rejected = (pipeline['rejected'] || 0) + (pipeline['withdrawn'] || 0);
         return (

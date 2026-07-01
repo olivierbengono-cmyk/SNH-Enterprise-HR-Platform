@@ -336,15 +336,18 @@ function Tag({ children, variant = 'blue' }: { children: React.ReactNode; varian
 }
 function AppStatus({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    new:          { label: 'Soumis',         cls: 'bg-blue-50 text-blue-700' },
-    reviewing:    { label: 'En examen',      cls: 'bg-amber-50 text-amber-700' },
-    interview:    { label: 'Entretien',      cls: 'bg-purple-50 text-purple-700' },
-    offer:           { label: 'Offre',           cls: 'bg-teal-50 text-teal-700' },
-    pre_onboarding:  { label: 'En essai',        cls: 'bg-cyan-50 text-cyan-700' },
-    onboarding:      { label: 'Intégration',     cls: 'bg-green-50 text-green-700' },
-    integrated:      { label: 'Titularisé(e)',   cls: 'bg-emerald-50 text-emerald-700' },
-    rejected:        { label: 'Refusé(e)',       cls: 'bg-red-50 text-red-700' },
-    withdrawn:       { label: 'Retiré(e)',       cls: 'bg-gray-100 text-gray-600' },
+    new:              { label: 'Soumis',              cls: 'bg-blue-50 text-blue-700' },
+    technical_tests:  { label: 'Tests techniques',   cls: 'bg-yellow-50 text-yellow-700' },
+    interview:        { label: 'Entretien',           cls: 'bg-orange-50 text-orange-700' },
+    psycho_tests:     { label: 'Tests psy.',          cls: 'bg-purple-50 text-purple-700' },
+    medical_visit:    { label: 'Visite médicale',    cls: 'bg-teal-50 text-teal-700' },
+    morality_inquiry: { label: 'Enquête moralité',   cls: 'bg-cyan-50 text-cyan-700' },
+    diploma_check:    { label: 'Auth. diplômes',     cls: 'bg-indigo-50 text-indigo-700' },
+    trial:            { label: 'En essai',            cls: 'bg-green-50 text-green-700' },
+    assignment:       { label: 'Affectation',         cls: 'bg-emerald-50 text-emerald-700' },
+    integrated:       { label: 'Titularisé(e)',      cls: 'bg-emerald-100 text-emerald-800' },
+    rejected:         { label: 'Refusé(e)',           cls: 'bg-red-50 text-red-700' },
+    withdrawn:        { label: 'Retiré(e)',           cls: 'bg-gray-100 text-gray-600' },
   };
   const s = map[status] ?? map.new;
   return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${s.cls}`}>{s.label}</span>;
@@ -368,6 +371,45 @@ function ProgressBar({ pct, color = 'bg-blue-600' }: { pct: number; color?: stri
   return (
     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
       <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+// ── SNH Pipeline Progress (shown to candidate) ─────────────────────────────────
+const SNH_PIPELINE_STEPS = [
+  { value: 'new',              label: 'Candidature' },
+  { value: 'technical_tests',  label: 'Tests techniques' },
+  { value: 'interview',        label: 'Entretien' },
+  { value: 'psycho_tests',     label: 'Tests psy.' },
+  { value: 'medical_visit',    label: 'Visite méd.' },
+  { value: 'morality_inquiry', label: 'Moralité' },
+  { value: 'diploma_check',    label: 'Diplômes' },
+  { value: 'trial',            label: 'Essai' },
+  { value: 'assignment',       label: 'Affectation' },
+  { value: 'integrated',       label: 'Titularisé(e)' },
+];
+function SNHPipelineProgress({ status, lang }: { status: string; lang: Lang }) {
+  const currentIdx = SNH_PIPELINE_STEPS.findIndex(s => s.value === status);
+  const isTerminal = status === 'rejected' || status === 'withdrawn';
+  if (isTerminal) return null;
+  const pct = currentIdx >= 0 ? Math.round(((currentIdx + 1) / SNH_PIPELINE_STEPS.length) * 100) : 0;
+  return (
+    <div className="mt-2 space-y-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-400">{lang === 'fr' ? 'Étape' : 'Step'} {Math.max(1, currentIdx + 1)}/{SNH_PIPELINE_STEPS.length}</span>
+        <span className="text-xs font-semibold text-green-700">{pct}%</span>
+      </div>
+      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-full rounded-full bg-green-600 transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="flex gap-0.5 overflow-hidden">
+        {SNH_PIPELINE_STEPS.map((step, i) => (
+          <div key={step.value}
+            className={`h-1 flex-1 rounded-sm transition-all ${i <= currentIdx ? 'bg-green-500' : 'bg-gray-200'}`}
+            title={step.label}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -497,8 +539,9 @@ const TR = {
     appReapplyLimitTitle: 'Limite de candidatures atteinte',
     appReapplyLimitMsg: 'Vous avez déjà postulé 3 fois à cette offre (la limite autorisée). Il n\'est plus possible de repostuler à ce poste.',
     appReapplyLimitBtn: 'Compris',
-    statusNew: 'Soumis', statusReviewing: 'En examen', statusInterview: 'Entretien',
-    statusOffer: 'Offre', statusPreOnboarding: 'En essai', statusOnboarding: 'Intégration',
+    statusNew: 'Soumis', statusTechnicalTests: 'Tests techniques', statusInterview: 'Entretien',
+    statusPsychoTests: 'Tests psy.', statusMedicalVisit: 'Visite médicale', statusMoralityInquiry: 'Enquête moralité',
+    statusDiplomaCheck: 'Auth. diplômes', statusTrial: 'En essai', statusAssignment: 'Affectation',
     statusIntegrated: 'Titularisé(e)', statusRejected: 'Refusé(e)', statusWithdrawn: 'Retiré(e)',
     // Notifications
     notifsNew: 'nouvelle', notifsNewPlural: 'nouvelles', notifsEmpty: 'Aucune notification',
@@ -624,9 +667,10 @@ const TR = {
     appReapplyLimitTitle: 'Application limit reached',
     appReapplyLimitMsg: 'You have already applied 3 times to this position (the maximum allowed). Further applications for this role are not possible.',
     appReapplyLimitBtn: 'Understood',
-    statusNew: 'Submitted', statusReviewing: 'Under review', statusInterview: 'Interview',
-    statusOffer: 'Offer', statusPreOnboarding: 'Pre-onboarding', statusOnboarding: 'Onboarding',
-    statusIntegrated: 'Integrated', statusRejected: 'Rejected', statusWithdrawn: 'Withdrawn',
+    statusNew: 'Submitted', statusTechnicalTests: 'Technical tests', statusInterview: 'Interview',
+    statusPsychoTests: 'Psycho tests', statusMedicalVisit: 'Medical check', statusMoralityInquiry: 'Background check',
+    statusDiplomaCheck: 'Diploma auth.', statusTrial: 'Trial period', statusAssignment: 'Assignment',
+    statusIntegrated: 'Permanent staff', statusRejected: 'Rejected', statusWithdrawn: 'Withdrawn',
     // Notifications
     notifsNew: 'new', notifsNewPlural: 'new', notifsEmpty: 'No notifications',
     notifsNewBadge: 'New',
@@ -3099,12 +3143,14 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
   const applied = new Set(applications.filter(a => a.status !== 'withdrawn').map(a => a.job_opening_id || '').filter(Boolean));
 
   const STATUS_LABELS: Record<string, string> = {
-    new: t.statusNew, reviewing: t.statusReviewing, interview: t.statusInterview,
-    offer: t.statusOffer, pre_onboarding: t.statusPreOnboarding, onboarding: t.statusOnboarding,
+    new: t.statusNew, technical_tests: t.statusTechnicalTests, interview: t.statusInterview,
+    psycho_tests: t.statusPsychoTests, medical_visit: t.statusMedicalVisit,
+    morality_inquiry: t.statusMoralityInquiry, diploma_check: t.statusDiplomaCheck,
+    trial: t.statusTrial, assignment: t.statusAssignment,
     integrated: t.statusIntegrated, rejected: t.statusRejected, withdrawn: t.statusWithdrawn,
   };
 
-  const canWithdraw = (status: string) => ['new', 'reviewing'].includes(status);
+  const canWithdraw = (status: string) => ['new', 'technical_tests'].includes(status);
   const canDelete  = (status: string) => ['withdrawn', 'rejected'].includes(status);
 
   const handleWithdraw = async (appId: string) => {
@@ -3190,6 +3236,7 @@ function ApplicationsSection({ applications, openJobs, documents, candidateId, o
                         {app.job_opening_id ? <Tag variant="blue">{t.appPublished}</Tag> : <Tag variant="purple">{t.appSpontaneous}</Tag>}
                         <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={10} />{fmtDate(app.created_at)}</span>
                       </div>
+                      <SNHPipelineProgress status={app.status} lang={lang} />
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <AppStatus status={app.status} />

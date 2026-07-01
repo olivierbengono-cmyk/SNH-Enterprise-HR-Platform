@@ -42,27 +42,33 @@ async function sendViaGmail(opts: {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  new: "Soumis",
-  reviewing: "En cours d'étude",
-  interview: "Entretien planifié",
-  offer: "Offre reçue",
-  pre_onboarding: "En essai",
-  onboarding: "Intégration en cours",
-  integrated: "Titularisé(e)",
-  rejected: "Non retenu(e)",
-  withdrawn: "Candidature retirée",
+  new:              "Candidature reçue",
+  technical_tests:  "Tests techniques — Jury SNH",
+  interview:        "Entretien d'embauche",
+  psycho_tests:     "Tests professionnels & psychotechniques",
+  medical_visit:    "Visite médicale d'embauche",
+  morality_inquiry: "Enquête de moralité",
+  diploma_check:    "Authentification diplômes & état civil",
+  trial:            "Engagement à l'essai",
+  assignment:       "Affectation et prise de service",
+  integrated:       "Titularisation",
+  rejected:         "Candidature — décision finale",
+  withdrawn:        "Candidature retirée",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  new: "#3b82f6",
-  reviewing: "#f59e0b",
-  interview: "#f97316",
-  offer: "#0d9488",
-  pre_onboarding: "#06b6d4",
-  onboarding: "#22c55e",
-  integrated: "#10b981",
-  rejected: "#ef4444",
-  withdrawn: "#94a03b",
+  new:              "#3b82f6",
+  technical_tests:  "#f59e0b",
+  interview:        "#f97316",
+  psycho_tests:     "#8b5cf6",
+  medical_visit:    "#0d9488",
+  morality_inquiry: "#06b6d4",
+  diploma_check:    "#6366f1",
+  trial:            "#22c55e",
+  assignment:       "#10b981",
+  integrated:       "#059669",
+  rejected:         "#ef4444",
+  withdrawn:        "#94a3b8",
 };
 
 function buildEmailHtml(opts: {
@@ -77,13 +83,16 @@ function buildEmailHtml(opts: {
   const { candidateName, jobTitle, status, statusLabel, statusColor, isSuccess, isRejected } = opts;
 
   const steps = [
-    { key: "new", label: "Soumis" },
-    { key: "reviewing", label: "En examen" },
-    { key: "interview", label: "Entretien" },
-    { key: "offer", label: "Offre" },
-    { key: "pre_onboarding", label: "En essai" },
-    { key: "onboarding", label: "Intégration" },
-    { key: "integrated", label: "Titularisé(e)" },
+    { key: "new",              label: "Candidature" },
+    { key: "technical_tests",  label: "Tests tech." },
+    { key: "interview",        label: "Entretien" },
+    { key: "psycho_tests",     label: "Tests psy." },
+    { key: "medical_visit",    label: "Visite méd." },
+    { key: "morality_inquiry", label: "Moralité" },
+    { key: "diploma_check",    label: "Diplômes" },
+    { key: "trial",            label: "Essai" },
+    { key: "assignment",       label: "Affectation" },
+    { key: "integrated",       label: "Titularisé(e)" },
   ];
 
   const activeIdx = steps.findIndex((s) => s.key === status);

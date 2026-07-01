@@ -40,6 +40,18 @@ interface Application {
   hired_as_employee_id: string | null; onboarding_checklist: OnboardingItem[];
   job_opening?: { id: string; title: string } | null;
 }
+interface StageNote {
+  id?: string;
+  application_id: string;
+  stage: string;
+  notes: string | null;
+  score: number | null;
+  score_max: number | null;
+  evaluator_name: string | null;
+  evaluator_role: string | null;
+  passed: boolean | null;
+  decision_date: string | null;
+}
 interface OnboardingItem { id: string; label: string; done: boolean; }
 interface Experience { id: string; job_title: string; company: string; location: string | null; start_date: string; end_date: string | null; is_current: boolean; description: string | null; }
 interface Education { id: string; degree: string; field_of_study: string | null; institution: string; end_date: string | null; grade: string | null; }
@@ -61,33 +73,76 @@ const SKILL_LEVELS = [{value:'beginner',label:'Débutant'},{value:'intermediate'
 const LANG_LEVELS = [{value:'beginner',label:'Débutant'},{value:'intermediate',label:'Intermédiaire'},{value:'good',label:'Bon'},{value:'excellent',label:'Excellent'}];
 const REGIONS_CM = ['Centre','Littoral','Ouest','Nord','Extrême-Nord','Adamaoua','Est','Sud','Nord-Ouest','Sud-Ouest'];
 
-// ── Pipeline stages ────────────────────────────────────────────────────────
+// ── Pipeline stages SNH — NS 193/2009 complété par NS 571/2010 ────────────
 const PIPELINE_STAGES = [
-  { value: 'new',            label: 'Candidature',    color: 'bg-blue-100 text-blue-800',    border: 'border-blue-300',    dot: 'bg-blue-500',    icon: FileText },
-  { value: 'reviewing',      label: 'Présélection',   color: 'bg-yellow-100 text-yellow-800', border: 'border-yellow-300',  dot: 'bg-yellow-500',  icon: Eye },
-  { value: 'interview',      label: 'Entretien',      color: 'bg-orange-100 text-orange-800', border: 'border-orange-300',  dot: 'bg-orange-500',  icon: Calendar },
-  { value: 'offer',          label: 'Offre',          color: 'bg-teal-100 text-teal-800',    border: 'border-teal-300',    dot: 'bg-teal-500',    icon: Send },
-  { value: 'pre_onboarding', label: 'En essai',        color: 'bg-cyan-100 text-cyan-800',    border: 'border-cyan-300',    dot: 'bg-cyan-500',    icon: ClipboardList },
-  { value: 'onboarding',     label: 'Intégration',    color: 'bg-green-100 text-green-800',  border: 'border-green-300',   dot: 'bg-green-500',   icon: UserPlus },
-  { value: 'integrated',     label: 'Titularisé(e)',  color: 'bg-emerald-100 text-emerald-800', border: 'border-emerald-300', dot: 'bg-emerald-600', icon: Award },
+  {
+    value: 'new', label: 'Candidature', shortLabel: 'Candidature',
+    color: 'bg-blue-100 text-blue-800', border: 'border-blue-300', dot: 'bg-blue-500', icon: FileText,
+    scoreMax: null, description: 'Réception et enregistrement du dossier de candidature par la DRH.',
+  },
+  {
+    value: 'technical_tests', label: 'Tests techniques', shortLabel: 'Tests tech.',
+    color: 'bg-yellow-100 text-yellow-800', border: 'border-yellow-300', dot: 'bg-yellow-500', icon: ClipboardList,
+    scoreMax: 40, description: 'Tests organisés par un Jury désigné par l\'ADG. Critères proposés par la DRH. Note sur 40.',
+  },
+  {
+    value: 'interview', label: 'Entretien d\'embauche', shortLabel: 'Entretien',
+    color: 'bg-orange-100 text-orange-800', border: 'border-orange-300', dot: 'bg-orange-500', icon: Calendar,
+    scoreMax: 20, description: 'Entretien conduit par la DRH. Note sur 20.',
+  },
+  {
+    value: 'psycho_tests', label: 'Tests psychotechniques', shortLabel: 'Tests psy.',
+    color: 'bg-purple-100 text-purple-800', border: 'border-purple-300', dot: 'bg-purple-500', icon: Zap,
+    scoreMax: 40, description: 'Tests professionnels et psychotechniques réalisés par un cabinet spécialisé. Note sur 40.',
+  },
+  {
+    value: 'medical_visit', label: 'Visite médicale', shortLabel: 'Médical',
+    color: 'bg-teal-100 text-teal-800', border: 'border-teal-300', dot: 'bg-teal-500', icon: UserCheck,
+    scoreMax: null, description: 'Visite médicale d\'embauche auprès du service médical SNH.',
+  },
+  {
+    value: 'morality_inquiry', label: 'Enquête de moralité', shortLabel: 'Moralité',
+    color: 'bg-cyan-100 text-cyan-800', border: 'border-cyan-300', dot: 'bg-cyan-500', icon: Search,
+    scoreMax: null, description: 'Enquête de moralité diligentée par la DRH.',
+  },
+  {
+    value: 'diploma_check', label: 'Auth. diplômes & état civil', shortLabel: 'Diplômes',
+    color: 'bg-indigo-100 text-indigo-800', border: 'border-indigo-300', dot: 'bg-indigo-500', icon: GraduationCap,
+    scoreMax: null, description: 'Authentification des diplômes et actes d\'état civil.',
+  },
+  {
+    value: 'trial', label: 'Engagement à l\'essai', shortLabel: 'Essai',
+    color: 'bg-green-100 text-green-800', border: 'border-green-300', dot: 'bg-green-500', icon: ClipboardList,
+    scoreMax: null, description: 'Période d\'essai avant affectation définitive.',
+  },
+  {
+    value: 'assignment', label: 'Affectation & prise de service', shortLabel: 'Affectation',
+    color: 'bg-emerald-100 text-emerald-800', border: 'border-emerald-300', dot: 'bg-emerald-500', icon: UserPlus,
+    scoreMax: null, description: 'Affectation officielle et prise de service dans la Direction.',
+  },
+  {
+    value: 'integrated', label: 'Titularisation', shortLabel: 'Titularisé(e)',
+    color: 'bg-green-100 text-green-900', border: 'border-green-400', dot: 'bg-green-700', icon: Award,
+    scoreMax: null, description: 'Titularisation définitive à la Société Nationale des Hydrocarbures.',
+  },
 ];
 const REJECTED_STAGES = [
-  { value: 'rejected',  label: 'Refusé(e)', color: 'bg-red-100 text-red-800',     icon: XCircle },
-  { value: 'withdrawn', label: 'Retiré(e)', color: 'bg-slate-100 text-slate-600', icon: X },
+  { value: 'rejected',  label: 'Refusé(e)', shortLabel: 'Refusé(e)', color: 'bg-red-100 text-red-800',     icon: XCircle,  scoreMax: null, description: '', dot: 'bg-red-500',    border: 'border-red-300' },
+  { value: 'withdrawn', label: 'Retiré(e)', shortLabel: 'Retiré(e)', color: 'bg-slate-100 text-slate-600', icon: X,        scoreMax: null, description: '', dot: 'bg-slate-400',  border: 'border-slate-300' },
 ];
 const ALL_STATUSES = [...PIPELINE_STAGES, ...REJECTED_STAGES];
-
 const STAGE_ORDER = PIPELINE_STAGES.map(s => s.value);
+const SCORED_STAGES = ['technical_tests', 'interview', 'psycho_tests'];
 
 const DEFAULT_CHECKLIST: OnboardingItem[] = [
   { id: '1', label: 'Contrat signé', done: false },
   { id: '2', label: 'Badge et accès créés', done: false },
   { id: '3', label: 'Poste de travail configuré', done: false },
   { id: '4', label: 'Présentation à l\'équipe', done: false },
-  { id: '5', label: 'Formation sécurité', done: false },
+  { id: '5', label: 'Formation sécurité SNH', done: false },
   { id: '6', label: 'Accès SI accordés', done: false },
-  { id: '7', label: 'Visite médicale', done: false },
-  { id: '8', label: 'Dossier administratif complet', done: false },
+  { id: '7', label: 'Dossier administratif complet', done: false },
+  { id: '8', label: 'Remise équipements de travail', done: false },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -2248,7 +2303,7 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
   onDelete: (id: string) => void; onDownloadDoc: (doc: CandDoc) => void;
   onEdit: (c: Candidate) => void;
 }) {
-  type Tab = 'profile' | 'experiences' | 'education' | 'skills' | 'documents' | 'pipeline' | 'onboarding' | 'cv';
+  type Tab = 'profile' | 'experiences' | 'education' | 'skills' | 'documents' | 'pipeline' | 'onboarding' | 'cv' | 'fiche_etat';
   const { profile: auditProfile } = useAuth();
   const [tab, setTab] = useState<Tab>('pipeline');
   const [saving, setSaving] = useState(false);
@@ -2257,13 +2312,19 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showHireModal, setShowHireModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [stageNotes, setStageNotes] = useState<Record<string, StageNote>>({});
+  const [editingStageNote, setEditingStageNote] = useState<string | null>(null);
+  const [stageNoteForm, setStageNoteForm] = useState<Partial<StageNote>>({});
 
   const app = c.candidate_applications?.[0];
   const currentStageIdx = STAGE_ORDER.indexOf(app?.status || 'new');
 
   useEffect(() => {
     setNoteText(app?.internal_notes || '');
-    if (app) loadPipelineEvents(app.id);
+    if (app) {
+      loadPipelineEvents(app.id);
+      loadStageNotes(app.id);
+    }
   }, [c.id, app?.id]);
 
   const loadPipelineEvents = async (appId: string) => {
@@ -2273,6 +2334,18 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
       .eq('application_id', appId)
       .order('created_at', { ascending: false });
     if (data) setPipelineEvents(data as PipelineEvent[]);
+  };
+
+  const loadStageNotes = async (appId: string) => {
+    const { data } = await supabase
+      .from('pipeline_stage_notes')
+      .select('*')
+      .eq('application_id', appId);
+    if (data) {
+      const map: Record<string, StageNote> = {};
+      data.forEach((n: StageNote) => { map[n.stage] = n; });
+      setStageNotes(map);
+    }
   };
 
   const moveToStage = async (newStatus: string) => {
@@ -2291,12 +2364,48 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
       resource_label: `${c.first_name} ${c.last_name}`,
       details: `Pipeline : ${getStageInfo(from).label} → ${getStageInfo(newStatus).label}`,
     });
-    if (newStatus === 'pre_onboarding' && (!app.onboarding_checklist || app.onboarding_checklist.length === 0)) {
+    if (newStatus === 'trial' && (!app.onboarding_checklist || app.onboarding_checklist.length === 0)) {
       await supabase.from('candidate_applications').update({ onboarding_checklist: DEFAULT_CHECKLIST }).eq('id', app.id);
     }
     await onRefresh(c.id);
     if (app) await loadPipelineEvents(app.id);
     setSaving(false);
+  };
+
+  const saveStageNote = async () => {
+    if (!app || !editingStageNote) return;
+    setSaving(true);
+    const existing = stageNotes[editingStageNote];
+    const payload = {
+      application_id: app.id,
+      stage: editingStageNote,
+      notes: stageNoteForm.notes ?? null,
+      score: stageNoteForm.score ?? null,
+      score_max: stageNoteForm.score_max ?? null,
+      evaluator_name: stageNoteForm.evaluator_name ?? null,
+      evaluator_role: stageNoteForm.evaluator_role ?? null,
+      passed: stageNoteForm.passed ?? null,
+      decision_date: stageNoteForm.decision_date ?? null,
+      created_by: auditProfile?.email ?? null,
+    };
+    if (existing?.id) {
+      await supabase.from('pipeline_stage_notes').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', existing.id);
+    } else {
+      await supabase.from('pipeline_stage_notes').insert(payload);
+    }
+    await loadStageNotes(app.id);
+    setEditingStageNote(null);
+    setStageNoteForm({});
+    setSaving(false);
+  };
+
+  const openStageNoteEditor = (stageValue: string) => {
+    const existing = stageNotes[stageValue];
+    setStageNoteForm(existing ? { ...existing } : {
+      stage: stageValue,
+      score_max: PIPELINE_STAGES.find(s => s.value === stageValue)?.scoreMax ?? null,
+    });
+    setEditingStageNote(stageValue);
   };
 
   const saveNote = async () => {
@@ -2329,14 +2438,15 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
   };
 
   const tabs: { id: Tab; label: string; icon: typeof Users }[] = [
-    { id: 'pipeline', label: 'Suivi pipeline', icon: TrendingUp },
-    { id: 'onboarding', label: 'Intégration', icon: ClipboardList },
-    { id: 'profile', label: 'Profil', icon: Users },
-    { id: 'experiences', label: 'Expériences', icon: Briefcase },
-    { id: 'education', label: 'Formations', icon: GraduationCap },
-    { id: 'skills', label: 'Compétences', icon: Zap },
-    { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'cv', label: 'Générer CV', icon: Download },
+    { id: 'pipeline',   label: 'Suivi pipeline',   icon: TrendingUp },
+    { id: 'onboarding', label: 'Intégration',       icon: ClipboardList },
+    { id: 'profile',    label: 'Profil',             icon: Users },
+    { id: 'experiences',label: 'Expériences',        icon: Briefcase },
+    { id: 'education',  label: 'Formations',         icon: GraduationCap },
+    { id: 'skills',     label: 'Compétences',        icon: Zap },
+    { id: 'documents',  label: 'Documents',          icon: FileText },
+    { id: 'cv',         label: 'Générer CV',         icon: Download },
+    { id: 'fiche_etat', label: 'Fiche ÉTAT SNH',     icon: Award },
   ];
 
   return (
@@ -2369,34 +2479,48 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
           </div>
         </div>
 
-        {/* Visual pipeline stepper */}
-        <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 overflow-x-auto">
+        {/* Visual pipeline stepper — NS 571/SNH */}
+        <div className="bg-slate-50 px-4 py-4 border-b border-slate-100 overflow-x-auto">
           <div className="flex items-center gap-0 min-w-max">
             {PIPELINE_STAGES.map((stage, idx) => {
               const isActive = app?.status === stage.value;
               const isPast = currentStageIdx > idx;
               const isRejected = app?.status === 'rejected' || app?.status === 'withdrawn';
               const Icon = stage.icon;
+              const note = stageNotes[stage.value];
               return (
                 <div key={stage.value} className="flex items-center">
-                  <button
-                    onClick={() => !saving && moveToStage(stage.value)}
-                    disabled={saving}
-                    title={stage.label}
-                    className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all group relative ${
-                      isActive ? 'bg-teal-700 text-white shadow-md' :
-                      isPast && !isRejected ? 'bg-teal-100 text-teal-700 hover:bg-teal-200' :
-                      isRejected && idx <= currentStageIdx ? 'opacity-40 cursor-not-allowed' :
-                      'bg-white border border-slate-200 text-slate-400 hover:border-teal-300 hover:text-teal-600'
-                    }`}>
-                    <Icon size={16} />
-                    <span className="text-xs font-medium whitespace-nowrap">{stage.label}</span>
-                    {isPast && !isRejected && !isActive && (
-                      <CheckCircle size={10} className="absolute -top-1 -right-1 text-teal-600 bg-white rounded-full" />
+                  <div className="flex flex-col items-center gap-0.5">
+                    <button
+                      onClick={() => !saving && moveToStage(stage.value)}
+                      disabled={saving}
+                      title={stage.description}
+                      className={`flex flex-col items-center gap-1 px-2.5 py-2 rounded-xl transition-all group relative ${
+                        isActive ? 'bg-teal-700 text-white shadow-md' :
+                        isPast && !isRejected ? 'bg-teal-100 text-teal-700 hover:bg-teal-200' :
+                        isRejected && idx <= currentStageIdx ? 'opacity-40 cursor-not-allowed' :
+                        'bg-white border border-slate-200 text-slate-400 hover:border-teal-300 hover:text-teal-600'
+                      }`}>
+                      <Icon size={14} />
+                      <span className="text-xs font-medium whitespace-nowrap">{stage.shortLabel}</span>
+                      {isPast && !isRejected && !isActive && (
+                        <CheckCircle size={10} className="absolute -top-1 -right-1 text-teal-600 bg-white rounded-full" />
+                      )}
+                    </button>
+                    {note?.score != null && (
+                      <span className={`text-[10px] font-bold px-1 rounded-full ${note.passed !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                        {note.score}/{note.score_max ?? stage.scoreMax}
+                      </span>
                     )}
-                  </button>
+                    {(isPast || isActive) && (
+                      <button onClick={() => openStageNoteEditor(stage.value)}
+                        className={`text-[10px] whitespace-nowrap hover:underline ${note ? 'text-teal-600' : 'text-slate-400 hover:text-teal-600'}`}>
+                        <MessageSquare size={9} className="inline mr-0.5" />{note ? 'note' : '+ note'}
+                      </button>
+                    )}
+                  </div>
                   {idx < PIPELINE_STAGES.length - 1 && (
-                    <div className={`w-6 h-0.5 ${isPast && !isRejected ? 'bg-teal-400' : 'bg-slate-200'}`} />
+                    <div className={`w-3 h-0.5 flex-shrink-0 ${isPast && !isRejected ? 'bg-teal-400' : 'bg-slate-200'}`} />
                   )}
                 </div>
               );
@@ -2407,28 +2531,21 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
                 const Icon = stage.icon;
                 return (
                   <button key={stage.value} onClick={() => !saving && moveToStage(stage.value)} disabled={saving}
-                    className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl border transition text-xs font-medium ${
+                    className={`flex flex-col items-center gap-1 px-2.5 py-2 rounded-xl border transition text-xs font-medium ${
                       isActive ? 'bg-red-600 text-white border-red-600' : 'border-slate-200 text-slate-400 hover:border-red-300 hover:text-red-500'
                     }`}>
-                    <Icon size={16} />{stage.label}
+                    <Icon size={14} />{stage.label}
                   </button>
                 );
               })}
             </div>
           </div>
-          {/* Offer & Hire quick actions */}
-          {app && ['interview', 'offer', 'pre_onboarding', 'onboarding'].includes(app.status) && (
+          {app && ['trial', 'assignment'].includes(app.status) && (
             <div className="flex gap-2 mt-3">
-              <button onClick={() => setShowOfferModal(true)}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-teal-50 border border-teal-200 text-teal-700 rounded-lg hover:bg-teal-100 transition">
-                <Send size={12} /> Renseigner l'offre
+              <button onClick={() => setShowHireModal(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-100 transition">
+                <UserPlus size={12} /> Finaliser la titularisation
               </button>
-              {(app.status === 'onboarding' || app.status === 'pre_onboarding') && (
-                <button onClick={() => setShowHireModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-100 transition">
-                  <UserPlus size={12} /> Finaliser l'intégration
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -2511,13 +2628,13 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
           {/* Onboarding checklist tab */}
           {tab === 'onboarding' && (
             <div className="space-y-4">
-              {!['pre_onboarding', 'onboarding', 'integrated'].includes(app?.status || '') ? (
+              {!['trial', 'assignment', 'integrated'].includes(app?.status || '') ? (
                 <div className="text-center py-12 bg-slate-50 rounded-xl">
                   <ClipboardList size={36} className="mx-auto text-slate-300 mb-3" />
-                  <p className="text-slate-500 font-medium">Checklist disponible à partir de l'étape "En essai"</p>
-                  <button onClick={() => moveToStage('pre_onboarding')}
+                  <p className="text-slate-500 font-medium">Checklist disponible à partir de l'étape "Engagement à l'essai"</p>
+                  <button onClick={() => moveToStage('trial')}
                     className="mt-4 px-4 py-2 bg-teal-700 text-white rounded-xl text-sm hover:bg-teal-800 transition">
-                    Passer en pré-intégration
+                    Passer à l'engagement à l'essai
                   </button>
                 </div>
               ) : (
@@ -2663,6 +2780,11 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
           {tab === 'cv' && (
             <AdminCVGeneratorTab candidate={c} />
           )}
+
+          {/* Fiche ÉTAT SNH — Rapport structuré de bout en bout */}
+          {tab === 'fiche_etat' && app && (
+            <FicheEtatSNH candidate={c} app={app} stageNotes={stageNotes} pipelineEvents={pipelineEvents} />
+          )}
         </div>
 
         {/* Footer */}
@@ -2670,6 +2792,93 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
           <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 text-red-500 hover:text-red-700 text-sm"><Trash2 size={14} />Supprimer le dossier</button>
           <button onClick={onClose} className="px-5 py-2 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 text-sm">Fermer</button>
         </div>
+
+        {/* Stage Note Modal */}
+        {editingStageNote && (
+          <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center p-6 z-20">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Note d'étape</h3>
+                  <p className="text-xs text-slate-500">{getStageInfo(editingStageNote).label}</p>
+                </div>
+                <button onClick={() => { setEditingStageNote(null); setStageNoteForm({}); }} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+              </div>
+
+              {/* Score (only for scored stages) */}
+              {SCORED_STAGES.includes(editingStageNote) && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Note obtenue</label>
+                    <input type="number" min={0} max={stageNoteForm.score_max ?? 100}
+                      value={stageNoteForm.score ?? ''} onChange={e => setStageNoteForm(f => ({ ...f, score: e.target.value === '' ? null : Number(e.target.value) }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Note max</label>
+                    <input type="number" min={0}
+                      value={stageNoteForm.score_max ?? ''} onChange={e => setStageNoteForm(f => ({ ...f, score_max: e.target.value === '' ? null : Number(e.target.value) }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  </div>
+                </div>
+              )}
+
+              {/* Pass/Fail */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Résultat</label>
+                <div className="flex gap-2">
+                  {[{ v: true, label: 'Admis(e)', color: 'bg-green-100 text-green-700 border-green-300' }, { v: false, label: 'Refusé(e)', color: 'bg-red-100 text-red-700 border-red-300' }, { v: null, label: 'En attente', color: 'bg-slate-100 text-slate-600 border-slate-300' }].map(opt => (
+                    <button key={String(opt.v)} type="button"
+                      onClick={() => setStageNoteForm(f => ({ ...f, passed: opt.v }))}
+                      className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border-2 transition ${stageNoteForm.passed === opt.v ? opt.color + ' ring-2 ring-offset-1 ring-teal-400' : 'border-slate-200 text-slate-400'}`}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Evaluator */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Évaluateur</label>
+                  <input value={stageNoteForm.evaluator_name ?? ''} onChange={e => setStageNoteForm(f => ({ ...f, evaluator_name: e.target.value }))}
+                    placeholder="Nom du jury / cabinet"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Rôle</label>
+                  <input value={stageNoteForm.evaluator_role ?? ''} onChange={e => setStageNoteForm(f => ({ ...f, evaluator_role: e.target.value }))}
+                    placeholder="DRH / Cabinet spécialisé"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                </div>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Date de décision</label>
+                <input type="date" value={stageNoteForm.decision_date ?? ''}
+                  onChange={e => setStageNoteForm(f => ({ ...f, decision_date: e.target.value || null }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Observations / Commentaires</label>
+                <textarea rows={3} value={stageNoteForm.notes ?? ''}
+                  onChange={e => setStageNoteForm(f => ({ ...f, notes: e.target.value }))}
+                  placeholder="Constats, recommandations, réserves..."
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-teal-500 outline-none" />
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => { setEditingStageNote(null); setStageNoteForm({}); }} className="flex-1 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm hover:bg-slate-50">Annuler</button>
+                <button onClick={saveStageNote} disabled={saving} className="flex-1 py-2 bg-teal-700 text-white rounded-lg text-sm font-medium hover:bg-teal-800 disabled:opacity-60 transition">
+                  {saving ? 'Sauvegarde...' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete confirmation */}
         {showDeleteConfirm && (
@@ -2738,6 +2947,169 @@ function CandidateDetailModal({ candidate: c, onClose, onRefresh, onDelete, onDo
           }}
         />
       )}
+    </div>
+  );
+}
+
+// ── Fiche ÉTAT SNH — Rapport structuré de bout en bout ────────────────────
+function FicheEtatSNH({ candidate: c, app, stageNotes, pipelineEvents }: {
+  candidate: Candidate; app: Application;
+  stageNotes: Record<string, StageNote>;
+  pipelineEvents: PipelineEvent[];
+}) {
+  const scoredStages = PIPELINE_STAGES.filter(s => s.scoreMax !== null);
+  const totalScore = scoredStages.reduce((acc, s) => acc + (stageNotes[s.value]?.score ?? 0), 0);
+  const totalMax = scoredStages.reduce((acc, s) => acc + (s.scoreMax ?? 0), 0);
+  const finalStatus = getStageInfo(app.status);
+  const isHired = ['trial', 'assignment', 'integrated'].includes(app.status);
+
+  const printFiche = () => window.print();
+
+  return (
+    <div className="space-y-5 print:p-0" id="fiche-etat-snh">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Fiche ÉTAT de Recrutement — SNH</h2>
+          <p className="text-xs text-slate-500">NS 193/SNH/ADG/09 complétée par NS 571/SNH/ADG/10</p>
+        </div>
+        <button onClick={printFiche}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition print:hidden">
+          <Download size={12} /> Imprimer / PDF
+        </button>
+      </div>
+
+      {/* Identité */}
+      <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Identité du candidat</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+          <div><span className="text-xs text-slate-400">Nom complet</span><p className="font-bold text-slate-900">{c.first_name} {c.last_name}</p></div>
+          <div><span className="text-xs text-slate-400">Email</span><p className="font-medium text-slate-700">{c.email}</p></div>
+          {c.phone && <div><span className="text-xs text-slate-400">Téléphone</span><p className="font-medium text-slate-700">{c.phone}</p></div>}
+          {c.location && <div><span className="text-xs text-slate-400">Localisation</span><p className="font-medium text-slate-700">{c.location}</p></div>}
+          <div><span className="text-xs text-slate-400">Poste souhaité</span><p className="font-medium text-slate-700">{c.desired_position || app.job_opening?.title || '—'}</p></div>
+          <div><span className="text-xs text-slate-400">Date candidature</span><p className="font-medium text-slate-700">{fmtDate(app.created_at)}</p></div>
+          <div><span className="text-xs text-slate-400">Statut actuel</span>
+            <p className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold mt-0.5 ${finalStatus.color}`}>{finalStatus.label}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Résumé scores */}
+      {scoredStages.some(s => stageNotes[s.value]?.score != null) && (
+        <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
+          <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-3">Classement par mérite (NS 571)</p>
+          <div className="flex items-center gap-6 flex-wrap">
+            {scoredStages.map(s => {
+              const n = stageNotes[s.value];
+              return (
+                <div key={s.value} className="text-center">
+                  <p className="text-xs text-teal-600">{s.shortLabel}</p>
+                  <p className="text-xl font-bold text-teal-900">{n?.score ?? '—'}<span className="text-xs font-normal text-teal-600">/{s.scoreMax}</span></p>
+                </div>
+              );
+            })}
+            <div className="text-center border-l border-teal-300 pl-6">
+              <p className="text-xs text-teal-600">TOTAL</p>
+              <p className="text-2xl font-extrabold text-teal-900">{totalScore}<span className="text-sm font-normal text-teal-600">/{totalMax}</span></p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Étapes du pipeline */}
+      <div>
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Suivi des étapes du processus</p>
+        <div className="space-y-2">
+          {PIPELINE_STAGES.map((stage, idx) => {
+            const note = stageNotes[stage.value];
+            const stageIdx = STAGE_ORDER.indexOf(app.status);
+            const isDone = stageIdx > idx || app.status === stage.value;
+            const Icon = stage.icon;
+            if (!isDone && !note) return null;
+            return (
+              <div key={stage.value} className={`rounded-xl border p-4 ${note?.passed === false ? 'bg-red-50 border-red-200' : isDone ? 'bg-white border-slate-200' : 'bg-slate-50 border-dashed border-slate-200'}`}>
+                <div className="flex items-start gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${isDone ? 'bg-teal-100' : 'bg-slate-100'}`}>
+                    <Icon size={14} className={isDone ? 'text-teal-700' : 'text-slate-400'} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-slate-800">{stage.label}</p>
+                      {note?.passed === true && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Admis(e)</span>}
+                      {note?.passed === false && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">Refusé(e)</span>}
+                      {note?.score != null && (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
+                          {note.score}/{note.score_max ?? stage.scoreMax} pts
+                        </span>
+                      )}
+                      {note?.decision_date && <span className="text-xs text-slate-400">{fmtDate(note.decision_date)}</span>}
+                    </div>
+                    {note?.evaluator_name && (
+                      <p className="text-xs text-slate-500 mt-0.5">{note.evaluator_name}{note.evaluator_role ? ` — ${note.evaluator_role}` : ''}</p>
+                    )}
+                    {note?.notes && (
+                      <p className="text-sm text-slate-600 mt-1 leading-relaxed bg-slate-50 rounded-lg p-2 border border-slate-100">{note.notes}</p>
+                    )}
+                    {!note && isDone && (
+                      <p className="text-xs text-slate-400 italic mt-0.5">Aucune note enregistrée pour cette étape</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Notes RH globales */}
+      {app.internal_notes && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-2">Notes RH confidentielles</p>
+          <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap">{app.internal_notes}</p>
+        </div>
+      )}
+
+      {/* Intégration */}
+      {isHired && (
+        <div className="bg-emerald-50 border border-emerald-300 rounded-xl p-4">
+          <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-3">Données d'intégration</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+            {app.offer_contract_type && <div><span className="text-xs text-emerald-600">Type de contrat</span><p className="font-bold text-emerald-900">{app.offer_contract_type}</p></div>}
+            {app.offer_salary && <div><span className="text-xs text-emerald-600">Salaire mensuel</span><p className="font-bold text-emerald-900">{Number(app.offer_salary).toLocaleString()} XAF</p></div>}
+            {app.offer_start_date && <div><span className="text-xs text-emerald-600">Prise de service</span><p className="font-bold text-emerald-900">{fmtDate(app.offer_start_date)}</p></div>}
+            {app.trial_period_months ? <div><span className="text-xs text-emerald-600">Période d'essai</span><p className="font-bold text-emerald-900">{app.trial_period_months} mois</p></div> : null}
+            {app.trial_end_date && <div><span className="text-xs text-emerald-600">Fin d'essai</span><p className="font-bold text-emerald-900">{fmtDate(app.trial_end_date)}</p></div>}
+            {app.hiring_decision_date && <div><span className="text-xs text-emerald-600">Date titularisation</span><p className="font-bold text-emerald-900">{fmtDate(app.hiring_decision_date)}</p></div>}
+          </div>
+        </div>
+      )}
+
+      {/* Historique des événements */}
+      {pipelineEvents.length > 0 && (
+        <div>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Chronologie du dossier</p>
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            {pipelineEvents.slice().reverse().map((ev, i) => (
+              <div key={ev.id} className={`flex items-start gap-3 px-4 py-3 text-sm ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
+                <div className="w-2 h-2 rounded-full bg-teal-400 mt-1.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-slate-700">{ev.notes || `→ ${getStageInfo(ev.to_status).label}`}</p>
+                </div>
+                <span className="text-xs text-slate-400 whitespace-nowrap">{fmtDate(ev.created_at)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Signature */}
+      <div className="border-t border-slate-200 pt-4 grid grid-cols-3 gap-6 text-xs text-slate-500">
+        <div className="text-center"><div className="h-12 border-b border-dashed border-slate-300 mb-1" /><p>Responsable du Recrutement</p></div>
+        <div className="text-center"><div className="h-12 border-b border-dashed border-slate-300 mb-1" /><p>Directeur des Ressources Humaines</p></div>
+        <div className="text-center"><div className="h-12 border-b border-dashed border-slate-300 mb-1" /><p>L'Administrateur-Directeur Général</p></div>
+      </div>
+      <p className="text-center text-xs text-slate-400">Document généré le {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} — CONFIDENTIEL</p>
     </div>
   );
 }

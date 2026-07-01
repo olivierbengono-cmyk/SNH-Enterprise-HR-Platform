@@ -12,6 +12,7 @@ import {
   ClipboardList, UserPlus, Award, Send, History, Plus, Filter, Upload, Pencil, Camera
 } from 'lucide-react';
 import { generateCV, CVData } from '../../utils/cvPDF';
+import RecruitmentReports from './RecruitmentReports';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Candidate {
@@ -248,7 +249,7 @@ const SPONTANEOUS_TYPE_LABELS: Record<SpontaneousType, string> = {
 };
 
 // ── Main component ─────────────────────────────────────────────────────────
-type MainView = 'candidates' | 'by-job' | 'search';
+type MainView = 'candidates' | 'by-job' | 'search' | 'reports';
 
 export default function CandidateManagement() {
   const { profile: authProfile } = useAuth();
@@ -577,6 +578,10 @@ export default function CandidateManagement() {
         <button onClick={() => setMainView('search')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mainView === 'search' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
           <Search size={15} /> Recherche multi-critères
+        </button>
+        <button onClick={() => setMainView('reports')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mainView === 'reports' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+          <TrendingUp size={15} /> États & Rapports
         </button>
       </div>
 
@@ -1113,6 +1118,9 @@ export default function CandidateManagement() {
           </div>
         </div>
       )}
+
+      {/* ── VIEW: Reports ── */}
+      {mainView === 'reports' && <RecruitmentReports />}
 
       {/* Candidate detail modal */}
       {selectedCandidate && (

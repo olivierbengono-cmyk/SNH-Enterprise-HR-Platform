@@ -115,8 +115,10 @@ function printHtml(html: string, title: string) {
   w.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title}</title><style>${BASE_STYLE}</style></head><body>
   <div class="hdr"><small>Société Nationale des Hydrocarbures — Direction des Ressources Humaines</small><h1>${title}</h1></div>
   <div class="meta">Généré le ${fmtLong(new Date().toISOString())}</div>
-  ${html}<script>window.onload=()=>window.print();</script></body></html>`);
+  ${html}</body></html>`);
   w.document.close();
+  w.focus();
+  w.print();
 }
 
 // ── Badge ─────────────────────────────────────────────────────────────────────

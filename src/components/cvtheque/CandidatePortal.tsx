@@ -85,7 +85,7 @@ const SKILL_CATEGORIES = [
 const LANG_LEVELS = [
   { value: 'beginner',     labelFr: 'Débutant',         labelEn: 'Beginner',    stars: 1 },
   { value: 'intermediate', labelFr: 'Intermédiaire',     labelEn: 'Intermediate', stars: 2 },
-  { value: 'good',         labelFr: 'Bon niveau',        labelEn: 'Good',        stars: 3 },
+  { value: 'good',         labelFr: 'Bon niveau',        labelEn: 'Advanced',    stars: 3 },
   { value: 'excellent',    labelFr: 'Courant',           labelEn: 'Fluent',      stars: 4 },
   { value: 'native',       labelFr: 'Natif / Maternel',  labelEn: 'Native',      stars: 5 },
 ];
@@ -179,7 +179,7 @@ const PROFILE_TR = {
     tabLangues: 'Languages', tabCV: 'Generate CV',
     firstName: 'First name *', lastName: 'Last name *', birthDate: 'Date of birth *',
     gender: 'Gender *', genderPh: '— Select —', genderM: 'Male', genderF: 'Female',
-    professionalTitle: 'Professional title', professionalTitlePh: 'Ex: Senior Petroleum Engineer',
+    professionalTitle: 'Professional title', professionalTitlePh: 'e.g., Senior Oil & Gas Engineer',
     phoneMain: 'Main phone *', phoneMainPh: '+237 6XX XXX XXX',
     phoneSecondary: 'Secondary phone',
     cityResidence: 'City of residence *', cityPh: 'Yaoundé',
@@ -188,20 +188,20 @@ const PROFILE_TR = {
     idNumber: 'National ID / Passport',
     desiredPosition: 'Desired position', desiredPositionPh: 'Reservoir Engineer...',
     availability: 'Available from',
-    salary: 'Salary expectation (FCFA)', salaryPh: 'Ex: 500,000',
+    salary: 'Expected Salary (XAF)', salaryPh: 'Ex: 500,000',
     linkedin: 'LinkedIn profile', linkedinPh: 'https://linkedin.com/in/...',
     portfolio: 'Website / Portfolio', portfolioPh: 'https://...',
     facebook: 'Facebook', facebookPh: 'https://facebook.com/...',
     twitter: 'Twitter / X', twitterPh: 'https://x.com/...',
     instagram: 'Instagram', instagramPh: 'https://instagram.com/...',
-    about: 'About you', aboutPh: 'Describe your background, expertise and career goals...',
+    about: 'About you', aboutPh: 'Briefly introduce yourself and your career goals…',
     academicPathTitle: 'Academic path',
     formationN: 'Education', addFormation: 'Add education',
-    level: 'Level *', degree: 'Degree obtained *', institution: 'Institution *',
+    level: 'Education Level *', degree: 'Degree obtained *', institution: 'School / University *',
     fieldOfStudy: 'Field of study', fieldPh: 'Petroleum Engineering, Finance...',
     eduCountry: 'Country', eduCity: 'City', startYear: 'Start year', endYear: 'End year',
     grade: 'Grade', gradePh: 'Distinction, Merit...',
-    descSpec: 'Description / Specialization', descSpecPh: 'Describe your specialization, thesis, final project...',
+    descSpec: 'Area of Specialization / Major', descSpecPh: 'Provide details about your specialization, thesis or graduation project…',
     currentFormation: 'Currently enrolled',
     experiencesTitle: 'Work experience / Internships',
     expN: 'Experience', addExp: 'Add experience',
@@ -213,7 +213,7 @@ const PROFILE_TR = {
     // Skills tab
     skillsTitle: 'Skills', skillsSelected: 'selected', skillsSelectedPlural: 'selected',
     closeCatalogue: 'Close catalogue', browseCatalogue: 'Browse skills catalogue',
-    skillLevelTitle: 'Level by skill', catTechnical: 'Technical', catSoft: 'Soft Skills',
+    skillLevelTitle: 'Proficiency Level', catTechnical: 'Technical', catSoft: 'Soft Skills',
     catLanguage: 'Languages', catCertification: 'Certifications', catOther: 'Other',
     noResultFor: 'No result for', customSkillPh: 'Custom skill not listed...',
     addBtn: 'Add',
@@ -222,17 +222,17 @@ const PROFILE_TR = {
     langAddPh: 'Add another language (e.g. Spanish, Arabic…)',
     langGroupWorld: 'World languages', langGroupAfrican: 'African languages', langGroupOther: 'Other',
     langLevelBeginner: 'Beginner', langLevelIntermediate: 'Intermediate',
-    langLevelGood: 'Good', langLevelExcellent: 'Fluent', langLevelNative: 'Native / Mother tongue',
+    langLevelGood: 'Advanced', langLevelExcellent: 'Fluent', langLevelNative: 'Native / Mother tongue',
     // CV generator
     cvPhotoTitle: 'Profile photo (CV)',
-    cvPhotoHint: 'Format: JPG, PNG, WEBP — max 5 MB\nUse a professional photo (neutral background, formal attire)',
-    cvPhotoUploading: 'Uploading...', cvPhotoBtn: 'Choose a photo',
+    cvPhotoHint: 'Format: JPG, PNG, WEBP — max 5 MB\nProfessional photo preferred (neutral background, formal attire)',
+    cvPhotoUploading: 'Uploading, please wait...', cvPhotoBtn: 'Choose a photo',
     cvPhotoTooLarge: 'Photo too large (max 5 MB)', cvPhotoError: 'Upload error: ',
     cvTemplateTitle: 'CV template',
     cvTemplateClassicLabel: 'SNH Classic', cvTemplateClassicDesc: 'Navy sidebar, photo, institutional style',
     cvTemplateModernLabel: 'Modern', cvTemplateModernDesc: 'Full header, two-column, clean and contemporary',
     cvAITitle: 'AI enhancement (optional)',
-    cvAIDesc: 'Describe the desired style, target position or key highlights. AI will improve your professional summary.',
+    cvAIDesc: 'Enter your target role or key highlights. AI will refine your summary.',
     cvAIPh: 'Ex: Highlight my drilling and oil production skills...',
     cvAIGenerating: 'Generating...', cvAIBtn: 'Enhance with AI',
     cvAIGenerated: 'AI summary generated', cvAISummaryLabel: 'AI summary:',
@@ -281,8 +281,8 @@ const DOC_TYPES_EN = [
   { value: 'birth_cert',          label: 'Birth certificate' },
   { value: 'residence_cert',      label: 'Residence certificate' },
   { value: 'medical_cert',        label: 'Medical fitness certificate' },
-  { value: 'tax_cert',            label: 'Tax clearance certificate' },
-  { value: 'cnps_cert',           label: 'CNPS certificate' },
+  { value: 'tax_cert',            label: 'Tax Clearance Certificate (TCC)' },
+  { value: 'cnps_cert',           label: 'CNPS Clearance Certificate' },
   { value: 'reference',           label: 'Recommendation letter' },
   { value: 'other',               label: 'Other document' },
 ];
@@ -293,6 +293,12 @@ const EDU_LEVELS = [
   'BAC+2 (BTS/DUT)', 'BAC+3 (Licence)', 'BAC+4',
   'BAC+5 (Master)', 'Doctorat', 'Autre',
 ];
+const EDU_LEVELS_EN = [
+  'FSLC', 'GCE O-Level', 'GCE A-Level',
+  'GCE+2 / HND', "Bachelor's Degree", 'GCE+4',
+  "Master's Degree", 'Doctorate / PhD', 'Other',
+];
+function getEduLevels(lang: 'fr' | 'en') { return lang === 'fr' ? EDU_LEVELS : EDU_LEVELS_EN; }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtDate(d: string | null) {
@@ -619,33 +625,33 @@ const TR = {
     // Auth / nav
     login: 'Log in', signup: 'Sign up', loginTitle: 'Log in to your account',
     registerTitle: 'Create your candidate account', snh: 'SNH Recruitment Portal',
-    heroTitle: 'Join SNH', heroSub: 'and be part of Cameroon\'s energy future',
-    heroDesc: 'Discover our career and internship opportunities and submit your application in a few steps.',
-    searchPlaceholder: 'Position, keyword, location...', allContracts: 'All contracts',
+    heroTitle: 'Join the SNH', heroSub: 'and contribute to Cameroon\'s energy future',
+    heroDesc: 'Find jobs & internships opportunities and apply in a few easy steps.',
+    searchPlaceholder: 'Job title, keywords, location', allContracts: 'All contracts',
     apply: 'Apply', seeDetails: 'View details', hideDetails: 'Hide',
-    noJobs: 'No positions match your search.', loadingJobs: 'Loading positions…',
-    spontTitle: 'Not finding what you\'re looking for?',
+    noJobs: "Don't see a matching position?", loadingJobs: 'Loading positions…',
+    spontTitle: "Can't find a matching role?",
     spontDesc: 'Send a spontaneous application — we\'ll keep it in our talent pool.',
     spontBtn: 'Submit a spontaneous application',
-    available: 'open positions', openUntil: 'Open until',
+    available: 'Job Openings / Vacancies', openUntil: 'Open until',
     firstName: 'First name', lastName: 'Last name', email: 'Email', password: 'Password',
     firstNamePh: 'Olivier', lastNamePh: 'Kamdem',
     alreadyAccount: 'Already have an account? Log in', noAccount: 'Don\'t have an account? Sign up',
     privacy: 'Your data is handled confidentially in accordance with SNH\'s recruitment policy.',
     dashboard: 'Dashboard', profile: 'My profile', documents: 'My documents',
-    jobs: 'Job openings', spontaneous: 'Spontaneous', applications: 'My applications',
+    jobs: 'Job openings', spontaneous: 'Open application', applications: 'My applications',
     notifications: 'Notifications', logout: 'Log out', menu: 'Menu',
     home: 'Home', notifs: 'Notifs', more: 'More',
     // Public landing
     statsPublished: 'Open positions', statsContracts: 'Contract types',
     statsLocation: 'Location', statsCountry: 'Cameroon',
     alreadyCandidate: 'Already a candidate?', accessMySpace: 'Access my account',
-    results: 'result', resultsPlural: 'results', allPositions: 'All positions',
+    results: 'result', resultsPlural: 'results', allPositions: 'All Job Openings',
     reset: 'Reset', closing: 'Closing:', details: 'Details',
     jobDescription: 'Job description', profileSought: 'Required profile',
     experience: 'Experience', year: 'year', years: 'years', min: 'min.',
     formation: 'Education', reference: 'Reference', applyToOffer: 'Apply for this position',
-    footer: 'Société Nationale des Hydrocarbures', rights: 'All rights reserved',
+    footer: 'National Hydrocarbons Corporation', rights: 'All rights reserved',
     // Auth modal
     connectBtn: 'Log in', createAccountBtn: 'Sign up',
     errorNameRequired: 'First and last name required',
@@ -666,11 +672,11 @@ const TR = {
     matchesTitle: 'Recommended positions', applied: 'Applied',
     // Documents
     docsExpiredTitle: 'Expired documents',
-    docsExpiredMsg: 'Please update these documents.',
+    docsExpiredMsg: 'Please renew or update the documents',
     docsSoonTitle: 'Documents expiring soon (within 30 days)',
     docsSoonMsg: 'Remember to renew these documents.',
     docsInfoTitle: 'At this stage, only your CV is required',
-    docsInfoMsg: 'Other documents (diplomas, ID, employment certificates, etc.) will be requested at subsequent stages of the recruitment process.',
+    docsInfoMsg: 'Other documents (diplomas, ID, employment certificates, etc.) will be requested during later stages of the process.',
     docsUploadTitle: 'Upload your CV',
     docsType: 'Document type', docsExpiry: 'Expiry date (if applicable)',
     docsUploading: 'Uploading...', docsChooseFile: 'Choose and upload a file',
@@ -685,25 +691,25 @@ const TR = {
     jdNotSpecified: 'Not specified', jdEducation: 'Education level',
     jdPublished: 'Published on', jdClosing: 'Closing on',
     jdDescription: 'Job description', jdProfile: 'Required profile',
-    jdSkillsRequired: 'Required skills', jdSkillsNice: 'Additional skills',
+    jdSkillsRequired: 'Required skills', jdSkillsNice: 'Nice-to-have skills',
     jdDocs: 'Supporting documents',
-    jdDocsInfo: 'These documents will be requested at subsequent stages of the selection process.',
+    jdDocsInfo: 'These documents will be required during subsequent selection stages.',
     jdClose: 'Close', jdApplyBtn: 'Apply for this position',
     jdApplyError: 'Unable to apply: ', jdRef: 'Ref.',
     // Jobs section
     jobsTitle: 'SNH Job Openings',
     jobsDesc: 'Click on a position to view details. Make sure your profile is complete before applying.',
-    jobsSearchPh: 'Search for a position...', jobsAllTypes: 'All contract types',
-    jobsEmpty: 'No positions found', jobsClosing: 'Closing', jobsViewOffer: 'View offer →',
+    jobsSearchPh: 'Search job openings', jobsAllTypes: 'All contract types',
+    jobsEmpty: 'No positions found', jobsClosing: 'Closing', jobsViewOffer: 'View Job Opening →',
     // Spontaneous
-    spontSent: 'Application sent!',
+    spontSent: 'Application Submitted Successfully!',
     spontSentMsg: 'Your spontaneous application has been forwarded to SNH. You will be contacted shortly.',
-    spontBannerTitle: 'Unsolicited application to SNH',
+    spontBannerTitle: 'Spontaneous application to SNH',
     spontBannerDesc: 'Submit your application directly even without a published offer. Specify the type of application and the position you are targeting.',
     spontTypeTitle: 'Application type',
     spontTypeEmploi: 'Employment', spontTypeEmploiSub: 'Permanent or fixed-term contract at SNH',
-    spontTypeAcad: 'Academic internship', spontTypeAcadSub: 'End of studies / dissertation',
-    spontTypePro: 'Professional internship', spontTypeProSub: 'Professional development / integration',
+    spontTypeAcad: 'Academic internship', spontTypeAcadSub: 'Graduation Project / Thesis Internship',
+    spontTypePro: 'Professional internship', spontTypeProSub: 'Professional Insertion / Skills Development',
     spontDocsTitle: 'Supporting documents',
     spontDocsDesc: 'You can submit your application right now. Supporting documents (diplomas, ID, certificates, etc.) will be requested at subsequent stages of the selection process.',
     spontPosteTitle: 'Target position', spontPosteLbl: 'Position title / role *',
@@ -727,7 +733,7 @@ const TR = {
     // Applications
     appTitle: 'My SNH applications', appEmpty: 'No applications',
     appAllStatuses: 'All statuses', appPublished: 'Published position',
-    appSpontaneous: 'Unsolicited application',
+    appSpontaneous: 'Spontaneous application',
     appConfirm: 'Confirm?', appYes: 'Yes', appNo: 'No',
     appWithdraw: 'Withdraw', appWithdrawError: 'Unable to withdraw: ',
     appDelete: 'Delete', appDeleteError: 'Unable to delete: ',
@@ -735,12 +741,12 @@ const TR = {
     appReapplyLimitTitle: 'Application limit reached',
     appReapplyLimitMsg: 'You have already applied 3 times to this position (the maximum allowed). Further applications for this role are not possible.',
     appReapplyLimitBtn: 'Understood',
-    statusNew: 'Received', statusTechnicalTests: 'Technical assessment', statusInterview: 'Interview',
-    statusPsychoTests: 'Psychometric tests', statusMedicalVisit: 'Medical examination', statusMoralityInquiry: 'Background check',
-    statusDiplomaCheck: 'Diploma verification', statusTrial: 'Probationary period', statusAssignment: 'Posting',
-    statusIntegrated: 'Tenured', statusRejected: 'Rejected', statusWithdrawn: 'Withdrawn',
+    statusNew: 'Submitted', statusTechnicalTests: 'Technical tests', statusInterview: 'Interview',
+    statusPsychoTests: 'Psycho tests', statusMedicalVisit: 'Medical check', statusMoralityInquiry: 'Background check',
+    statusDiplomaCheck: 'Diploma auth.', statusTrial: 'Trial period', statusAssignment: 'Assignment',
+    statusIntegrated: 'Permanent staff', statusRejected: 'Rejected', statusWithdrawn: 'Withdrawn',
     // Notifications
-    notifsNew: 'new', notifsNewPlural: 'new', notifsEmpty: 'No notifications',
+    notifsNew: 'New', notifsNewPlural: 'New', notifsEmpty: 'No notifications',
     notifsNewBadge: 'New',
   },
 } as const;
@@ -1805,7 +1811,7 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
 
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         {tab === 'infos' && <InfosTab profile={profile} setProfile={setProfile} t={t} />}
-        {tab === 'formations' && <FormationsTab items={educations} setItems={setEducations} t={t} />}
+        {tab === 'formations' && <FormationsTab items={educations} setItems={setEducations} t={t} lang={lang} />}
         {tab === 'experiences' && <ExperiencesTab items={experiences} setItems={setExperiences} t={t} />}
         {tab === 'competences' && <CompetencesTab items={skills} setItems={setSkills} masterSkills={masterSkills} lang={lang} />}
         {tab === 'langues' && <LanguesTab items={languages} setItems={setLanguages} lang={lang} />}
@@ -2030,7 +2036,7 @@ function InfosTab({ profile, setProfile, t }: { profile: CandidateProfile; setPr
   );
 }
 
-function FormationsTab({ items, setItems, t }: { items: Education[]; setItems: (v: Education[]) => void; t: typeof PROFILE_TR['fr'] }) {
+function FormationsTab({ items, setItems, t, lang }: { items: Education[]; setItems: (v: Education[]) => void; t: typeof PROFILE_TR['fr']; lang: 'fr' | 'en' }) {
   const add = () => setItems([...items, { degree: '', field_of_study: '', institution: '', location: '', start_date: '', end_date: '', is_current: false, grade: '', country: 'Cameroun', education_level: '', description: '' }]);
   const upd = (i: number, k: keyof Education, v: any) => { const a = [...items]; (a[i] as any)[k] = v; setItems(a); };
   const del = (i: number) => setItems(items.filter((_, j) => j !== i));
@@ -2047,7 +2053,7 @@ function FormationsTab({ items, setItems, t }: { items: Education[]; setItems: (
             <div><Lbl>{t.level}</Lbl>
               <select value={edu.education_level || ''} onChange={e => upd(i,'education_level',e.target.value)} className={inp()}>
                 <option value="">— Sélectionner —</option>
-                {EDU_LEVELS.map(l => <option key={l}>{l}</option>)}
+                {EDU_LEVELS.map((l, i) => <option key={l} value={l}>{getEduLevels(lang)[i]}</option>)}
               </select>
             </div>
             <div><Lbl>{t.degree}</Lbl><input value={edu.degree} onChange={e => upd(i,'degree',e.target.value)} className={inp()} placeholder="Master en Génie Pétrolier..." /></div>
@@ -3123,7 +3129,7 @@ function SpontaneousSection({ candidateId, profile, documents, onApplied, lang }
                 <Lbl>{t.spontStageLevel}</Lbl>
                 <select value={stageEduLevel} onChange={e => setStageEduLevel(e.target.value)} className={inp()}>
                   <option value="">{t.spontStageLevelPh}</option>
-                  {EDU_LEVELS.map(l => <option key={l}>{l}</option>)}
+                  {EDU_LEVELS.map((l, i) => <option key={l} value={l}>{getEduLevels(lang)[i]}</option>)}
                 </select>
               </div>
               <div>

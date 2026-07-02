@@ -110,14 +110,16 @@ const BASE_STYLE = `
 `;
 
 function printHtml(html: string, title: string) {
-  const w = window.open('', '_blank');
-  if (!w) return;
-  w.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title}</title><style>${BASE_STYLE}</style></head><body>
+  const fullHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title}</title><style>${BASE_STYLE}</style></head><body>
   <div class="hdr"><small>Société Nationale des Hydrocarbures — Direction des Ressources Humaines</small><h1>${title}</h1></div>
   <div class="meta">Généré le ${fmtLong(new Date().toISOString())}</div>
-  ${html}</body></html>`);
-  w.document.close();
-  setTimeout(() => { w.focus(); w.print(); }, 400);
+  ${html}
+  <script>window.onload=function(){window.focus();window.print();}<\/script>
+  </body></html>`;
+  const blob = new Blob([fullHtml], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 // ── Badge ─────────────────────────────────────────────────────────────────────

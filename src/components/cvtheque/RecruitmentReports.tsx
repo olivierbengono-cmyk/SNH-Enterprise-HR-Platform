@@ -117,8 +117,7 @@ function printHtml(html: string, title: string) {
   <div class="meta">Généré le ${fmtLong(new Date().toISOString())}</div>
   ${html}</body></html>`);
   w.document.close();
-  w.focus();
-  w.print();
+  setTimeout(() => { w.focus(); w.print(); }, 400);
 }
 
 // ── Badge ─────────────────────────────────────────────────────────────────────

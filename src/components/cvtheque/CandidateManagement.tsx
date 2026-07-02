@@ -1120,7 +1120,7 @@ export default function CandidateManagement() {
       )}
 
       {/* ── VIEW: Reports ── */}
-      {mainView === 'reports' && <RecruitmentReports />}
+      {mainView === 'reports' && <RecruitmentReports candidates={candidates} />}
 
       {/* Candidate detail modal */}
       {selectedCandidate && (

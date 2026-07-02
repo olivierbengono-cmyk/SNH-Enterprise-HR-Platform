@@ -1,1437 +1,899 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
-  BarChart3, FileText, Users, Search, ChevronDown, Printer,
-  TrendingUp, Calendar, Award, Briefcase, Building2, X,
-  CheckCircle, Clock, User, BookOpen, ClipboardList, Download
+  BarChart3, FileText, Users, TrendingUp, Printer,
+  RefreshCw, ChevronRight, Briefcase, ClipboardList, Award, User
 } from 'lucide-react';
 
-// ── Constants ──────────────────────────────────────────────────────────────────
-const SNH_GREEN = '#006B3C';
-const SNH_DARK  = '#004d2b';
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface Cand {
+  id: string; first_name: string; last_name: string; email: string;
+  phone?: string|null; birth_date?: string|null; gender?: string|null;
+  nationality?: string|null; location?: string|null;
+  professional_title?: string|null; photo_url?: string|null;
+  candidate_applications?: App[];
+  candidate_educations?: { degree: string; field_of_study?: string|null; institution: string; end_date?: string|null }[];
+  candidate_experiences?: { job_title?: string|null; company?: string|null; start_date?: string|null; end_date?: string|null; is_current?: boolean }[];
+}
+interface App {
+  id: string; status: string; created_at: string;
+  desired_position?: string|null; rating?: number|null;
+  offer_start_date?: string|null; trial_period_months?: number|null;
+  trial_end_date?: string|null; offer_salary?: number|null;
+  offer_contract_type?: string|null; offer_date?: string|null;
+  job_opening_id?: string|null;
+  job_opening?: { id: string; title: string }|null;
+}
+interface Job { id: string; title: string; status: string; contract_type?: string|null; publication_date?: string|null; }
 
-const PIPELINE_STEPS = [
-  { value: 'new',              label: 'Candidature',                  short: 'Candidature' },
-  { value: 'technical_tests',  label: 'Tests techniques — Jury SNH',  short: 'Tests tech.' },
-  { value: 'interview',        label: 'Entretien d\'embauche',         short: 'Entretien' },
-  { value: 'psycho_tests',     label: 'Tests psy. & professionnels',  short: 'Tests psy.' },
-  { value: 'medical_visit',    label: 'Visite médicale d\'embauche',  short: 'Visite méd.' },
-  { value: 'morality_inquiry', label: 'Enquête de moralité',          short: 'Moralité' },
-  { value: 'diploma_check',    label: 'Auth. diplômes & état civil',  short: 'Diplômes' },
-  { value: 'trial',            label: 'Engagement à l\'essai',        short: 'Essai' },
-  { value: 'assignment',       label: 'Affectation & prise de service', short: 'Affectation' },
-  { value: 'integrated',       label: 'Titularisation',               short: 'Titularisé(e)' },
+interface Props { candidates: Cand[]; }
+
+type View = 'dashboard' | 'synthese' | 'etat' | 'offre' | 'lettre';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const G = '#006B3C';
+const GD = '#004d2b';
+
+const STAGES = [
+  { v: 'new',              l: 'Candidature',             s: 'Candidature' },
+  { v: 'technical_tests',  l: 'Tests techniques',        s: 'Tests tech.' },
+  { v: 'interview',        l: "Entretien d'embauche",    s: 'Entretien' },
+  { v: 'psycho_tests',     l: 'Tests psy. & professionnels', s: 'Tests psy.' },
+  { v: 'medical_visit',    l: "Visite médicale d'embauche", s: 'Visite méd.' },
+  { v: 'morality_inquiry', l: 'Enquête de moralité',     s: 'Moralité' },
+  { v: 'diploma_check',    l: 'Auth. diplômes & état civil', s: 'Diplômes' },
+  { v: 'trial',            l: "Engagement à l'essai",    s: 'Essai' },
+  { v: 'assignment',       l: 'Affectation & prise de service', s: 'Affectation' },
+  { v: 'integrated',       l: 'Titularisation',          s: 'Titularisé(e)' },
 ];
 
-const STATUS_FR: Record<string, string> = {
-  new: 'Candidature', technical_tests: 'Tests techniques', interview: 'Entretien',
-  psycho_tests: 'Tests psy.', medical_visit: 'Visite médicale', morality_inquiry: 'Enquête moralité',
-  diploma_check: 'Auth. diplômes', trial: 'Engagement essai', assignment: 'Affectation',
-  integrated: 'Titularisé(e)', rejected: 'Refusé(e)', withdrawn: 'Retiré(e)',
+const SFR: Record<string,string> = {
+  new:'Candidature', technical_tests:'Tests tech.', interview:'Entretien',
+  psycho_tests:'Tests psy.', medical_visit:'Visite méd.', morality_inquiry:'Moralité',
+  diploma_check:'Diplômes', trial:'Eng. essai', assignment:'Affectation',
+  integrated:'Titularisé(e)', rejected:'Refusé(e)', withdrawn:'Retiré(e)',
 };
 
-const STATUS_COLOR: Record<string, string> = {
-  new: '#3b82f6', technical_tests: '#f59e0b', interview: '#f97316', psycho_tests: '#8b5cf6',
-  medical_visit: '#0d9488', morality_inquiry: '#06b6d4', diploma_check: '#6366f1',
-  trial: '#22c55e', assignment: '#10b981', integrated: '#059669', rejected: '#ef4444', withdrawn: '#94a3b8',
+const SC: Record<string,string> = {
+  new:'#3b82f6', technical_tests:'#f59e0b', interview:'#f97316', psycho_tests:'#8b5cf6',
+  medical_visit:'#0d9488', morality_inquiry:'#06b6d4', diploma_check:'#6366f1',
+  trial:'#22c55e', assignment:'#10b981', integrated:'#059669', rejected:'#ef4444', withdrawn:'#94a3b8',
 };
 
-const STATUS_BG: Record<string, string> = {
-  new: 'bg-blue-100 text-blue-800', technical_tests: 'bg-amber-100 text-amber-800',
-  interview: 'bg-orange-100 text-orange-800', psycho_tests: 'bg-violet-100 text-violet-800',
-  medical_visit: 'bg-teal-100 text-teal-800', morality_inquiry: 'bg-cyan-100 text-cyan-800',
-  diploma_check: 'bg-indigo-100 text-indigo-800', trial: 'bg-lime-100 text-lime-800',
-  assignment: 'bg-emerald-100 text-emerald-800', integrated: 'bg-emerald-200 text-emerald-900',
-  rejected: 'bg-red-100 text-red-800', withdrawn: 'bg-slate-100 text-slate-600',
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmt = (d?: string|null) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+const fmtLong = (d?: string|null) => d ? new Date(d).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}) : '—';
+const fullName = (c: Cand) => `${c.first_name} ${c.last_name}`;
+const topDegree = (c: Cand) => {
+  const eds = c.candidate_educations ?? [];
+  return eds.length ? eds[eds.length-1].degree : '—';
 };
+const expMonths = (c: Cand) => {
+  return (c.candidate_experiences ?? []).reduce((sum, e) => {
+    if (!e.start_date) return sum;
+    const end = e.end_date ? new Date(e.end_date) : new Date();
+    const s = new Date(e.start_date);
+    return sum + Math.max(0,(end.getFullYear()-s.getFullYear())*12+end.getMonth()-s.getMonth());
+  }, 0);
+};
+const expStr = (m: number) => m >= 12 ? `${Math.floor(m/12)} an(s)` : `${m} mois`;
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-function fmtDate(d: string | null | undefined) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+function getRows(candidates: Cand[]) {
+  const rows: {app: App; cand: Cand}[] = [];
+  for (const c of candidates)
+    for (const a of (c.candidate_applications ?? []))
+      rows.push({app: a, cand: c});
+  return rows.sort((a,b) => b.app.created_at.localeCompare(a.app.created_at));
 }
 
-function fmtDateLong(d: string | null | undefined) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-}
+// ── Print helper ──────────────────────────────────────────────────────────────
+const BASE_STYLE = `
+  *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+  body{padding:20px;font-size:11px;color:#111}
+  .hdr{background:#006B3C;color:#fff;padding:14px 20px;margin:-20px -20px 18px}
+  .hdr h1{font-size:18px;margin:4px 0 0}
+  .hdr small{font-size:10px;opacity:.8;text-transform:uppercase;letter-spacing:1px}
+  .meta{font-size:10px;color:#666;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;margin-bottom:14px}
+  th{background:#006B3C;color:#fff;padding:6px 8px;font-size:10px;text-align:left}
+  td{padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:10px;vertical-align:top}
+  tr:nth-child(even) td{background:#f0fdf4}
+  h2{font-size:13px;color:#004d2b;margin:14px 0 6px;border-left:3px solid #006B3C;padding-left:8px}
+  .kpi{display:inline-block;border:1px solid #d1fae5;border-radius:6px;padding:10px 18px;margin:0 6px 10px 0;text-align:center}
+  .kv{font-size:22px;font-weight:700;color:#006B3C}
+  .kl{font-size:10px;color:#555;margin-top:2px}
+  p{margin:4px 0;font-size:11px}
+  .sig{margin-top:40px;display:flex;justify-content:space-between}
+  .sig div{text-align:center;width:45%}
+  .sig .line{border-top:1px solid #000;margin-top:40px;padding-top:6px;font-size:10px}
+  @media print{body{padding:12px}}
+`;
 
-function StatusBadge({ status }: { status: string }) {
-  const cls = STATUS_BG[status] ?? 'bg-slate-100 text-slate-700';
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{STATUS_FR[status] ?? status}</span>;
-}
-
-// ── SNH Table Header ──────────────────────────────────────────────────────────
-function TableHeader({ title }: { title: string }) {
-  return (
-    <tr>
-      <th colSpan={99} className="text-left px-4 py-2 text-sm font-bold text-white"
-        style={{ background: SNH_GREEN }}>
-        {title}
-      </th>
-    </tr>
-  );
-}
-
-function Th({ children }: { children: React.ReactNode }) {
-  return (
-    <th className="px-3 py-2 text-xs font-semibold text-white text-center whitespace-nowrap"
-      style={{ background: SNH_DARK }}>
-      {children}
-    </th>
-  );
-}
-
-function Td({ children, center }: { children: React.ReactNode; center?: boolean }) {
-  return (
-    <td className={`px-3 py-2 text-xs text-slate-700 border-b border-slate-100 ${center ? 'text-center' : ''}`}>
-      {children}
-    </td>
-  );
-}
-
-// ── Print utility ─────────────────────────────────────────────────────────────
-function printElement(html: string, title: string) {
+function printHtml(html: string, title: string) {
   const w = window.open('', '_blank');
   if (!w) return;
-  w.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
-  <title>${title}</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:Arial,Helvetica,sans-serif;color:#111827;background:#fff;padding:24px;font-size:12px;}
-    h1{font-size:18px;color:#006B3C;margin-bottom:4px;}
-    h2{font-size:13px;color:#006B3C;margin:16px 0 8px;text-transform:uppercase;letter-spacing:1px;}
-    table{width:100%;border-collapse:collapse;margin-bottom:16px;}
-    th{background:#004d2b;color:#fff;padding:7px 10px;font-size:11px;text-align:left;}
-    td{padding:6px 10px;font-size:11px;border-bottom:1px solid #e5e7eb;}
-    .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;}
-    .green-header{background:#006B3C;color:#fff;padding:6px 10px;font-weight:700;font-size:12px;}
-    .section{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:16px;}
-    .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;padding:12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;}
-    .meta-item label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;display:block;}
-    .meta-item span{font-size:12px;font-weight:600;color:#111827;}
-    .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;text-align:center;color:#9ca3af;font-size:10px;}
-    .logo-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
-    .logo-box{width:42px;height:42px;background:#006B3C;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:900;}
-    .subtitle{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;}
-    @media print{body{padding:12px;}}
-  </style>
-  </head><body>${html}
-  <div class="footer">SNH — Société Nationale des Hydrocarbures du Cameroun &nbsp;|&nbsp; recrutement.snh.cm &nbsp;|&nbsp; Généré le ${fmtDateLong(new Date().toISOString())}</div>
-  </body></html>`);
+  w.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title}</title><style>${BASE_STYLE}</style></head><body>
+  <div class="hdr"><small>Société Nationale des Hydrocarbures — Direction des Ressources Humaines</small><h1>${title}</h1></div>
+  <div class="meta">Généré le ${fmtLong(new Date().toISOString())}</div>
+  ${html}<script>window.onload=()=>window.print();</script></body></html>`);
   w.document.close();
-  w.onload = () => w.print();
 }
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-interface AppRow {
-  id: string;
-  status: string;
-  created_at: string;
-  desired_position: string | null;
-  cover_letter: string | null;
-  job_opening_id: string | null;
-  candidate: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string | null;
-    birth_date: string | null;
-    location: string | null;
-    professional_title: string | null;
-    summary: string | null;
-    photo_url: string | null;
-    candidate_educations?: { degree: string | null; field_of_study: string | null; institution: string | null; end_year: string | null }[];
-    candidate_experiences?: { company: string | null; position: string | null; duration_months: number | null; start_date: string | null; end_date: string | null }[];
-  } | null;
-  job_opening: { id: string; title: string } | null;
-  pipeline_events?: { to_status: string; created_at: string; notes: string | null }[];
-  pipeline_stage_notes?: { stage: string; score: number | null; score_max: number | null; passed: boolean | null; evaluator_name: string | null; notes: string | null }[];
-}
-
-interface JobOpening {
-  id: string;
-  title: string;
-  status: string;
-  contract_type: string | null;
-  publication_date: string | null;
-  closing_date: string | null;
-}
-
-type ReportView = 'dashboard' | 'candidate_synthesis' | 'candidate_fiche' | 'offer_report' | 'engagement_letter';
-
-// ── Minibar chart (purely visual) ─────────────────────────────────────────────
-function MiniBarChart({ data }: { data: { label: string; count: number; color: string }[] }) {
-  const max = Math.max(...data.map(d => d.count), 1);
+// ── Badge ─────────────────────────────────────────────────────────────────────
+function Badge({ s }: { s: string }) {
+  const c = SC[s] ?? '#64748b';
   return (
-    <div className="space-y-1.5">
-      {data.map(d => (
-        <div key={d.label} className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 w-28 flex-shrink-0 text-right truncate">{d.label}</span>
-          <div className="flex-1 bg-slate-100 rounded-full h-4 relative overflow-hidden">
-            <div className="h-full rounded-full transition-all"
-              style={{ width: `${(d.count / max) * 100}%`, background: d.color }} />
-            <span className="absolute right-2 top-0 h-full flex items-center text-xs font-semibold text-slate-700">{d.count}</span>
-          </div>
-        </div>
-      ))}
-    </div>
+    <span style={{background:c+'22',color:c,padding:'2px 8px',borderRadius:9999,fontSize:11,fontWeight:600,whiteSpace:'nowrap'}}>
+      {SFR[s] ?? s}
+    </span>
   );
 }
 
-// ── Sparkline chart ──────────────────────────────────────────────────────────
-function SparkLine({ values, color = SNH_GREEN }: { values: number[]; color?: string }) {
-  const max = Math.max(...values, 1);
-  const w = 400, h = 80;
-  const step = w / Math.max(values.length - 1, 1);
-  const pts = values.map((v, i) => `${i * step},${h - (v / max) * (h - 10) - 5}`).join(' ');
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" preserveAspectRatio="none" style={{ height: 80 }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// ── Main Component ─────────────────────────────────────────────────────────────
-export default function RecruitmentReports() {
-  const [reportView, setReportView] = useState<ReportView>('dashboard');
-  const [applications, setApplications] = useState<AppRow[]>([]);
-  const [jobs, setJobs] = useState<JobOpening[]>([]);
-  const [loading, setLoading] = useState(true);
+// ── Component ─────────────────────────────────────────────────────────────────
+export default function RecruitmentReports({ candidates }: Props) {
+  const [view, setView] = useState<View>('dashboard');
+  const [jobs, setJobs] = useState<Job[]>([]);
 
   // Filters
-  const [filterJobId, setFilterJobId] = useState('all');
-  const [filterStage, setFilterStage] = useState('all');
-  const [filterDateFrom, setFilterDateFrom] = useState('');
-  const [filterDateTo, setFilterDateTo] = useState('');
+  const [fJob, setFJob] = useState('all');
+  const [fStage, setFStage] = useState('all');
+  const [fFrom, setFFrom] = useState('');
+  const [fTo, setFTo] = useState('');
 
-  // Selection
-  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  // Selection for offre & lettre views
+  const [selJobId, setSelJobId] = useState('');
+  const [selAppId, setSelAppId] = useState('');
 
-  const printRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    supabase.from('job_openings')
+      .select('id, title, status, contract_type, publication_date')
+      .order('publication_date', { ascending: false })
+      .then(({ data }) => { if (data) setJobs(data as Job[]); });
+  }, []);
 
-  useEffect(() => { loadData(); }, []);
+  const allRows = getRows(candidates);
 
-  const loadData = async () => {
-    setLoading(true);
-    // Query from `candidates` (same as CandidateManagement — avoids PostgREST
-    // ambiguous FK issues that appear when starting from candidate_applications)
-    const [candRes, jobRes, eventsRes, notesRes] = await Promise.all([
-      supabase.from('candidates').select(`
-        id, first_name, last_name, email, phone, birth_date, location, professional_title, summary, photo_url,
-        candidate_applications(id, status, created_at, desired_position, cover_letter, job_opening_id,
-          job_opening:job_openings(id, title)
-        ),
-        candidate_educations(degree, field_of_study, institution, end_year),
-        candidate_experiences(company, position, duration_months, start_date, end_date)
-      `).order('created_at', { ascending: false }),
-      supabase.from('job_openings')
-        .select('id, title, status, contract_type, publication_date, closing_date')
-        .order('created_at', { ascending: false }),
-      supabase.from('hiring_pipeline_events')
-        .select('application_id, to_status, created_at, notes')
-        .order('created_at', { ascending: true }),
-      supabase.from('pipeline_stage_notes')
-        .select('application_id, stage, score, score_max, passed, evaluator_name, notes'),
-    ]);
-
-    if (candRes.error) console.error('[Reports] candidates:', candRes.error);
-    if (jobRes.error)  console.error('[Reports] jobs:', jobRes.error);
-    if (eventsRes.error) console.error('[Reports] events:', eventsRes.error);
-    if (notesRes.error) console.error('[Reports] notes:', notesRes.error);
-
-    // Index events and notes by application_id
-    const evByApp: Record<string, { to_status: string; created_at: string; notes: string | null }[]> = {};
-    for (const ev of (eventsRes.data || []) as any[]) {
-      if (!evByApp[ev.application_id]) evByApp[ev.application_id] = [];
-      evByApp[ev.application_id].push({ to_status: ev.to_status, created_at: ev.created_at, notes: ev.notes });
-    }
-    const notesByApp: Record<string, { stage: string; score: number | null; score_max: number | null; passed: boolean | null; evaluator_name: string | null; notes: string | null }[]> = {};
-    for (const n of (notesRes.data || []) as any[]) {
-      if (!notesByApp[n.application_id]) notesByApp[n.application_id] = [];
-      notesByApp[n.application_id].push({ stage: n.stage, score: n.score, score_max: n.score_max, passed: n.passed, evaluator_name: n.evaluator_name, notes: n.notes });
-    }
-
-    // Flatten: one row per application, enriched with candidate info
-    const apps: AppRow[] = [];
-    for (const cand of (candRes.data || []) as any[]) {
-      const candidateInfo = {
-        id: cand.id,
-        first_name: cand.first_name,
-        last_name: cand.last_name,
-        email: cand.email,
-        phone: cand.phone,
-        birth_date: cand.birth_date,
-        location: cand.location,
-        professional_title: cand.professional_title,
-        summary: cand.summary,
-        photo_url: cand.photo_url,
-        candidate_educations: cand.candidate_educations || [],
-        candidate_experiences: cand.candidate_experiences || [],
-      };
-      const appList: any[] = cand.candidate_applications || [];
-      if (appList.length === 0) {
-        // Candidate with no application — skip for report views
-        continue;
-      }
-      for (const app of appList) {
-        apps.push({
-          id: app.id,
-          status: app.status,
-          created_at: app.created_at,
-          desired_position: app.desired_position,
-          cover_letter: app.cover_letter,
-          job_opening_id: app.job_opening_id,
-          candidate: candidateInfo,
-          job_opening: app.job_opening ?? null,
-          pipeline_events: evByApp[app.id] || [],
-          pipeline_stage_notes: notesByApp[app.id] || [],
-        });
-      }
-    }
-    // Sort by application date desc
-    apps.sort((a, b) => b.created_at.localeCompare(a.created_at));
-
-    setApplications(apps);
-    setJobs((jobRes.data as JobOpening[]) || []);
-    setLoading(false);
-  };
-
-  // Derived filtered apps
-  const filteredApps = applications.filter(a => {
-    if (filterJobId !== 'all' && a.job_opening_id !== filterJobId) return false;
-    if (filterStage !== 'all' && a.status !== filterStage) return false;
-    if (filterDateFrom && a.created_at < filterDateFrom) return false;
-    if (filterDateTo && a.created_at > filterDateTo + 'T23:59:59') return false;
+  // Filtered rows for dashboard/synthese/etat
+  const rows = allRows.filter(({app}) => {
+    if (fJob !== 'all' && app.job_opening?.id !== fJob && app.job_opening_id !== fJob) return false;
+    if (fStage !== 'all' && app.status !== fStage) return false;
+    if (fFrom && app.created_at < fFrom) return false;
+    if (fTo && app.created_at > fTo + 'T23:59:59') return false;
     return true;
   });
 
-  const selectedApp = applications.find(a => a.id === selectedAppId) ?? null;
-  const selectedJob = jobs.find(j => j.id === selectedJobId) ?? null;
+  const activeRows = allRows.filter(({app}) =>
+    !['rejected','withdrawn','integrated'].includes(app.status)
+  );
+  const integratedCount = allRows.filter(({app}) => app.status === 'integrated').length;
+  const uniqueCands = new Set(allRows.map(r => r.cand.id)).size;
 
-  // Stats for dashboard
-  const statsByStage = PIPELINE_STEPS.map(s => ({
-    label: s.short,
-    count: applications.filter(a => a.status === s.value).length,
-    color: STATUS_COLOR[s.value] ?? SNH_GREEN,
-  }));
+  // For rapport de l'offre
+  const offreRows = allRows.filter(({app}) =>
+    app.job_opening?.id === selJobId || app.job_opening_id === selJobId
+  );
+  const selJob = jobs.find(j => j.id === selJobId);
 
-  // Simulated 30-day trend (based on created_at)
-  const trend30 = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (29 - i));
-    const key = d.toISOString().slice(0, 10);
-    return applications.filter(a => a.created_at?.slice(0, 10) === key).length;
-  });
+  // For lettre
+  const trialRows = allRows.filter(({app}) =>
+    ['trial','assignment','integrated'].includes(app.status)
+  );
+  const selLettre = trialRows.find(({app}) => app.id === selAppId);
 
-  if (loading) {
+  // ── Nav ──────────────────────────────────────────────────────────────────────
+  const NAV: { v: View; label: string; icon: React.ReactNode }[] = [
+    { v: 'dashboard', label: 'Tableau de bord', icon: <BarChart3 size={15}/> },
+    { v: 'synthese',  label: 'Synthèse candidature', icon: <TrendingUp size={15}/> },
+    { v: 'etat',      label: 'État de la candidature', icon: <Users size={15}/> },
+    { v: 'offre',     label: "Rapport de l'offre", icon: <Briefcase size={15}/> },
+    { v: 'lettre',    label: "Lettre d'engagement", icon: <FileText size={15}/> },
+  ];
+
+  // ── Shared filter bar ─────────────────────────────────────────────────────────
+  function FilterBar({ showStage = true }: { showStage?: boolean }) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2" style={{ borderColor: SNH_GREEN }} />
-      </div>
-    );
-  }
-
-  // ── REPORT: Dashboard ──────────────────────────────────────────────────────
-  const renderDashboard = () => {
-    const totalApps = applications.length;
-    const totalCandidates = new Set(applications.map(a => a.candidate?.id).filter(Boolean)).size;
-    const inProcess = applications.filter(a => !['rejected', 'withdrawn', 'integrated'].includes(a.status)).length;
-    const integrated = applications.filter(a => a.status === 'integrated').length;
-
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="rounded-xl overflow-hidden shadow-sm border border-slate-200">
-          <div className="p-5 text-white" style={{ background: `linear-gradient(135deg, ${SNH_GREEN} 0%, ${SNH_DARK} 100%)` }}>
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/10 rounded-xl flex items-center justify-center">
-                <BarChart3 size={28} className="text-white" />
-              </div>
-              <div>
-                <p className="text-green-200 text-xs font-medium uppercase tracking-widest">SOCIÉTÉ NATIONALE DES HYDROCARBURES</p>
-                <h1 className="text-2xl font-bold text-white mt-0.5">Tableaux de Bord — Candidatures</h1>
-                <p className="text-green-200 text-sm mt-1">Des états clairs pour un suivi efficace et des décisions éclairées.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-slate-100">
-            {[
-              { label: 'Candidatures reçues', value: totalApps, icon: FileText, color: 'text-blue-600' },
-              { label: 'Candidats uniques', value: totalCandidates, icon: Users, color: 'text-teal-600' },
-              { label: 'En cours de traitement', value: inProcess, icon: Clock, color: 'text-amber-600' },
-              { label: 'Titularisés', value: integrated, icon: Award, color: 'text-green-700' },
-            ].map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="p-4 bg-white">
-                <div className="flex items-center gap-2 mb-1">
-                  <Icon size={14} className={color} />
-                  <span className="text-xs text-slate-400">{label}</span>
-                </div>
-                <p className={`text-2xl font-bold ${color}`}>{value}</p>
-              </div>
-            ))}
-          </div>
+      <div className="flex flex-wrap items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 mb-4">
+        <div className="flex-1 min-w-[180px]">
+          <label className="block text-xs text-slate-500 mb-1">Offre</label>
+          <select value={fJob} onChange={e => setFJob(e.target.value)}
+            className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white">
+            <option value="all">Toutes les offres</option>
+            {jobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}
+          </select>
         </div>
-
-        {/* Filters bar */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Offre</label>
-            <select value={filterJobId} onChange={e => setFilterJobId(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30">
-              <option value="all">Toutes les offres</option>
-              <option value="">Candidatures spontanées</option>
-              {jobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Phase</label>
-            <select value={filterStage} onChange={e => setFilterStage(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30">
+        {showStage && (
+          <div className="flex-1 min-w-[180px]">
+            <label className="block text-xs text-slate-500 mb-1">Phase</label>
+            <select value={fStage} onChange={e => setFStage(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white">
               <option value="all">Toutes les phases</option>
-              {PIPELINE_STEPS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              {STAGES.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
               <option value="rejected">Refusé(e)</option>
               <option value="withdrawn">Retiré(e)</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Du</label>
-            <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Au</label>
-            <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30" />
-          </div>
-          {(filterJobId !== 'all' || filterStage !== 'all' || filterDateFrom || filterDateTo) && (
-            <button onClick={() => { setFilterJobId('all'); setFilterStage('all'); setFilterDateFrom(''); setFilterDateTo(''); }}
-              className="flex items-center gap-1 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-xs hover:bg-red-50 transition">
-              <X size={12} /> Réinitialiser
-            </button>
-          )}
-          <button
-            onClick={() => printDashboard(filteredApps)}
-            className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white transition"
-            style={{ background: SNH_GREEN }}>
-            <Printer size={14} /> Imprimer
+        )}
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">Du</label>
+          <input type="date" value={fFrom} onChange={e => setFFrom(e.target.value)}
+            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white"/>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">Au</label>
+          <input type="date" value={fTo} onChange={e => setFTo(e.target.value)}
+            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white"/>
+        </div>
+        {(fJob !== 'all' || fStage !== 'all' || fFrom || fTo) && (
+          <button onClick={() => { setFJob('all'); setFStage('all'); setFFrom(''); setFTo(''); }}
+            className="mt-4 text-xs text-slate-500 hover:text-slate-800 underline">
+            Réinitialiser
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Candidature table (shared) ────────────────────────────────────────────────
+  function AppTable({ data }: { data: typeof rows }) {
+    if (data.length === 0)
+      return <div className="text-center py-10 text-slate-400 text-sm">Aucune candidature</div>;
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr style={{background:GD}}>
+              {['N°','Candidat','Poste visé','Date dépôt','Diplôme','Expérience','Statut'].map(h => (
+                <th key={h} className="px-3 py-2 text-left text-white font-semibold whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map(({app,cand},i) => (
+              <tr key={app.id} className={i%2===0?'bg-white':'bg-slate-50/60'}>
+                <td className="px-3 py-2 text-slate-500">{i+1}</td>
+                <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">{fullName(cand)}</td>
+                <td className="px-3 py-2 text-slate-600">{app.desired_position ?? app.job_opening?.title ?? '—'}</td>
+                <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{fmt(app.created_at)}</td>
+                <td className="px-3 py-2 text-slate-500">{topDegree(cand)}</td>
+                <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{expStr(expMonths(cand))}</td>
+                <td className="px-3 py-2"><Badge s={app.status}/></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // ── DASHBOARD ─────────────────────────────────────────────────────────────────
+  function Dashboard() {
+    const byStage = STAGES.map(s => ({
+      ...s,
+      count: allRows.filter(r => r.app.status === s.v).length,
+    }));
+    const maxCount = Math.max(...byStage.map(s => s.count), 1);
+
+    // Group by job
+    const byJob: Record<string,{title:string;count:number}> = {};
+    for (const {app} of allRows) {
+      const jid = app.job_opening?.id ?? app.job_opening_id ?? '__none__';
+      const title = app.job_opening?.title ?? 'Non précisé';
+      if (!byJob[jid]) byJob[jid] = {title, count: 0};
+      byJob[jid].count++;
+    }
+    const jobList = Object.values(byJob).sort((a,b)=>b.count-a.count).slice(0,8);
+
+    // Evolution last 30 days
+    const today = new Date();
+    const days: {label:string; count:number}[] = [];
+    for (let i=29; i>=0; i--) {
+      const d = new Date(today); d.setDate(today.getDate()-i);
+      const ds = d.toISOString().slice(0,10);
+      days.push({
+        label: d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}),
+        count: allRows.filter(r => r.app.created_at.slice(0,10) === ds).length,
+      });
+    }
+    const maxDay = Math.max(...days.map(d=>d.count), 1);
+
+    function printDashboard() {
+      const stageRows = byStage.map(s =>
+        `<tr><td>${s.l}</td><td style="text-align:right;font-weight:600">${s.count}</td></tr>`
+      ).join('');
+      const jobRows = jobList.map(j =>
+        `<tr><td>${j.title}</td><td style="text-align:right;font-weight:600">${j.count}</td></tr>`
+      ).join('');
+      printHtml(`
+        <div>
+          <div class="kpi"><span class="kv">${allRows.length}</span><div class="kl">Candidatures reçues</div></div>
+          <div class="kpi"><span class="kv">${uniqueCands}</span><div class="kl">Candidats uniques</div></div>
+          <div class="kpi"><span class="kv">${activeRows.length}</span><div class="kl">En cours de traitement</div></div>
+          <div class="kpi"><span class="kv">${integratedCount}</span><div class="kl">Titularisés</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">
+          <div><h2>Répartition par phase du pipeline</h2>
+          <table><tr><th>Phase</th><th style="text-align:right">Candidats</th></tr>${stageRows}</table></div>
+          <div><h2>Candidatures par offre</h2>
+          <table><tr><th>Offre</th><th style="text-align:right">Nb.</th></tr>${jobRows}</table></div>
+        </div>`, 'Tableau de Bord — Candidatures');
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* KPIs */}
+        <div className="grid grid-cols-4 gap-4">
+          {[
+            { label: 'Candidatures reçues', val: allRows.length, color: 'text-blue-600' },
+            { label: 'Candidats uniques',   val: uniqueCands,    color: 'text-emerald-600' },
+            { label: 'En cours de traitement', val: activeRows.length, color: 'text-amber-500' },
+            { label: 'Titularisés',          val: integratedCount, color: 'text-green-700' },
+          ].map(k => (
+            <div key={k.label} className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className={`text-3xl font-bold ${k.color}`}>{k.val}</div>
+              <div className="text-xs text-slate-500 mt-1">{k.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <FilterBar/>
+
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-sm font-semibold text-slate-700">
+            Récapitulatif des candidatures <span className="text-slate-400 font-normal ml-1">{rows.length} résultat(s)</span>
+          </span>
+          <button onClick={printDashboard}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg"
+            style={{background:G}}>
+            <Printer size={13}/> Imprimer
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Table 1: Récapitulatif général */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
-              <ClipboardList size={14} style={{ color: SNH_GREEN }} />
-              <span className="text-sm font-semibold text-slate-800">Récapitulatif des candidatures</span>
-              <span className="ml-auto text-xs text-slate-400">{filteredApps.length} résultat(s)</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr>
-                    <Th>N°</Th>
-                    <Th>Candidat</Th>
-                    <Th>Poste visé</Th>
-                    <Th>Date dépôt</Th>
-                    <Th>Diplôme</Th>
-                    <Th>Expérience</Th>
-                    <Th>Statut</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredApps.slice(0, 8).map((app, i) => {
-                    const edu = app.candidate?.candidate_educations?.[0];
-                    const expMonths = (app.candidate?.candidate_experiences || [])
-                      .reduce((acc, e) => acc + (e.duration_months || 0), 0);
-                    const expYears = Math.round(expMonths / 12);
-                    return (
-                      <tr key={app.id} className={`hover:bg-slate-50 cursor-pointer ${i % 2 === 0 ? '' : 'bg-slate-50/40'}`}
-                        onClick={() => { setSelectedAppId(app.id); setReportView('candidate_synthesis'); }}>
-                        <Td center>{i + 1}</Td>
-                        <Td>
-                          <span className="font-semibold text-slate-800">
-                            {app.candidate ? `${app.candidate.first_name} ${app.candidate.last_name}` : '—'}
-                          </span>
-                        </Td>
-                        <Td>{app.desired_position || app.job_opening?.title || '—'}</Td>
-                        <Td center>{fmtDate(app.created_at)}</Td>
-                        <Td>{edu ? `${edu.degree ?? ''} ${edu.field_of_study ?? ''}`.trim() || '—' : '—'}</Td>
-                        <Td center>{expYears > 0 ? `${expYears} an${expYears > 1 ? 's' : ''}` : '—'}</Td>
-                        <Td center><StatusBadge status={app.status} /></Td>
-                      </tr>
-                    );
-                  })}
-                  {filteredApps.length === 0 && (
-                    <tr><td colSpan={7} className="text-center py-8 text-slate-400 text-xs">Aucune candidature</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {filteredApps.length > 8 && (
-              <div className="px-4 py-2 border-t border-slate-100 text-xs text-slate-400 text-center">
-                {filteredApps.length - 8} candidature(s) supplémentaire(s) — imprimez pour voir tout
-              </div>
-            )}
+        <div className="grid grid-cols-5 gap-4">
+          <div className="col-span-3 bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <AppTable data={rows}/>
           </div>
 
-          {/* Funnel chart */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp size={14} style={{ color: SNH_GREEN }} />
-              <span className="text-sm font-semibold text-slate-800">Répartition par phase du pipeline</span>
+          <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-4">
+            <div className="text-sm font-semibold text-slate-700 mb-3">Répartition par phase du pipeline</div>
+            <div className="space-y-1.5">
+              {byStage.map(s => (
+                <div key={s.v} className="flex items-center gap-2 text-xs">
+                  <span className="text-right text-slate-500 w-20 shrink-0 truncate">{s.s}</span>
+                  <div className="flex-1 h-4 rounded-sm bg-slate-100 relative overflow-hidden">
+                    <div className="h-full rounded-sm transition-all"
+                      style={{width:`${(s.count/maxCount)*100}%`,background:G}}/>
+                    <span className="absolute right-2 top-0 h-full flex items-center text-xs font-semibold text-slate-700">{s.count}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <MiniBarChart data={statsByStage} />
           </div>
         </div>
 
-        {/* Table by offer */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
-            <Briefcase size={14} style={{ color: SNH_GREEN }} />
-            <span className="text-sm font-semibold text-slate-800">Liste des candidats par offre</span>
-          </div>
-          {jobs.map(job => {
-            const jobApps = filteredApps.filter(a => a.job_opening_id === job.id);
-            if (jobApps.length === 0) return null;
-            return (
-              <div key={job.id}>
-                <div className="px-4 py-2 text-xs font-bold text-white" style={{ background: SNH_GREEN }}>
-                  Offre : {job.title}
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs border-collapse">
-                    <thead>
-                      <tr>
-                        <Th>N°</Th>
-                        <Th>Candidat</Th>
-                        <Th>Date dépôt</Th>
-                        <Th>Diplôme</Th>
-                        <Th>Expérience</Th>
-                        <Th>Date naissance</Th>
-                        <Th>Statut</Th>
-                        <Th>Détail</Th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {jobApps.slice(0, 5).map((app, i) => {
-                        const edu = app.candidate?.candidate_educations?.[0];
-                        const expMonths = (app.candidate?.candidate_experiences || []).reduce((s, e) => s + (e.duration_months || 0), 0);
-                        return (
-                          <tr key={app.id} className={i % 2 === 0 ? '' : 'bg-slate-50/40'}>
-                            <Td center>{i + 1}</Td>
-                            <Td><span className="font-semibold">{app.candidate ? `${app.candidate.first_name} ${app.candidate.last_name}` : '—'}</span></Td>
-                            <Td center>{fmtDate(app.created_at)}</Td>
-                            <Td>{edu ? `${edu.degree ?? ''} ${edu.field_of_study ?? ''}`.trim() || '—' : '—'}</Td>
-                            <Td center>{expMonths > 0 ? `${Math.round(expMonths / 12)} an(s)` : '—'}</Td>
-                            <Td center>{app.candidate?.birth_date ? fmtDate(app.candidate.birth_date) : '—'}</Td>
-                            <Td center><StatusBadge status={app.status} /></Td>
-                            <Td center>
-                              <button onClick={() => { setSelectedAppId(app.id); setReportView('candidate_synthesis'); }}
-                                className="px-2 py-0.5 rounded text-xs font-semibold text-white transition"
-                                style={{ background: SNH_GREEN }}>
-                                Voir
-                              </button>
-                            </Td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            );
-          })}
-          {/* Spontaneous */}
-          {(() => {
-            const spontApps = filteredApps.filter(a => !a.job_opening_id);
-            if (spontApps.length === 0) return null;
-            return (
-              <div>
-                <div className="px-4 py-2 text-xs font-bold text-white" style={{ background: SNH_GREEN }}>
-                  Candidatures spontanées
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs border-collapse">
-                    <thead>
-                      <tr><Th>N°</Th><Th>Candidat</Th><Th>Poste souhaité</Th><Th>Date dépôt</Th><Th>Statut</Th></tr>
-                    </thead>
-                    <tbody>
-                      {spontApps.slice(0, 5).map((app, i) => (
-                        <tr key={app.id} className={i % 2 === 0 ? '' : 'bg-slate-50/40'}>
-                          <Td center>{i + 1}</Td>
-                          <Td><span className="font-semibold">{app.candidate ? `${app.candidate.first_name} ${app.candidate.last_name}` : '—'}</span></Td>
-                          <Td>{app.desired_position || '—'}</Td>
-                          <Td center>{fmtDate(app.created_at)}</Td>
-                          <Td center><StatusBadge status={app.status} /></Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* 30-day trend chart */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp size={14} style={{ color: SNH_GREEN }} />
-              <span className="text-sm font-semibold text-slate-800">Évolution des candidatures (30 derniers jours)</span>
+        {/* By job */}
+        {jobList.length > 0 && (
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <Briefcase size={15} className="text-emerald-700"/> Liste des candidats par offre
             </div>
-            <span className="text-xs text-slate-400">Total : {applications.length}</span>
+            <div className="space-y-1.5">
+              {jobList.map((j,i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-600 flex-1 truncate">{j.title}</span>
+                  <span className="font-semibold text-slate-800 w-8 text-right">{j.count}</span>
+                  <div className="w-32 h-3 rounded-sm bg-slate-100 overflow-hidden">
+                    <div className="h-full rounded-sm" style={{width:`${(j.count/Math.max(...jobList.map(x=>x.count),1))*100}%`,background:G}}/>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <SparkLine values={trend30} />
-          <div className="flex items-center justify-between mt-2 text-xs text-slate-400">
-            <span>J-30</span>
-            <span>Aujourd'hui</span>
+        )}
+
+        {/* Evolution */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <TrendingUp size={15} className="text-emerald-700"/>
+            Évolution des candidatures (30 derniers jours)
+            <span className="text-slate-400 font-normal text-xs ml-1">Total : {days.reduce((s,d)=>s+d.count,0)}</span>
           </div>
-          <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
-            {[
-              { label: 'Candidatures reçues', value: totalApps },
-              { label: 'Candidats présélectionnés', value: applications.filter(a => !['new', 'rejected', 'withdrawn'].includes(a.status)).length },
-              { label: 'Entretiens programmés', value: applications.filter(a => a.status === 'interview').length },
-            ].map(({ label, value }) => (
-              <div key={label} className="text-center">
-                <p className="text-2xl font-bold" style={{ color: SNH_GREEN }}>{value.toLocaleString('fr-FR')}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+          <div className="flex items-end gap-0.5 h-20">
+            {days.map((d,i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                <div className="w-full rounded-sm transition-all"
+                  style={{height:`${Math.max(2,(d.count/maxDay)*64)}px`,background:G,opacity:d.count?1:0.15}}/>
+                {i % 5 === 0 && (
+                  <span className="text-slate-400" style={{fontSize:8}}>{d.label}</span>
+                )}
+                {d.count > 0 && (
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap" style={{fontSize:9}}>
+                    {d.label}: {d.count}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       </div>
     );
-  };
+  }
 
-  // ── REPORT: Candidate Synthesis ────────────────────────────────────────────
-  const renderCandidateSynthesis = () => {
-    const app = selectedApp;
-    if (!app) return (
-      <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-        <Users size={40} className="mx-auto text-slate-300 mb-3" />
-        <p className="text-slate-500 text-sm">Sélectionnez une candidature depuis le tableau de bord</p>
-        <button onClick={() => setReportView('dashboard')} className="mt-3 text-xs font-medium underline text-green-700">
-          Retour au tableau de bord
-        </button>
-      </div>
-    );
+  // ── SYNTHÈSE CANDIDATURE ──────────────────────────────────────────────────────
+  function SyntheseView() {
+    // Group by type (contract type from job opening or status category)
+    const byType: Record<string,{label:string;rows:typeof rows}> = {};
+    for (const r of rows) {
+      const t = r.app.offer_contract_type ?? 'Non précisé';
+      if (!byType[t]) byType[t] = {label:t, rows:[]};
+      byType[t].rows.push(r);
+    }
 
-    const cand = app.candidate;
-    const fullName = cand ? `${cand.first_name} ${cand.last_name}` : '—';
-    const currentIdx = PIPELINE_STEPS.findIndex(s => s.value === app.status);
-    const pct = currentIdx >= 0 ? Math.round(((currentIdx + 1) / PIPELINE_STEPS.length) * 100) : 0;
-    const edu = cand?.candidate_educations?.[0];
-    const events = (app.pipeline_events || []).sort((a, b) => a.created_at.localeCompare(b.created_at));
-    const lastUpdate = events.length > 0 ? events[events.length - 1].created_at : app.created_at;
+    function printSynthese() {
+      const tableRows = rows.map((r,i) => `<tr>
+        <td>${i+1}</td><td>${fullName(r.cand)}</td>
+        <td>${r.app.desired_position ?? r.app.job_opening?.title ?? '—'}</td>
+        <td>${fmt(r.app.created_at)}</td>
+        <td>${topDegree(r.cand)}</td>
+        <td>${expStr(expMonths(r.cand))}</td>
+        <td>${SFR[r.app.status] ?? r.app.status}</td>
+      </tr>`).join('');
+
+      const byTypeRows = Object.values(byType).map(t => `
+        <h2>${t.label} (${t.rows.length})</h2>
+        <table><tr><th>N°</th><th>Candidat</th><th>Poste visé</th><th>Date dépôt</th><th>Statut</th></tr>
+        ${t.rows.map((r,i) => `<tr><td>${i+1}</td><td>${fullName(r.cand)}</td><td>${r.app.desired_position??r.app.job_opening?.title??'—'}</td><td>${fmt(r.app.created_at)}</td><td>${SFR[r.app.status]??r.app.status}</td></tr>`).join('')}
+        </table>`).join('');
+
+      const period = (fFrom || fTo) ? `Période : ${fFrom ? fmt(fFrom) : '—'} → ${fTo ? fmt(fTo) : '—'}` : '';
+      printHtml(`
+        ${period ? `<p style="margin-bottom:10px">${period}</p>` : ''}
+        <h2>Récapitulatif des candidatures (${rows.length})</h2>
+        <table><tr><th>N°</th><th>Candidat</th><th>Poste visé</th><th>Date dépôt</th><th>Diplôme</th><th>Expérience</th><th>Statut</th></tr>
+        ${tableRows}</table>
+        <h2>Répartition par type de candidature</h2>
+        ${byTypeRows}
+      `, 'Synthèse des Candidatures');
+    }
 
     return (
-      <div className="space-y-5">
-        {/* Header */}
-        <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm">
-          <div className="p-4 text-white" style={{ background: `linear-gradient(135deg, ${SNH_GREEN} 0%, ${SNH_DARK} 100%)` }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-green-200 text-xs font-medium uppercase tracking-widest">
-                <BarChart3 size={12} /> Synthèse / Évolution sur une candidature précise
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => printCandidateSynthesis(app)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white text-xs hover:bg-white/20 transition">
-                  <Printer size={12} /> Imprimer
-                </button>
-                <button onClick={() => { setSelectedAppId(app.id); setReportView('candidate_fiche'); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white text-xs hover:bg-white/20 transition">
-                  <FileText size={12} /> Fiche candidat
-                </button>
-              </div>
-            </div>
-          </div>
+      <div className="space-y-4">
+        <FilterBar/>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-slate-700">
+            Récapitulatif des candidatures
+            <span className="text-slate-400 font-normal ml-2 text-xs">{rows.length} résultat(s)</span>
+          </span>
+          <button onClick={printSynthese} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg" style={{background:G}}>
+            <Printer size={13}/> Imprimer
+          </button>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <AppTable data={rows}/>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-slate-100 bg-white">
-            {/* Candidate identity */}
-            <div className="p-5 flex items-start gap-4">
-              <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-lg font-bold text-slate-600 flex-shrink-0 border-2 border-white shadow">
-                {cand ? `${cand.first_name[0]}${cand.last_name[0]}`.toUpperCase() : '?'}
-              </div>
-              <div>
-                <p className="font-bold text-slate-900 text-base">{fullName}</p>
-                <p className="text-xs text-slate-400 mt-0.5">Candidat(e)</p>
-                <div className="mt-2 space-y-1">
-                  {[
-                    { label: 'Date de dépôt', value: fmtDate(app.created_at) },
-                    { label: 'Offre', value: app.job_opening?.title || app.desired_position || 'Spontanée' },
-                    { label: 'Statut actuel', value: STATUS_FR[app.status] ?? app.status },
-                    { label: 'Phase actuelle', value: PIPELINE_STEPS.find(s => s.value === app.status)?.label ?? app.status },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-start gap-2 text-xs">
-                      <span className="text-slate-400 w-24 flex-shrink-0">{label} :</span>
-                      <span className="font-semibold text-slate-700">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* KPIs */}
-            <div className="p-5 grid grid-cols-2 gap-3">
-              {[
-                { label: 'Phase actuelle', value: PIPELINE_STEPS.find(s => s.value === app.status)?.short ?? app.status, color: STATUS_COLOR[app.status] ?? SNH_GREEN },
-                { label: 'Étapes validées', value: `${Math.max(0, currentIdx)} / ${PIPELINE_STEPS.length}`, color: '#0d9488' },
-                { label: 'Taux d\'avancement', value: `${pct}%`, color: SNH_GREEN },
-                { label: 'Dernière mise à jour', value: fmtDate(lastUpdate), color: '#6366f1' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <p className="text-xs text-slate-400 mb-1">{label}</p>
-                  <p className="text-sm font-bold" style={{ color }}>{value}</p>
+        {Object.values(byType).length > 1 && (
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="text-sm font-semibold text-slate-700 mb-3">Répartition par type de candidature</div>
+            <div className="space-y-3">
+              {Object.values(byType).map(t => (
+                <div key={t.label}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-slate-600 font-medium">{t.label}</span>
+                    <span className="text-slate-500">{t.rows.length} candidature(s)</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{width:`${(t.rows.length/rows.length)*100}%`,background:G}}/>
+                  </div>
                 </div>
               ))}
             </div>
-
-            {/* Progress bar */}
-            <div className="p-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Avancement du dossier</p>
-              <div className="h-3 bg-slate-100 rounded-full overflow-hidden mb-3">
-                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: SNH_GREEN }} />
-              </div>
-              <p className="text-xs text-slate-400 text-right mb-3">{pct}% complété</p>
-              <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                {PIPELINE_STEPS.map((s, i) => {
-                  const done = i < currentIdx;
-                  const active = i === currentIdx;
-                  return (
-                    <div key={s.value} className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full flex items-center justify-center text-xs flex-shrink-0"
-                        style={{ background: active ? STATUS_COLOR[s.value] : done ? '#10b981' : '#e5e7eb', color: active || done ? '#fff' : '#9ca3af' }}>
-                        {done ? '✓' : i + 1}
-                      </div>
-                      <span className={`text-xs ${active ? 'font-bold' : done ? 'text-emerald-600' : 'text-slate-400'}`}
-                        style={active ? { color: STATUS_COLOR[s.value] } : {}}>
-                        {s.short}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
-        </div>
+        )}
+      </div>
+    );
+  }
 
-        {/* Timeline */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <History size={14} style={{ color: SNH_GREEN }} />
-            <span className="text-sm font-semibold text-slate-800">Évolution de la candidature</span>
-          </div>
-          {events.length === 0 ? (
-            <p className="text-xs text-slate-400">Aucun événement enregistré</p>
-          ) : (
-            <div className="relative">
-              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-100" />
-              <div className="space-y-3">
-                {events.map((ev, i) => {
-                  const step = PIPELINE_STEPS.find(s => s.value === ev.to_status);
-                  return (
-                    <div key={i} className="flex items-start gap-4 relative">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 z-10 ring-2 ring-white"
-                        style={{ background: STATUS_COLOR[ev.to_status] ?? SNH_GREEN }}>
-                        {i + 1}
-                      </div>
-                      <div className="flex-1 pb-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-slate-800">{step?.label ?? ev.to_status}</span>
-                          <span className="text-xs text-slate-400">{fmtDate(ev.created_at)}</span>
-                        </div>
-                        {ev.notes && <p className="text-xs text-slate-500 mt-1 italic">"{ev.notes}"</p>}
-                      </div>
-                    </div>
-                  );
-                })}
-                {/* Current */}
-                <div className="flex items-start gap-4 relative">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 z-10 ring-2 ring-white animate-pulse"
-                    style={{ background: STATUS_COLOR[app.status] ?? SNH_GREEN }}>
-                    {events.length + 1}
-                  </div>
-                  <div className="flex-1 pb-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold" style={{ color: STATUS_COLOR[app.status] }}>
-                        {PIPELINE_STEPS.find(s => s.value === app.status)?.label ?? app.status} — En cours
-                      </span>
-                      <span className="text-xs text-slate-400">{fmtDate(lastUpdate)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+  // ── ÉTAT DE LA CANDIDATURE ────────────────────────────────────────────────────
+  function EtatView() {
+    function printEtat() {
+      const tableRows = rows.map((r,i) => `<tr>
+        <td>${i+1}</td><td>${fullName(r.cand)}</td>
+        <td>${r.app.desired_position ?? r.app.job_opening?.title ?? '—'}</td>
+        <td>${r.cand.professional_title ?? '—'}</td>
+        <td>${topDegree(r.cand)}</td>
+        <td>${expStr(expMonths(r.cand))}</td>
+        <td>${fmt(r.app.created_at)}</td>
+        <td>${SFR[r.app.status] ?? r.app.status}</td>
+      </tr>`).join('');
+      const jobTitle = fJob !== 'all' ? (jobs.find(j=>j.id===fJob)?.title ?? '') : 'Toutes les offres';
+      const stageTitle = fStage !== 'all' ? (STAGES.find(s=>s.v===fStage)?.l ?? fStage) : 'Toutes les phases';
+      printHtml(`
+        <p><strong>Offre :</strong> ${jobTitle} | <strong>Phase :</strong> ${stageTitle}</p><br/>
+        <table><tr><th>N°</th><th>Candidat</th><th>Poste visé</th><th>Titre professionnel</th><th>Diplôme</th><th>Expérience</th><th>Date dépôt</th><th>Statut</th></tr>
+        ${tableRows}</table>
+      `, "Liste des candidats — État de la candidature");
+    }
 
-        {/* Scores table */}
-        {(app.pipeline_stage_notes || []).length > 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
-              <Award size={14} style={{ color: SNH_GREEN }} />
-              <span className="text-sm font-semibold text-slate-800">Notes & scores par étape</span>
-            </div>
-            <table className="w-full text-xs border-collapse">
+    return (
+      <div className="space-y-4">
+        <FilterBar showStage={true}/>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-slate-700">
+            Liste des candidats
+            <span className="text-slate-400 font-normal ml-2 text-xs">{rows.length} résultat(s)</span>
+          </span>
+          <button onClick={printEtat} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg" style={{background:G}}>
+            <Printer size={13}/> Imprimer
+          </button>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
               <thead>
-                <tr><Th>Phase</Th><Th>Score</Th><Th>Évaluateur</Th><Th>Décision</Th><Th>Observations</Th></tr>
+                <tr style={{background:GD}}>
+                  {['N°','Candidat','Poste visé','Titre','Diplôme','Expérience','Date dépôt','Statut'].map(h=>(
+                    <th key={h} className="px-3 py-2 text-left text-white font-semibold whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
               </thead>
               <tbody>
-                {(app.pipeline_stage_notes || []).map((n, i) => (
-                  <tr key={i} className={i % 2 === 0 ? '' : 'bg-slate-50/40'}>
-                    <Td>{PIPELINE_STEPS.find(s => s.value === n.stage)?.label ?? n.stage}</Td>
-                    <Td center>{n.score != null ? `${n.score}${n.score_max ? `/${n.score_max}` : ''}` : '—'}</Td>
-                    <Td>{n.evaluator_name ?? '—'}</Td>
-                    <Td center>
-                      {n.passed === true ? <span className="text-emerald-600 font-bold">Admis</span>
-                        : n.passed === false ? <span className="text-red-500 font-bold">Non admis</span>
-                        : <span className="text-slate-400">—</span>}
-                    </Td>
-                    <Td>{n.notes ?? '—'}</Td>
+                {rows.length === 0 ? (
+                  <tr><td colSpan={8} className="text-center py-10 text-slate-400">Aucune candidature</td></tr>
+                ) : rows.map(({app,cand},i) => (
+                  <tr key={app.id} className={i%2===0?'bg-white':'bg-slate-50/60'}>
+                    <td className="px-3 py-2 text-slate-500">{i+1}</td>
+                    <td className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">{fullName(cand)}</td>
+                    <td className="px-3 py-2 text-slate-600">{app.desired_position ?? app.job_opening?.title ?? '—'}</td>
+                    <td className="px-3 py-2 text-slate-500">{cand.professional_title ?? '—'}</td>
+                    <td className="px-3 py-2 text-slate-500">{topDegree(cand)}</td>
+                    <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{expStr(expMonths(cand))}</td>
+                    <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{fmt(app.created_at)}</td>
+                    <td className="px-3 py-2"><Badge s={app.status}/></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── RAPPORT DE L'OFFRE ────────────────────────────────────────────────────────
+  function OffreView() {
+    const byStageOffre = STAGES.map(s => ({
+      ...s, count: offreRows.filter(r => r.app.status === s.v).length,
+    }));
+
+    function printOffre() {
+      if (!selJob) return;
+      const stageRows = byStageOffre.map(s =>
+        `<tr><td>${s.l}</td><td style="text-align:right;font-weight:600">${s.count}</td></tr>`
+      ).join('');
+      const candRows = offreRows.map((r,i) => `<tr>
+        <td>${i+1}</td><td>${fullName(r.cand)}</td>
+        <td>${r.cand.professional_title ?? '—'}</td>
+        <td>${topDegree(r.cand)}</td>
+        <td>${expStr(expMonths(r.cand))}</td>
+        <td>${fmt(r.app.created_at)}</td>
+        <td>${SFR[r.app.status] ?? r.app.status}</td>
+      </tr>`).join('');
+      printHtml(`
+        <div style="margin-bottom:16px">
+          <div class="kpi"><span class="kv">${offreRows.length}</span><div class="kl">Candidatures</div></div>
+          <div class="kpi"><span class="kv">${byStageOffre.find(s=>s.v==='integrated')?.count??0}</span><div class="kl">Titularisés</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px">
+          <div>
+            <h2>Répartition par phase</h2>
+            <table><tr><th>Phase</th><th style="text-align:right">Nb.</th></tr>${stageRows}</table>
+          </div>
+          <div>
+            <h2>Liste des candidats</h2>
+            <table><tr><th>N°</th><th>Candidat</th><th>Titre</th><th>Diplôme</th><th>Expérience</th><th>Date dépôt</th><th>Statut</th></tr>
+            ${candRows}</table>
+          </div>
+        </div>
+      `, `Rapport de l'offre — ${selJob.title}`);
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <label className="block text-xs text-slate-500 mb-1">Sélectionner une offre</label>
+          <select value={selJobId} onChange={e => setSelJobId(e.target.value)}
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="">— Choisir une offre —</option>
+            {jobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}
+          </select>
+        </div>
+
+        {selJobId && selJob && (
+          <>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800">{selJob.title}</h3>
+                  <div className="text-xs text-slate-500 mt-0.5 space-x-3">
+                    <span>Statut : {selJob.status}</span>
+                    {selJob.contract_type && <span>Contrat : {selJob.contract_type}</span>}
+                    {selJob.publication_date && <span>Publié le {fmt(selJob.publication_date)}</span>}
+                  </div>
+                </div>
+                <button onClick={printOffre}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white rounded-lg" style={{background:G}}>
+                  <Printer size={13}/> Imprimer
+                </button>
+              </div>
+              <div className="grid grid-cols-4 gap-3 mt-4">
+                {[
+                  { l: 'Candidatures',   v: offreRows.length },
+                  { l: 'En cours',       v: offreRows.filter(r=>!['rejected','withdrawn','integrated'].includes(r.app.status)).length },
+                  { l: 'Refusés',        v: offreRows.filter(r=>r.app.status==='rejected').length },
+                  { l: 'Titularisés',    v: offreRows.filter(r=>r.app.status==='integrated').length },
+                ].map(k => (
+                  <div key={k.l} className="text-center bg-slate-50 rounded-lg p-3">
+                    <div className="text-2xl font-bold text-emerald-700">{k.v}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{k.l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-5 gap-4">
+              <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-4">
+                <div className="text-sm font-semibold text-slate-700 mb-3">Répartition par phase</div>
+                <div className="space-y-1.5">
+                  {byStageOffre.map(s => {
+                    const max = Math.max(...byStageOffre.map(x=>x.count), 1);
+                    return (
+                      <div key={s.v} className="flex items-center gap-2 text-xs">
+                        <span className="w-20 text-right text-slate-500 shrink-0 truncate">{s.s}</span>
+                        <div className="flex-1 h-4 bg-slate-100 rounded-sm relative overflow-hidden">
+                          <div className="h-full rounded-sm" style={{width:`${(s.count/max)*100}%`,background:G}}/>
+                          <span className="absolute right-1 top-0 h-full flex items-center text-xs font-semibold text-slate-700">{s.count}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="col-span-3 bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <AppTable data={offreRows}/>
+              </div>
+            </div>
+          </>
+        )}
+        {!selJobId && (
+          <div className="bg-white rounded-xl border border-slate-200 flex items-center justify-center py-16 text-slate-400 text-sm">
+            Sélectionnez une offre pour afficher son rapport
+          </div>
         )}
       </div>
     );
-  };
+  }
 
-  // ── REPORT: Candidate Fiche ────────────────────────────────────────────────
-  const renderCandidateFiche = () => {
-    const app = selectedApp;
-    if (!app) return null;
-    const cand = app.candidate;
-    const fullName = cand ? `${cand.first_name} ${cand.last_name}` : '—';
-    const edu = cand?.candidate_educations?.[0];
-    const exps = cand?.candidate_experiences ?? [];
-    const events = (app.pipeline_events || []).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  // ── LETTRE D'ENGAGEMENT ───────────────────────────────────────────────────────
+  function LettreView() {
+    const sel = selLettre;
+
+    function printLettre() {
+      if (!sel) return;
+      const { app, cand } = sel;
+      const startDate = app.offer_start_date ? fmtLong(app.offer_start_date) : '_______________';
+      const endDate = app.trial_end_date ? fmtLong(app.trial_end_date) : '_______________';
+      const months = app.trial_period_months ?? '___';
+      const poste = app.desired_position ?? app.job_opening?.title ?? '_______________';
+      const salary = app.offer_salary ? `${app.offer_salary.toLocaleString('fr-FR')} FCFA brut/mois` : '_______________';
+      const edu = (cand.candidate_educations ?? []).map(e =>
+        `<tr><td>${e.degree}</td><td>${e.field_of_study??'—'}</td><td>${e.institution}</td><td>${e.end_date?new Date(e.end_date).getFullYear():'—'}</td></tr>`
+      ).join('');
+      const exp = (cand.candidate_experiences ?? []).map(e =>
+        `<tr><td>${e.company??'—'}</td><td>${e.job_title??'—'}</td><td>${e.start_date?fmt(e.start_date):'—'}</td><td>${e.end_date?fmt(e.end_date):(e.is_current?'Présent':'—')}</td></tr>`
+      ).join('');
+
+      printHtml(`
+        <div style="margin-bottom:20px">
+          <p style="text-align:right;margin-bottom:16px">Douala, le ${fmtLong(new Date().toISOString())}</p>
+          <p><strong>À :</strong> M. / Mme ${fullName(cand)}</p>
+          <p style="margin-top:8px"><strong>Objet : Engagement à l'essai — Poste de ${poste}</strong></p>
+        </div>
+        <p>Monsieur / Madame,</p>
+        <br/>
+        <p>Suite aux épreuves de recrutement et à l'avis favorable du jury de recrutement, nous avons l'honneur de vous informer que vous êtes retenu(e) pour un engagement à l'essai au sein de la Société Nationale des Hydrocarbures (SNH) aux conditions ci-après :</p>
+        <br/>
+        <h2>1. Conditions d'engagement</h2>
+        <table style="width:auto">
+          <tr><td style="padding:4px 12px 4px 0;font-weight:600">Poste</td><td>${poste}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:600">Date de prise de service</td><td>${startDate}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:600">Durée de l'essai</td><td>${months} mois</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:600">Fin de période d'essai</td><td>${endDate}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:600">Rémunération mensuelle brute</td><td>${salary}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:600">Type de contrat</td><td>${app.offer_contract_type ?? '—'}</td></tr>
+        </table>
+        <br/>
+        <p>Durant la période d'essai, vous bénéficierez des avantages accordés au personnel en situation régulière selon les dispositions du statut du personnel de la SNH.</p>
+        <br/>
+        <p>À l'issue de la période d'essai et sous réserve d'un avis favorable de votre hiérarchie, vous serez titularisé(e) dans votre poste.</p>
+        <br/>
+        <p>Nous vous prions de bien vouloir retourner un exemplaire dûment signé de la présente lettre en guise d'acceptation.</p>
+        <br/>
+        <h2>2. Profil du candidat</h2>
+        <table style="width:auto;margin-bottom:8px">
+          <tr><td style="padding:3px 12px 3px 0;font-weight:600">Nom et prénom</td><td>${fullName(cand)}</td></tr>
+          <tr><td style="padding:3px 12px 3px 0;font-weight:600">Date de naissance</td><td>${fmtLong(cand.birth_date)}</td></tr>
+          <tr><td style="padding:3px 12px 3px 0;font-weight:600">Nationalité</td><td>${cand.nationality ?? '—'}</td></tr>
+          <tr><td style="padding:3px 12px 3px 0;font-weight:600">Email</td><td>${cand.email}</td></tr>
+        </table>
+        ${edu ? `<h2>3. Formation</h2><table><tr><th>Diplôme</th><th>Spécialité</th><th>Établissement</th><th>Année</th></tr>${edu}</table>` : ''}
+        ${exp ? `<h2>4. Expériences professionnelles</h2><table><tr><th>Entreprise</th><th>Poste</th><th>Début</th><th>Fin</th></tr>${exp}</table>` : ''}
+        <div class="sig">
+          <div><div class="line">La Direction des Ressources Humaines<br/>SNH</div></div>
+          <div><div class="line">Lu et approuvé — ${fullName(cand)}</div></div>
+        </div>
+      `, `Lettre d'engagement à l'essai — ${fullName(cand)}`);
+    }
 
     return (
-      <div className="space-y-5">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 flex items-center justify-between text-white" style={{ background: `linear-gradient(135deg, ${SNH_GREEN} 0%, ${SNH_DARK} 100%)` }}>
-            <div className="flex items-center gap-2">
-              <User size={16} />
-              <span className="font-bold">État de la candidature — {fullName}</span>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => printCandidateFiche(app)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white text-xs hover:bg-white/20 transition">
-                <Printer size={12} /> Imprimer
-              </button>
-              <button onClick={() => setReportView('engagement_letter')}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white text-xs hover:bg-white/20 transition">
-                <FileText size={12} /> Lettre d'engagement
-              </button>
-            </div>
-          </div>
+      <div className="space-y-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <label className="block text-xs text-slate-500 mb-1">Sélectionner un candidat (phase Essai / Affectation / Titularisé)</label>
+          <select value={selAppId} onChange={e => setSelAppId(e.target.value)}
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="">— Choisir un candidat —</option>
+            {trialRows.map(({app,cand}) => (
+              <option key={app.id} value={app.id}>
+                {fullName(cand)} — {app.job_opening?.title ?? app.desired_position ?? 'Poste non précisé'} ({SFR[app.status]})
+              </option>
+            ))}
+          </select>
+          {trialRows.length === 0 && (
+            <p className="text-xs text-slate-400 mt-2">Aucun candidat en phase Essai, Affectation ou Titularisation.</p>
+          )}
+        </div>
 
-          <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Identity */}
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: SNH_GREEN }}>Identité du candidat</h2>
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-xl font-bold text-slate-500 border border-slate-200 flex-shrink-0">
-                  {cand ? `${cand.first_name[0]}${cand.last_name[0]}`.toUpperCase() : '?'}
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 flex-1">
-                  {[
-                    { label: 'NOM', value: cand?.last_name ?? '—' },
-                    { label: 'Prénoms', value: cand?.first_name ?? '—' },
-                    { label: 'Date de naissance', value: cand?.birth_date ? fmtDate(cand.birth_date) : '—' },
-                    { label: 'Lieu de résidence', value: cand?.location ?? '—' },
-                    { label: 'Diplôme', value: edu?.degree ?? '—' },
-                    { label: 'École', value: edu?.institution ?? '—' },
-                    { label: 'Domaine', value: edu?.field_of_study ?? '—' },
-                    { label: 'Expérience', value: (() => { const m = exps.reduce((s, e) => s + (e.duration_months || 0), 0); return m > 0 ? `${Math.round(m / 12)} an(s)` : '—'; })() },
-                  ].map(({ label, value }) => (
-                    <div key={label}>
-                      <span className="text-xs text-slate-400">{label} : </span>
-                      <span className="text-xs font-semibold text-slate-800">{value}</span>
+        {sel && (
+          <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-bold text-slate-800 text-base">{fullName(sel.cand)}</h3>
+                <p className="text-sm text-slate-500">{sel.cand.professional_title ?? sel.app.desired_position ?? '—'}</p>
+                <Badge s={sel.app.status}/>
+              </div>
+              <button onClick={printLettre}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm text-white rounded-lg font-medium"
+                style={{background:G}}>
+                <Printer size={14}/> Générer la lettre
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Informations personnelles</div>
+                {[
+                  ['Naissance', fmtLong(sel.cand.birth_date)],
+                  ['Nationalité', sel.cand.nationality ?? '—'],
+                  ['Email', sel.cand.email],
+                  ['Téléphone', sel.cand.phone ?? '—'],
+                  ['Localisation', sel.cand.location ?? '—'],
+                ].map(([l,v]) => (
+                  <div key={l as string} className="flex gap-2">
+                    <span className="text-slate-400 w-24 shrink-0">{l}</span>
+                    <span className="text-slate-700 font-medium">{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Conditions d'engagement</div>
+                {[
+                  ['Poste',         sel.app.desired_position ?? sel.app.job_opening?.title ?? '—'],
+                  ['Prise de service', fmtLong(sel.app.offer_start_date)],
+                  ['Durée essai',   sel.app.trial_period_months ? `${sel.app.trial_period_months} mois` : '—'],
+                  ['Fin essai',     fmtLong(sel.app.trial_end_date)],
+                  ['Salaire brut',  sel.app.offer_salary ? `${sel.app.offer_salary.toLocaleString('fr-FR')} FCFA` : '—'],
+                  ['Type contrat',  sel.app.offer_contract_type ?? '—'],
+                ].map(([l,v]) => (
+                  <div key={l as string} className="flex gap-2">
+                    <span className="text-slate-400 w-28 shrink-0">{l}</span>
+                    <span className="text-slate-700 font-medium">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {(sel.cand.candidate_educations?.length ?? 0) > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Formation</div>
+                <div className="space-y-1">
+                  {sel.cand.candidate_educations!.map((e,i) => (
+                    <div key={i} className="text-sm text-slate-600">
+                      <span className="font-medium">{e.degree}</span>
+                      {e.field_of_study && <span className="text-slate-400"> — {e.field_of_study}</span>}
+                      <span className="text-slate-400"> · {e.institution}</span>
+                      {e.end_date && <span className="text-slate-400"> ({new Date(e.end_date).getFullYear()})</span>}
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-
-            {/* Evolution table */}
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: SNH_GREEN }}>Évolution de la candidature</h2>
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr><Th>Phase</Th><Th>Statut</Th><Th>Date</Th><Th>Observations</Th></tr>
-                </thead>
-                <tbody>
-                  {events.map((ev, i) => {
-                    const note = (app.pipeline_stage_notes || []).find(n => n.stage === ev.to_status);
-                    return (
-                      <tr key={i} className={i % 2 === 0 ? '' : 'bg-slate-50/40'}>
-                        <Td>{PIPELINE_STEPS.find(s => s.value === ev.to_status)?.short ?? ev.to_status}</Td>
-                        <Td center>
-                          {note?.passed === true ? <span className="text-emerald-600 font-bold text-xs">Validé</span>
-                            : note?.passed === false ? <span className="text-red-500 font-bold text-xs">Échec</span>
-                            : <span className="text-slate-400">—</span>}
-                        </Td>
-                        <Td center>{fmtDate(ev.created_at)}</Td>
-                        <Td>{note?.notes ?? ev.notes ?? '—'}</Td>
-                      </tr>
-                    );
-                  })}
-                  {events.length === 0 && (
-                    <tr><td colSpan={4} className="text-center py-4 text-slate-400 text-xs">Aucun événement</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            )}
           </div>
+        )}
 
-          {/* Experiences */}
-          {exps.length > 0 && (
-            <div className="px-5 pb-5">
-              <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: SNH_GREEN }}>Expériences / Stages professionnels</h2>
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr><Th>N°</Th><Th>Structure</Th><Th>Poste</Th><Th>Durée</Th></tr>
-                </thead>
-                <tbody>
-                  {exps.map((exp, i) => (
-                    <tr key={i} className={i % 2 === 0 ? '' : 'bg-slate-50/40'}>
-                      <Td center>{i + 1}</Td>
-                      <Td>{exp.company ?? '—'}</Td>
-                      <Td>{exp.position ?? '—'}</Td>
-                      <Td center>{exp.duration_months ? `${exp.duration_months} mois` : '—'}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Pièces jointes */}
-          <div className="px-5 pb-5">
-            <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: SNH_GREEN }}>Pièces jointes</h2>
-            <div className="space-y-2">
-              {[
-                { label: 'CV', icon: FileText },
-                { label: 'Lettre de motivation', icon: BookOpen },
-              ].map(({ label, icon: Icon }) => (
-                <div key={label} className="flex items-center gap-2 p-2 border border-slate-100 rounded-lg bg-slate-50 text-xs text-slate-600">
-                  <Icon size={13} className="text-red-400" />
-                  {label}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // ── REPORT: Offer Report ──────────────────────────────────────────────────
-  const renderOfferReport = () => {
-    const job = selectedJob ?? jobs[0] ?? null;
-    const jobApps = job ? applications.filter(a => a.job_opening_id === job.id) : [];
-    const phaseBreakdown = PIPELINE_STEPS.map(s => ({
-      phase: s.label,
-      count: jobApps.filter(a => a.status === s.value).length,
-    })).filter(p => p.count > 0);
-
-    return (
-      <div className="space-y-5">
-        {/* Job selector */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3">
-          <Briefcase size={16} style={{ color: SNH_GREEN }} />
-          <span className="text-sm font-semibold text-slate-700">Offre sélectionnée :</span>
-          <select value={selectedJobId ?? ''} onChange={e => setSelectedJobId(e.target.value || null)}
-            className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30">
-            <option value="">— Sélectionner une offre —</option>
-            {jobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}
-          </select>
-          {job && (
-            <button onClick={() => printOfferReport(job, jobApps, phaseBreakdown)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white transition"
-              style={{ background: SNH_GREEN }}>
-              <Printer size={14} /> Imprimer
-            </button>
-          )}
-        </div>
-
-        {!job ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-            <Briefcase size={40} className="mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-500 text-sm">Sélectionnez une offre pour afficher son rapport</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Offer info */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 text-white font-bold text-sm" style={{ background: SNH_GREEN }}>
-                Rapport de l'offre
-              </div>
-              <div className="p-4 space-y-3">
-                {[
-                  { label: 'NOM', value: job.title },
-                  { label: 'Ref Note', value: `N° — du ${fmtDateLong(job.publication_date ?? new Date().toISOString())}` },
-                  { label: 'Nbre de candidatures reçues', value: jobApps.length.toString() },
-                  { label: 'Contrat', value: job.contract_type ?? '—' },
-                  { label: 'Clôture', value: fmtDate(job.closing_date) },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-start gap-3">
-                    <span className="text-xs font-semibold text-slate-500 w-40 flex-shrink-0">{label}</span>
-                    <span className="text-xs font-bold text-slate-900">{value}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="px-4 pb-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider mb-3 mt-2" style={{ color: SNH_GREEN }}>Évolution de l'étude de dossier</h3>
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr><Th>Phase</Th><Th>Nbre de candidats</Th><Th>Observations</Th></tr>
-                  </thead>
-                  <tbody>
-                    {phaseBreakdown.map((p, i) => (
-                      <tr key={i} className={i % 2 === 0 ? '' : 'bg-slate-50/40'}>
-                        <Td>{p.phase}</Td>
-                        <Td center>{p.count}</Td>
-                        <Td>—</Td>
-                      </tr>
-                    ))}
-                    {phaseBreakdown.length === 0 && (
-                      <tr><td colSpan={3} className="py-4 text-center text-xs text-slate-400">Aucune donnée</td></tr>
-                    )}
-                  </tbody>
-                </table>
-                <p className="text-xs text-slate-400 mt-3 italic">
-                  Annexes : Liste des candidats par phase avec les observations et les notes
-                </p>
-              </div>
-            </div>
-
-            {/* Candidate list for this offer */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 text-white font-bold text-sm" style={{ background: SNH_GREEN }}>
-                Candidats — {job.title}
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr><Th>N°</Th><Th>Candidat</Th><Th>Date dépôt</Th><Th>Diplôme</Th><Th>Exp.</Th><Th>Phase</Th></tr>
-                  </thead>
-                  <tbody>
-                    {jobApps.map((app, i) => {
-                      const edu = app.candidate?.candidate_educations?.[0];
-                      const expM = (app.candidate?.candidate_experiences || []).reduce((s, e) => s + (e.duration_months || 0), 0);
-                      return (
-                        <tr key={app.id} className={`cursor-pointer hover:bg-slate-50 ${i % 2 === 0 ? '' : 'bg-slate-50/40'}`}
-                          onClick={() => { setSelectedAppId(app.id); setReportView('candidate_synthesis'); }}>
-                          <Td center>{i + 1}</Td>
-                          <Td><span className="font-semibold">{app.candidate ? `${app.candidate.first_name} ${app.candidate.last_name}` : '—'}</span></Td>
-                          <Td center>{fmtDate(app.created_at)}</Td>
-                          <Td>{edu?.degree ?? '—'}</Td>
-                          <Td center>{expM > 0 ? `${Math.round(expM / 12)}a` : '—'}</Td>
-                          <Td center><StatusBadge status={app.status} /></Td>
-                        </tr>
-                      );
-                    })}
-                    {jobApps.length === 0 && (
-                      <tr><td colSpan={6} className="py-4 text-center text-xs text-slate-400">Aucune candidature</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+        {!selAppId && (
+          <div className="bg-white rounded-xl border border-slate-200 flex items-center justify-center py-16 text-slate-400 text-sm">
+            Sélectionnez un candidat pour prévisualiser et générer la lettre
           </div>
         )}
       </div>
     );
+  }
+
+  // ── Layout ────────────────────────────────────────────────────────────────────
+  const ICONS: Record<View, React.ReactNode> = {
+    dashboard: <BarChart3 size={15}/>,
+    synthese:  <TrendingUp size={15}/>,
+    etat:      <Users size={15}/>,
+    offre:     <Briefcase size={15}/>,
+    lettre:    <FileText size={15}/>,
   };
-
-  // ── REPORT: Engagement Letter ──────────────────────────────────────────────
-  const renderEngagementLetter = () => {
-    const app = selectedApp;
-    const cand = app?.candidate;
-    const fullName = cand ? `${cand.first_name} ${cand.last_name}` : '[NOM PRÉNOM]';
-    const poste = app?.desired_position || app?.job_opening?.title || '[POSTE]';
-    const today = new Date();
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() + 30);
-
-    return (
-      <div className="space-y-5">
-        {/* Selector */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3">
-          <FileText size={16} style={{ color: SNH_GREEN }} />
-          <span className="text-sm font-semibold text-slate-700">Candidat :</span>
-          <select value={selectedAppId ?? ''} onChange={e => setSelectedAppId(e.target.value || null)}
-            className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30">
-            <option value="">— Sélectionner un candidat —</option>
-            {applications.filter(a => a.status === 'trial' || a.status === 'assignment' || a.status === 'integrated')
-              .map(a => (
-                <option key={a.id} value={a.id}>
-                  {a.candidate ? `${a.candidate.first_name} ${a.candidate.last_name}` : a.id} — {STATUS_FR[a.status]}
-                </option>
-              ))}
-          </select>
-          <button onClick={() => printEngagementLetter(fullName, poste, startDate)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white transition"
-            style={{ background: SNH_GREEN }}>
-            <Download size={14} /> Générer Word / PDF
-          </button>
-        </div>
-
-        {/* Letter preview */}
-        <div className="bg-white rounded-xl border-2 border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2 bg-slate-50">
-            <div className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold" style={{ background: '#2563eb' }}>W</div>
-            <span className="text-sm font-semibold text-slate-700">Génération de la Lettre d'Engagement à l'Essai</span>
-          </div>
-          <div className="p-8 max-w-2xl mx-auto">
-            <div className="text-center mb-6">
-              <div className="flex items-center justify-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded flex items-center justify-center text-white font-bold text-lg flex-shrink-0" style={{ background: SNH_GREEN }}>S</div>
-                <div className="text-left">
-                  <p className="font-bold text-slate-800 text-sm">SOCIÉTÉ NATIONALE DES HYDROCARBURES</p>
-                  <p className="text-xs text-slate-400">(SNH)</p>
-                </div>
-              </div>
-              <h2 className="text-base font-bold text-slate-900 mt-4">LETTRE D'ENGAGEMENT À L'ESSAI</h2>
-            </div>
-
-            <p className="text-sm text-slate-700 mb-4">Madame, Monsieur <strong>{fullName}</strong>,</p>
-
-            <p className="text-sm text-slate-700 mb-3 leading-relaxed">
-              Nous avons le plaisir de vous informer que, suite à votre candidature et aux différentes étapes du
-              processus de recrutement, vous êtes retenu(e) pour le poste de{' '}
-              <strong>{poste}</strong> au sein de la Société Nationale des Hydrocarbures.
-            </p>
-
-            <p className="text-sm text-slate-700 mb-3 leading-relaxed">
-              Vous êtes engagé(e) à titre d'essai pour une durée de <strong>trois (03) mois</strong> à compter du{' '}
-              <strong>{fmtDateLong(startDate.toISOString())}</strong>, conformément aux dispositions du Code du travail en vigueur.
-            </p>
-
-            <p className="text-sm text-slate-700 mb-3 leading-relaxed">
-              Durant cette période, vos compétences professionnelles et votre intégration au sein de notre équipe
-              seront évaluées.
-            </p>
-
-            <p className="text-sm text-slate-700 mb-6 leading-relaxed">
-              Nous vous prions de bien vouloir nous faire parvenir les pièces nécessaires à la constitution de votre
-              dossier administratif.
-            </p>
-
-            <p className="text-sm text-slate-700 mb-8">Nous vous souhaitons la bienvenue au sein de la SNH.</p>
-
-            <div className="grid grid-cols-2 gap-8 mt-8 pt-6 border-t border-slate-100">
-              <div className="text-center">
-                <p className="text-xs text-slate-500 mb-1">Yaoundé, le {fmtDateLong(today.toISOString())}</p>
-                <p className="text-xs font-semibold text-slate-700 mt-4">Le Directeur des Ressources Humaines</p>
-                <div className="mt-6 border-t border-slate-300 pt-1">
-                  <p className="text-xs text-slate-400">Signature</p>
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-slate-500 mb-1">Lu et approuvé</p>
-                <p className="text-xs font-semibold text-slate-700 mt-4">{fullName}</p>
-                <div className="mt-6 border-t border-slate-300 pt-1">
-                  <p className="text-xs text-slate-400">Signature du candidat</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // ── Print functions ──────────────────────────────────────────────────────────
-  const printDashboard = (apps: AppRow[]) => {
-    const rows = apps.slice(0, 50).map((app, i) => {
-      const edu = app.candidate?.candidate_educations?.[0];
-      const expM = (app.candidate?.candidate_experiences || []).reduce((s, e) => s + (e.duration_months || 0), 0);
-      const name = app.candidate ? `${app.candidate.first_name} ${app.candidate.last_name}` : '—';
-      return `<tr>
-        <td style="text-align:center">${i + 1}</td>
-        <td>${name}</td>
-        <td>${app.desired_position || app.job_opening?.title || '—'}</td>
-        <td style="text-align:center">${fmtDate(app.created_at)}</td>
-        <td>${edu?.degree ?? '—'}</td>
-        <td style="text-align:center">${expM > 0 ? `${Math.round(expM / 12)} an(s)` : '—'}</td>
-        <td style="text-align:center">${STATUS_FR[app.status] ?? app.status}</td>
-      </tr>`;
-    }).join('');
-
-    printElement(`
-      <div class="logo-bar">
-        <div class="logo-box">S</div>
-        <div>
-          <h1>Tableaux de Bord — Candidatures</h1>
-          <p class="subtitle">Société Nationale des Hydrocarbures du Cameroun</p>
-        </div>
-      </div>
-      <h2>Récapitulatif des candidatures (${apps.length} résultat(s))</h2>
-      <table>
-        <thead><tr><th>N°</th><th>Candidat</th><th>Poste visé</th><th>Date dépôt</th><th>Diplôme</th><th>Expérience</th><th>Statut</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `, 'Tableau de Bord — Candidatures SNH');
-  };
-
-  const printCandidateSynthesis = (app: AppRow) => {
-    const cand = app.candidate;
-    const fullName = cand ? `${cand.first_name} ${cand.last_name}` : '—';
-    const currentIdx = PIPELINE_STEPS.findIndex(s => s.value === app.status);
-    const pct = currentIdx >= 0 ? Math.round(((currentIdx + 1) / PIPELINE_STEPS.length) * 100) : 0;
-    const events = (app.pipeline_events || []).sort((a, b) => a.created_at.localeCompare(b.created_at));
-
-    const evRows = events.map((ev, i) => `<tr>
-      <td>${i + 1}</td>
-      <td>${PIPELINE_STEPS.find(s => s.value === ev.to_status)?.label ?? ev.to_status}</td>
-      <td style="text-align:center">${fmtDate(ev.created_at)}</td>
-      <td>${ev.notes ?? '—'}</td>
-    </tr>`).join('');
-
-    printElement(`
-      <div class="logo-bar">
-        <div class="logo-box">S</div>
-        <div>
-          <h1>Synthèse — ${fullName}</h1>
-          <p class="subtitle">Société Nationale des Hydrocarbures du Cameroun</p>
-        </div>
-      </div>
-      <div class="section">
-        <div class="meta">
-          <div class="meta-item"><label>Candidat(e)</label><span>${fullName}</span></div>
-          <div class="meta-item"><label>Poste visé</label><span>${app.desired_position || app.job_opening?.title || '—'}</span></div>
-          <div class="meta-item"><label>Date de dépôt</label><span>${fmtDate(app.created_at)}</span></div>
-          <div class="meta-item"><label>Phase actuelle</label><span>${STATUS_FR[app.status] ?? app.status}</span></div>
-          <div class="meta-item"><label>Taux d'avancement</label><span>${pct}%</span></div>
-          <div class="meta-item"><label>Étapes validées</label><span>${Math.max(0, currentIdx)} / ${PIPELINE_STEPS.length}</span></div>
-        </div>
-      </div>
-      <h2>Évolution de la candidature</h2>
-      <table>
-        <thead><tr><th>N°</th><th>Phase</th><th>Date</th><th>Observations</th></tr></thead>
-        <tbody>${evRows}</tbody>
-      </table>
-    `, `Synthèse candidature — ${fullName}`);
-  };
-
-  const printCandidateFiche = (app: AppRow) => {
-    const cand = app.candidate;
-    const fullName = cand ? `${cand.first_name} ${cand.last_name}` : '—';
-    const edu = cand?.candidate_educations?.[0];
-    const exps = cand?.candidate_experiences ?? [];
-    const events = (app.pipeline_events || []).sort((a, b) => a.created_at.localeCompare(b.created_at));
-
-    const expRows = exps.map((e, i) => `<tr>
-      <td style="text-align:center">${i + 1}</td><td>${e.company ?? '—'}</td>
-      <td>${e.position ?? '—'}</td><td style="text-align:center">${e.duration_months ? `${e.duration_months} mois` : '—'}</td>
-    </tr>`).join('');
-
-    const evRows = events.map((ev, i) => {
-      const note = (app.pipeline_stage_notes || []).find(n => n.stage === ev.to_status);
-      return `<tr>
-        <td>${PIPELINE_STEPS.find(s => s.value === ev.to_status)?.short ?? ev.to_status}</td>
-        <td style="text-align:center">${note?.passed === true ? 'Validé' : note?.passed === false ? 'Échec' : '—'}</td>
-        <td style="text-align:center">${fmtDate(ev.created_at)}</td>
-        <td>${note?.notes ?? ev.notes ?? '—'}</td>
-      </tr>`;
-    }).join('');
-
-    printElement(`
-      <div class="logo-bar">
-        <div class="logo-box">S</div>
-        <div>
-          <h1>État de la Candidature — ${fullName}</h1>
-          <p class="subtitle">Société Nationale des Hydrocarbures du Cameroun</p>
-        </div>
-      </div>
-      <div class="section">
-        <div class="meta">
-          <div class="meta-item"><label>NOM</label><span>${cand?.last_name ?? '—'}</span></div>
-          <div class="meta-item"><label>Prénoms</label><span>${cand?.first_name ?? '—'}</span></div>
-          <div class="meta-item"><label>Date de naissance</label><span>${cand?.birth_date ? fmtDate(cand.birth_date) : '—'}</span></div>
-          <div class="meta-item"><label>Lieu de résidence</label><span>${cand?.location ?? '—'}</span></div>
-          <div class="meta-item"><label>Diplôme</label><span>${edu?.degree ?? '—'}</span></div>
-          <div class="meta-item"><label>École</label><span>${edu?.institution ?? '—'}</span></div>
-          <div class="meta-item"><label>Domaine</label><span>${edu?.field_of_study ?? '—'}</span></div>
-          <div class="meta-item"><label>Expérience</label><span>${(() => { const m = exps.reduce((s, e) => s + (e.duration_months || 0), 0); return m > 0 ? `${Math.round(m / 12)} an(s)` : '—'; })()}</span></div>
-        </div>
-      </div>
-      ${exps.length > 0 ? `
-      <h2>Expériences / Stages professionnels</h2>
-      <table>
-        <thead><tr><th>N°</th><th>Structure</th><th>Poste</th><th>Durée</th></tr></thead>
-        <tbody>${expRows}</tbody>
-      </table>` : ''}
-      <h2>Évolution de la candidature</h2>
-      <table>
-        <thead><tr><th>Phase</th><th>Statut</th><th>Date</th><th>Observations</th></tr></thead>
-        <tbody>${evRows}</tbody>
-      </table>
-    `, `État candidature — ${fullName}`);
-  };
-
-  const printOfferReport = (job: JobOpening, apps: AppRow[], phaseBreakdown: { phase: string; count: number }[]) => {
-    const phaseRows = phaseBreakdown.map(p => `<tr><td>${p.phase}</td><td style="text-align:center">${p.count}</td><td>—</td></tr>`).join('');
-    const appRows = apps.slice(0, 50).map((app, i) => {
-      const edu = app.candidate?.candidate_educations?.[0];
-      const expM = (app.candidate?.candidate_experiences || []).reduce((s, e) => s + (e.duration_months || 0), 0);
-      return `<tr>
-        <td style="text-align:center">${i + 1}</td>
-        <td>${app.candidate ? `${app.candidate.first_name} ${app.candidate.last_name}` : '—'}</td>
-        <td style="text-align:center">${fmtDate(app.created_at)}</td>
-        <td>${edu?.degree ?? '—'}</td>
-        <td style="text-align:center">${expM > 0 ? `${Math.round(expM / 12)}a` : '—'}</td>
-        <td style="text-align:center">${STATUS_FR[app.status] ?? app.status}</td>
-      </tr>`;
-    }).join('');
-
-    printElement(`
-      <div class="logo-bar">
-        <div class="logo-box">S</div>
-        <div>
-          <h1>Rapport de l'Offre — ${job.title}</h1>
-          <p class="subtitle">Société Nationale des Hydrocarbures du Cameroun</p>
-        </div>
-      </div>
-      <div class="section">
-        <div class="meta">
-          <div class="meta-item"><label>NOM</label><span>${job.title}</span></div>
-          <div class="meta-item"><label>Contrat</label><span>${job.contract_type ?? '—'}</span></div>
-          <div class="meta-item"><label>Nbre de candidatures reçues</label><span>${apps.length}</span></div>
-          <div class="meta-item"><label>Clôture</label><span>${fmtDate(job.closing_date)}</span></div>
-        </div>
-      </div>
-      <h2>Évolution de l'étude de dossier</h2>
-      <table>
-        <thead><tr><th>Phase</th><th>Nombre de candidats</th><th>Observations</th></tr></thead>
-        <tbody>${phaseRows}</tbody>
-      </table>
-      <h2>Liste des candidats</h2>
-      <table>
-        <thead><tr><th>N°</th><th>Candidat</th><th>Date dépôt</th><th>Diplôme</th><th>Exp.</th><th>Phase</th></tr></thead>
-        <tbody>${appRows}</tbody>
-      </table>
-      <p style="font-size:10px;color:#9ca3af;margin-top:8px;font-style:italic;">
-        Annexes : Liste des candidats par phase avec les observations et les notes
-      </p>
-    `, `Rapport offre — ${job.title}`);
-  };
-
-  const printEngagementLetter = (fullName: string, poste: string, startDate: Date) => {
-    printElement(`
-      <div style="text-align:center;margin-bottom:24px;">
-        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px;">
-          <div class="logo-box">S</div>
-          <div style="text-align:left">
-            <strong>SOCIÉTÉ NATIONALE DES HYDROCARBURES</strong><br>
-            <span style="font-size:10px;color:#6b7280;">(SNH)</span>
-          </div>
-        </div>
-        <h2 style="font-size:14px;margin-top:16px;">LETTRE D'ENGAGEMENT À L'ESSAI</h2>
-      </div>
-      <p style="margin-bottom:12px;">Madame, Monsieur <strong>${fullName}</strong>,</p>
-      <p style="margin-bottom:12px;line-height:1.6;">
-        Nous avons le plaisir de vous informer que, suite à votre candidature et aux différentes étapes du processus
-        de recrutement, vous êtes retenu(e) pour le poste de <strong>${poste}</strong>.
-      </p>
-      <p style="margin-bottom:12px;line-height:1.6;">
-        Vous êtes engagé(e) à titre d'essai pour une durée de <strong>trois (03) mois</strong> à compter du
-        <strong>${fmtDateLong(startDate.toISOString())}</strong>, conformément aux dispositions du Code du travail en vigueur.
-      </p>
-      <p style="margin-bottom:12px;line-height:1.6;">
-        Durant cette période, vos compétences professionnelles et votre intégration au sein de notre équipe seront évaluées.
-      </p>
-      <p style="margin-bottom:12px;line-height:1.6;">
-        Nous vous prions de bien vouloir nous faire parvenir les pièces nécessaires à la constitution de votre dossier administratif.
-      </p>
-      <p style="margin-bottom:32px;">Nous vous souhaitons la bienvenue au sein de la SNH.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;border-top:1px solid #e5e7eb;padding-top:16px;">
-        <div style="text-align:center;">
-          <p style="font-size:11px;color:#6b7280;">Yaoundé, le ${fmtDateLong(new Date().toISOString())}</p>
-          <p style="margin-top:12px;font-weight:600;font-size:11px;">Le Directeur des Ressources Humaines</p>
-          <div style="margin-top:40px;border-top:1px solid #9ca3af;padding-top:4px;font-size:10px;color:#9ca3af;">Signature</div>
-        </div>
-        <div style="text-align:center;">
-          <p style="font-size:11px;color:#6b7280;">Lu et approuvé</p>
-          <p style="margin-top:12px;font-weight:600;font-size:11px;">${fullName}</p>
-          <div style="margin-top:40px;border-top:1px solid #9ca3af;padding-top:4px;font-size:10px;color:#9ca3af;">Signature du candidat</div>
-        </div>
-      </div>
-    `, `Lettre engagement — ${fullName}`);
-  };
-
-  // ── History icon import ────────────────────────────────────────────────────
-  const History = ({ size, style }: { size: number; style?: React.CSSProperties }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
-      <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
-      <path d="M12 7v5l4 2" />
-    </svg>
-  );
-
-  // ── Render ─────────────────────────────────────────────────────────────────
-  const navItems: { id: ReportView; label: string; icon: React.FC<any> }[] = [
-    { id: 'dashboard',           label: 'Tableau de bord',           icon: BarChart3 },
-    { id: 'candidate_synthesis', label: 'Synthèse candidature',      icon: TrendingUp },
-    { id: 'candidate_fiche',     label: 'État de la candidature',    icon: User },
-    { id: 'offer_report',        label: 'Rapport de l\'offre',        icon: Briefcase },
-    { id: 'engagement_letter',   label: 'Lettre d\'engagement',      icon: FileText },
-  ];
 
   return (
-    <div className="flex gap-5 min-h-0">
-      {/* Sidebar nav */}
-      <div className="w-52 flex-shrink-0">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden sticky top-0">
-          <div className="px-3 py-3 border-b border-slate-100" style={{ background: `${SNH_GREEN}08` }}>
-            <div className="flex items-center gap-2">
-              <BarChart3 size={14} style={{ color: SNH_GREEN }} />
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">États & Rapports</span>
-            </div>
-          </div>
-          <div className="p-2 space-y-0.5">
-            {navItems.map(({ id, label, icon: Icon }) => (
-              <button key={id} onClick={() => setReportView(id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-all text-left ${
-                  reportView === id
-                    ? 'text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-                style={reportView === id ? { background: SNH_GREEN } : {}}>
-                <Icon size={13} className="flex-shrink-0" />
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="p-3 border-t border-slate-100">
-            <button onClick={loadData}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg text-xs text-slate-500 hover:bg-slate-50 transition">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
-              Actualiser
-            </button>
+    <div className="flex gap-0 min-h-screen bg-slate-50">
+      {/* Sidebar */}
+      <aside className="w-52 shrink-0 bg-white border-r border-slate-200 flex flex-col py-4">
+        <div className="px-3 mb-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider px-2">
+            <BarChart3 size={13}/> États &amp; Rapports
           </div>
         </div>
-      </div>
+        {NAV.map(n => (
+          <button key={n.v} onClick={() => setView(n.v)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors text-left w-full
+              ${view === n.v ? 'text-white font-semibold' : 'text-slate-600 hover:bg-slate-50'}`}
+            style={view === n.v ? {background:G} : {}}>
+            {ICONS[n.v]} {n.label}
+            {view === n.v && <ChevronRight size={12} className="ml-auto"/>}
+          </button>
+        ))}
+        <div className="mt-auto px-3 pt-4 border-t border-slate-100">
+          <button onClick={() => window.location.reload()}
+            className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-800 px-2 py-1.5">
+            <RefreshCw size={12}/> Actualiser
+          </button>
+        </div>
+      </aside>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        {reportView === 'dashboard' && renderDashboard()}
-        {reportView === 'candidate_synthesis' && renderCandidateSynthesis()}
-        {reportView === 'candidate_fiche' && renderCandidateFiche()}
-        {reportView === 'offer_report' && renderOfferReport()}
-        {reportView === 'engagement_letter' && renderEngagementLetter()}
-      </div>
+      {/* Main */}
+      <main className="flex-1 overflow-auto p-6">
+        {/* Header */}
+        <div className="rounded-2xl text-white p-6 mb-6 flex items-center gap-4"
+          style={{background:`linear-gradient(135deg,${G} 0%,${GD} 100%)`}}>
+          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+            {view === 'dashboard' && <BarChart3 size={24}/>}
+            {view === 'synthese'  && <TrendingUp size={24}/>}
+            {view === 'etat'      && <ClipboardList size={24}/>}
+            {view === 'offre'     && <Briefcase size={24}/>}
+            {view === 'lettre'    && <Award size={24}/>}
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-widest opacity-75 mb-0.5">Société Nationale des Hydrocarbures</div>
+            <h1 className="text-2xl font-bold">
+              {view === 'dashboard' && 'Tableaux de Bord — Candidatures'}
+              {view === 'synthese'  && 'Synthèse des Candidatures'}
+              {view === 'etat'      && 'État de la Candidature'}
+              {view === 'offre'     && "Rapport de l'Offre"}
+              {view === 'lettre'    && "Lettre d'Engagement à l'Essai"}
+            </h1>
+            <p className="text-sm opacity-75 mt-0.5">Des états clairs pour un suivi efficace et des décisions éclairées.</p>
+          </div>
+        </div>
+
+        {view === 'dashboard' && <Dashboard/>}
+        {view === 'synthese'  && <SyntheseView/>}
+        {view === 'etat'      && <EtatView/>}
+        {view === 'offre'     && <OffreView/>}
+        {view === 'lettre'    && <LettreView/>}
+      </main>
     </div>
   );
 }

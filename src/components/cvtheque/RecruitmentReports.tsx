@@ -216,44 +216,83 @@ export default function RecruitmentReports() {
 
   const loadData = async () => {
     setLoading(true);
-    // Split queries to avoid PostgREST FK ambiguity on hiring_pipeline_events
-    // (it has two FKs to parent tables, causing silent join failure)
-    const [appRes, jobRes, eventsRes, notesRes] = await Promise.all([
-      supabase.from('candidate_applications').select(`
-        id, status, created_at, desired_position, cover_letter, job_opening_id,
-        candidate:candidates(
-          id, first_name, last_name, email, phone, birth_date, location, professional_title, summary, photo_url,
-          candidate_educations(degree, field_of_study, institution, end_year),
-          candidate_experiences(company, position, duration_months, start_date, end_date)
+    // Query from `candidates` (same as CandidateManagement — avoids PostgREST
+    // ambiguous FK issues that appear when starting from candidate_applications)
+    const [candRes, jobRes, eventsRes, notesRes] = await Promise.all([
+      supabase.from('candidates').select(`
+        id, first_name, last_name, email, phone, birth_date, location, professional_title, summary, photo_url,
+        candidate_applications(id, status, created_at, desired_position, cover_letter, job_opening_id,
+          job_opening:job_openings(id, title)
         ),
-        job_opening:job_openings(id, title)
+        candidate_educations(degree, field_of_study, institution, end_year),
+        candidate_experiences(company, position, duration_months, start_date, end_date)
       `).order('created_at', { ascending: false }),
-      supabase.from('job_openings').select('id, title, status, contract_type, publication_date, closing_date').order('created_at', { ascending: false }),
-      supabase.from('hiring_pipeline_events').select('application_id, to_status, created_at, notes').order('created_at', { ascending: true }),
-      supabase.from('pipeline_stage_notes').select('application_id, stage, score, score_max, passed, evaluator_name, notes'),
+      supabase.from('job_openings')
+        .select('id, title, status, contract_type, publication_date, closing_date')
+        .order('created_at', { ascending: false }),
+      supabase.from('hiring_pipeline_events')
+        .select('application_id, to_status, created_at, notes')
+        .order('created_at', { ascending: true }),
+      supabase.from('pipeline_stage_notes')
+        .select('application_id, stage, score, score_max, passed, evaluator_name, notes'),
     ]);
-    if (appRes.error) console.error('[RecruitmentReports] applications error:', appRes.error);
-    if (jobRes.error) console.error('[RecruitmentReports] jobs error:', jobRes.error);
-    if (eventsRes.error) console.error('[RecruitmentReports] events error:', eventsRes.error);
-    if (notesRes.error) console.error('[RecruitmentReports] notes error:', notesRes.error);
 
-    // Merge events and notes into applications
+    if (candRes.error) console.error('[Reports] candidates:', candRes.error);
+    if (jobRes.error)  console.error('[Reports] jobs:', jobRes.error);
+    if (eventsRes.error) console.error('[Reports] events:', eventsRes.error);
+    if (notesRes.error) console.error('[Reports] notes:', notesRes.error);
+
+    // Index events and notes by application_id
     const evByApp: Record<string, { to_status: string; created_at: string; notes: string | null }[]> = {};
-    (eventsRes.data || []).forEach((ev: any) => {
+    for (const ev of (eventsRes.data || []) as any[]) {
       if (!evByApp[ev.application_id]) evByApp[ev.application_id] = [];
       evByApp[ev.application_id].push({ to_status: ev.to_status, created_at: ev.created_at, notes: ev.notes });
-    });
+    }
     const notesByApp: Record<string, { stage: string; score: number | null; score_max: number | null; passed: boolean | null; evaluator_name: string | null; notes: string | null }[]> = {};
-    (notesRes.data || []).forEach((n: any) => {
+    for (const n of (notesRes.data || []) as any[]) {
       if (!notesByApp[n.application_id]) notesByApp[n.application_id] = [];
       notesByApp[n.application_id].push({ stage: n.stage, score: n.score, score_max: n.score_max, passed: n.passed, evaluator_name: n.evaluator_name, notes: n.notes });
-    });
+    }
 
-    const apps: AppRow[] = (appRes.data || []).map((a: any) => ({
-      ...a,
-      pipeline_events: evByApp[a.id] || [],
-      pipeline_stage_notes: notesByApp[a.id] || [],
-    }));
+    // Flatten: one row per application, enriched with candidate info
+    const apps: AppRow[] = [];
+    for (const cand of (candRes.data || []) as any[]) {
+      const candidateInfo = {
+        id: cand.id,
+        first_name: cand.first_name,
+        last_name: cand.last_name,
+        email: cand.email,
+        phone: cand.phone,
+        birth_date: cand.birth_date,
+        location: cand.location,
+        professional_title: cand.professional_title,
+        summary: cand.summary,
+        photo_url: cand.photo_url,
+        candidate_educations: cand.candidate_educations || [],
+        candidate_experiences: cand.candidate_experiences || [],
+      };
+      const appList: any[] = cand.candidate_applications || [];
+      if (appList.length === 0) {
+        // Candidate with no application — skip for report views
+        continue;
+      }
+      for (const app of appList) {
+        apps.push({
+          id: app.id,
+          status: app.status,
+          created_at: app.created_at,
+          desired_position: app.desired_position,
+          cover_letter: app.cover_letter,
+          job_opening_id: app.job_opening_id,
+          candidate: candidateInfo,
+          job_opening: app.job_opening ?? null,
+          pipeline_events: evByApp[app.id] || [],
+          pipeline_stage_notes: notesByApp[app.id] || [],
+        });
+      }
+    }
+    // Sort by application date desc
+    apps.sort((a, b) => b.created_at.localeCompare(a.created_at));
 
     setApplications(apps);
     setJobs((jobRes.data as JobOpening[]) || []);

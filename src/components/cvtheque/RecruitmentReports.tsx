@@ -216,7 +216,9 @@ export default function RecruitmentReports() {
 
   const loadData = async () => {
     setLoading(true);
-    const [appRes, jobRes] = await Promise.all([
+    // Split queries to avoid PostgREST FK ambiguity on hiring_pipeline_events
+    // (it has two FKs to parent tables, causing silent join failure)
+    const [appRes, jobRes, eventsRes, notesRes] = await Promise.all([
       supabase.from('candidate_applications').select(`
         id, status, created_at, desired_position, cover_letter, job_opening_id,
         candidate:candidates(
@@ -224,15 +226,36 @@ export default function RecruitmentReports() {
           candidate_educations(degree, field_of_study, institution, end_year),
           candidate_experiences(company, position, duration_months, start_date, end_date)
         ),
-        job_opening:job_openings(id, title),
-        pipeline_events:hiring_pipeline_events(to_status, created_at, notes),
-        pipeline_stage_notes(stage, score, score_max, passed, evaluator_name, notes)
+        job_opening:job_openings(id, title)
       `).order('created_at', { ascending: false }),
       supabase.from('job_openings').select('id, title, status, contract_type, publication_date, closing_date').order('created_at', { ascending: false }),
+      supabase.from('hiring_pipeline_events').select('application_id, to_status, created_at, notes').order('created_at', { ascending: true }),
+      supabase.from('pipeline_stage_notes').select('application_id, stage, score, score_max, passed, evaluator_name, notes'),
     ]);
     if (appRes.error) console.error('[RecruitmentReports] applications error:', appRes.error);
     if (jobRes.error) console.error('[RecruitmentReports] jobs error:', jobRes.error);
-    setApplications((appRes.data as AppRow[]) || []);
+    if (eventsRes.error) console.error('[RecruitmentReports] events error:', eventsRes.error);
+    if (notesRes.error) console.error('[RecruitmentReports] notes error:', notesRes.error);
+
+    // Merge events and notes into applications
+    const evByApp: Record<string, { to_status: string; created_at: string; notes: string | null }[]> = {};
+    (eventsRes.data || []).forEach((ev: any) => {
+      if (!evByApp[ev.application_id]) evByApp[ev.application_id] = [];
+      evByApp[ev.application_id].push({ to_status: ev.to_status, created_at: ev.created_at, notes: ev.notes });
+    });
+    const notesByApp: Record<string, { stage: string; score: number | null; score_max: number | null; passed: boolean | null; evaluator_name: string | null; notes: string | null }[]> = {};
+    (notesRes.data || []).forEach((n: any) => {
+      if (!notesByApp[n.application_id]) notesByApp[n.application_id] = [];
+      notesByApp[n.application_id].push({ stage: n.stage, score: n.score, score_max: n.score_max, passed: n.passed, evaluator_name: n.evaluator_name, notes: n.notes });
+    });
+
+    const apps: AppRow[] = (appRes.data || []).map((a: any) => ({
+      ...a,
+      pipeline_events: evByApp[a.id] || [],
+      pipeline_stage_notes: notesByApp[a.id] || [],
+    }));
+
+    setApplications(apps);
     setJobs((jobRes.data as JobOpening[]) || []);
     setLoading(false);
   };

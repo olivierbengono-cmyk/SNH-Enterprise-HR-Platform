@@ -45,20 +45,6 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; bo
   cancelled:  { label: 'Annulée',       color: 'text-slate-500',   bg: 'bg-slate-100',  border: 'border-slate-200' },
 };
 
-const DIRECTIONS = [
-  'Direction Générale',
-  'Direction de l\'Exploration',
-  'Direction de la Production',
-  'Direction Technique',
-  'Direction Financière',
-  'Direction des Ressources Humaines',
-  'Direction Juridique',
-  'Direction Commerciale',
-  'Direction des Systèmes d\'Information',
-  'Direction HSE',
-  'Direction de la Communication',
-  'Secrétariat Général',
-];
 
 const EDU_LEVELS = ['CAP/BEP', 'Bac', 'Bac+2', 'Bac+3/Licence', 'Bac+4', 'Bac+5/Master', 'Doctorat'];
 const CONTRACT_TYPES = ['CDI', 'CDD', 'Stage académique', 'Stage professionnel', 'Contrat de prestation'];
@@ -142,6 +128,7 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
   const [skillDropOpen, setSkillDropOpen] = useState(false);
   const [positions, setPositions] = useState<{ id: string; title: string }[]>([]);
   const [masterSkills, setMasterSkills] = useState<{ id: string; name: string; category: string }[]>([]);
+  const [directions, setDirections] = useState<{ id: string; name: string; code: string | null }[]>([]);
 
   useEffect(() => {
     supabase.from('positions').select('id, title').order('title').then(({ data }) => {
@@ -149,6 +136,9 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
     });
     supabase.from('skills').select('id, name, category').order('category').order('name').then(({ data }) => {
       if (data) setMasterSkills(data);
+    });
+    supabase.from('departments').select('id, name, code').order('name').then(({ data }) => {
+      if (data) setDirections(data);
     });
   }, []);
 
@@ -239,7 +229,11 @@ function FormModal({ initial, onClose, onSaved }: FormModalProps) {
               <select value={form.direction} onChange={e => set('direction', e.target.value)}
                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-white">
                 <option value="">Sélectionner...</option>
-                {DIRECTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                {directions.map(d => (
+                  <option key={d.id} value={d.name}>
+                    {d.code ? `${d.code} — ${d.name}` : d.name}
+                  </option>
+                ))}
               </select>
             </div>
 

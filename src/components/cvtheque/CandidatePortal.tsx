@@ -131,8 +131,8 @@ const PROFILE_TR = {
     academicPathTitle: 'Parcours académique',
     formationN: 'Formation', addFormation: 'Ajouter une formation',
     level: 'Niveau *', degree: 'Diplôme obtenu *', institution: 'Établissement *',
-    fieldOfStudy: "Domaine d'études", fieldPh: 'Génie Pétrolier, Finance...',
-    eduCountry: 'Pays', eduCity: 'Ville', startYear: 'Année de début', endYear: 'Année de fin',
+    fieldOfStudy: "Domaine d'études *", fieldPh: 'Génie Pétrolier, Finance...',
+    eduCountry: 'Pays', eduCity: 'Ville', startYear: 'Année de début *', endYear: 'Année de fin',
     grade: 'Mention', gradePh: 'Très bien, Bien...',
     descSpec: 'Description / Spécialisation', descSpecPh: "Décrivez votre spécialisation, mémoire, projet de fin d'études...",
     currentFormation: 'Formation en cours',
@@ -198,8 +198,8 @@ const PROFILE_TR = {
     academicPathTitle: 'Academic path',
     formationN: 'Education', addFormation: 'Add education',
     level: 'Education Level *', degree: 'Degree obtained *', institution: 'School / University *',
-    fieldOfStudy: 'Field of study', fieldPh: 'Petroleum Engineering, Finance...',
-    eduCountry: 'Country', eduCity: 'City', startYear: 'Start year', endYear: 'End year',
+    fieldOfStudy: 'Field of study *', fieldPh: 'Petroleum Engineering, Finance...',
+    eduCountry: 'Country', eduCity: 'City', startYear: 'Start year *', endYear: 'End year',
     grade: 'Grade', gradePh: 'Distinction, Merit...',
     descSpec: 'Area of Specialization / Major', descSpecPh: 'Provide details about your specialization, thesis or graduation project…',
     currentFormation: 'Currently enrolled',
@@ -613,6 +613,8 @@ const TR = {
     appReapplyLimitTitle: 'Limite de candidatures atteinte',
     appReapplyLimitMsg: 'Vous avez déjà postulé 3 fois à cette offre (la limite autorisée). Il n\'est plus possible de repostuler à ce poste.',
     appReapplyLimitBtn: 'Compris',
+    appGlobalLimitTitle: 'Limite globale atteinte',
+    appGlobalLimitMsg: 'Vous avez atteint le maximum de 5 candidatures actives. Retirez une candidature existante avant d\'en soumettre une nouvelle.',
     statusNew: 'Soumis', statusTechnicalTests: 'Tests techniques', statusInterview: 'Entretien',
     statusPsychoTests: 'Tests psy.', statusMedicalVisit: 'Visite médicale', statusMoralityInquiry: 'Enquête moralité',
     statusDiplomaCheck: 'Auth. diplômes', statusTrial: 'En essai', statusAssignment: 'Affectation',
@@ -741,6 +743,8 @@ const TR = {
     appReapplyLimitTitle: 'Application limit reached',
     appReapplyLimitMsg: 'You have already applied 3 times to this position (the maximum allowed). Further applications for this role are not possible.',
     appReapplyLimitBtn: 'Understood',
+    appGlobalLimitTitle: 'Global limit reached',
+    appGlobalLimitMsg: 'You have reached the maximum of 5 active applications. Withdraw an existing application before submitting a new one.',
     statusNew: 'Submitted', statusTechnicalTests: 'Technical tests', statusInterview: 'Interview',
     statusPsychoTests: 'Psycho tests', statusMedicalVisit: 'Medical check', statusMoralityInquiry: 'Background check',
     statusDiplomaCheck: 'Diploma auth.', statusTrial: 'Trial period', statusAssignment: 'Assignment',
@@ -891,15 +895,21 @@ export default function CandidatePortal() {
 
   const profilePct = () => {
     if (!profile) return 0;
-    const checks = [
-      profile.phone, profile.location, profile.summary, profile.desired_position,
-      profile.availability_date, profile.professional_title, profile.birth_date,
-      experiences.length > 0 ? 'ok' : null,
-      educations.length > 0 ? 'ok' : null,
-      skills.length > 0 ? 'ok' : null,
-      documents.length > 0 ? 'ok' : null,
-    ];
-    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+    // 5 sections, each worth 20 points — mirrors the dashboard completionItems
+    let score = 0;
+    // Personal info (phone + location + birth_date + gender)
+    const personalFields = [profile.phone, profile.location, profile.birth_date, profile.gender];
+    score += Math.round((personalFields.filter(Boolean).length / personalFields.length) * 20);
+    // Education (at least one with degree + institution + field + start_date)
+    const validEdu = educations.filter(e => e.degree && e.institution && e.field_of_study && e.start_date);
+    score += validEdu.length > 0 ? 20 : 0;
+    // Experience
+    score += experiences.length > 0 ? 20 : 0;
+    // Skills (at least 3)
+    score += skills.length >= 3 ? 20 : Math.round((skills.length / 3) * 20);
+    // Documents
+    score += documents.length > 0 ? 20 : 0;
+    return score;
   };
 
   if (loading) return (
@@ -1070,7 +1080,7 @@ export default function CandidatePortal() {
           {section === 'jobs' && (
             <JobsSection openJobs={openJobs} matches={matches} candidateId={candidateId!}
               onApplied={(app) => setApplications(prev => [app, ...prev])} applications={applications}
-              documents={documents} lang={lang} />
+              documents={documents} educations={educations} lang={lang} />
           )}
           {section === 'spontaneous' && profile && candidateId && (
             <SpontaneousSection candidateId={candidateId} profile={profile} documents={documents}
@@ -1517,13 +1527,20 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
   candidateId: string; onApplied: (app: Application) => void; lang: Lang;
 }) {
   const t = TR[lang];
-  const completionItems = [
-    { label: t.itemPersonalInfo, done: !!(profile.phone && profile.location), pct: profile.phone && profile.location ? 100 : 50 },
-    { label: t.itemEducation, done: educations.length > 0, pct: educations.length > 0 ? 100 : 0 },
-    { label: t.itemExperience, done: experiences.length > 0, pct: experiences.length > 0 ? 100 : 0 },
-    { label: t.itemSkills, done: skills.length >= 5, pct: Math.min(100, (skills.length / 5) * 100) },
-    { label: t.itemDocuments, done: documents.length > 0, pct: documents.length > 0 ? 100 : 0 },
-  ];
+  const completionItems = (() => {
+    const personalFields = [profile.phone, profile.location, profile.birth_date, profile.gender];
+    const personalDone = personalFields.filter(Boolean).length;
+    const personalPct = Math.round((personalDone / personalFields.length) * 100);
+    const validEdu = educations.filter(e => e.degree && e.institution && e.field_of_study && e.start_date);
+    const skillPct = Math.min(100, Math.round((skills.length / 3) * 100));
+    return [
+      { label: t.itemPersonalInfo, done: personalPct === 100, pct: personalPct },
+      { label: t.itemEducation, done: validEdu.length > 0, pct: validEdu.length > 0 ? 100 : 0 },
+      { label: t.itemExperience, done: experiences.length > 0, pct: experiences.length > 0 ? 100 : 0 },
+      { label: t.itemSkills, done: skills.length >= 3, pct: skillPct },
+      { label: t.itemDocuments, done: documents.length > 0, pct: documents.length > 0 ? 100 : 0 },
+    ];
+  })();
 
   const [applying, setApplying] = useState<string | null>(null);
   // Exclude withdrawn so "Apply" button can reappear after withdrawal
@@ -1532,7 +1549,19 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
 
   const handleApply = async (jobId: string, jobTitle: string) => {
     setApplying(jobId);
-    // Check attempt count (including past withdrawn applications)
+    // Check global application limit (max 5 active applications across all jobs)
+    const { count: globalCount } = await supabase
+      .from('candidate_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('candidate_id', candidateId)
+      .neq('status', 'withdrawn')
+      .neq('status', 'rejected');
+    if ((globalCount ?? 0) >= 5) {
+      setApplying(null);
+      setLimitJobId('global');
+      return;
+    }
+    // Check per-job attempt count (max 3 attempts on same job including withdrawn)
     const { count } = await supabase
       .from('candidate_applications')
       .select('id', { count: 'exact', head: true })
@@ -1668,8 +1697,12 @@ function DashboardSection({ profile, experiences, educations, skills, documents,
             <AlertCircle size={22} className="text-amber-600" />
           </div>
           <div className="text-center">
-            <p className="text-base font-bold text-gray-900">{t.appReapplyLimitTitle}</p>
-            <p className="text-sm text-gray-600 mt-2">{t.appReapplyLimitMsg}</p>
+            <p className="text-base font-bold text-gray-900">
+              {limitJobId === 'global' ? t.appGlobalLimitTitle : t.appReapplyLimitTitle}
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              {limitJobId === 'global' ? t.appGlobalLimitMsg : t.appReapplyLimitMsg}
+            </p>
           </div>
           <button onClick={() => setLimitJobId(null)}
             className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
@@ -1759,7 +1792,7 @@ function ProfileSection({ profile, setProfile, experiences, setExperiences, educ
 
       // 3. Educations — delete + reinsert
       supabase.from('candidate_educations').delete().eq('candidate_id', candidateId).then(async () => {
-        const valid = educations.filter(e => e.degree && e.institution);
+        const valid = educations.filter(e => e.degree && e.institution && e.field_of_study && e.start_date);
         if (valid.length) {
           const { error: eduErr } = await supabase.from('candidate_educations').insert(
             valid.map(({ id: _id, ...e }) => ({
@@ -2058,10 +2091,10 @@ function FormationsTab({ items, setItems, t, lang }: { items: Education[]; setIt
             </div>
             <div><Lbl>{t.degree}</Lbl><input value={edu.degree} onChange={e => upd(i,'degree',e.target.value)} className={inp()} placeholder="Master en Génie Pétrolier..." /></div>
             <div><Lbl>{t.institution}</Lbl><input value={edu.institution} onChange={e => upd(i,'institution',e.target.value)} className={inp()} placeholder="ENSP, Université de Yaoundé..." /></div>
-            <div><Lbl>{t.fieldOfStudy}</Lbl><input value={edu.field_of_study} onChange={e => upd(i,'field_of_study',e.target.value)} className={inp()} placeholder={t.fieldPh} /></div>
+            <div><Lbl>{t.fieldOfStudy}</Lbl><input value={edu.field_of_study} onChange={e => upd(i,'field_of_study',e.target.value)} className={inp(!edu.field_of_study)} placeholder={t.fieldPh} /></div>
             <div><Lbl>{t.eduCountry}</Lbl><input value={edu.country || ''} onChange={e => upd(i,'country',e.target.value)} className={inp()} /></div>
             <div><Lbl>{t.eduCity}</Lbl><input value={edu.location} onChange={e => upd(i,'location',e.target.value)} className={inp()} /></div>
-            <div><Lbl>{t.startYear}</Lbl><input type="number" value={dateToYear(edu.start_date)} onChange={e => upd(i,'start_date',e.target.value)} className={inp()} placeholder="Ex: 2018" min="1950" max="2030" /></div>
+            <div><Lbl>{t.startYear}</Lbl><input type="number" value={dateToYear(edu.start_date)} onChange={e => upd(i,'start_date',e.target.value)} className={inp(!edu.start_date)} placeholder="Ex: 2018" min="1950" max="2030" /></div>
             {!edu.is_current && <div><Lbl>{t.endYear}</Lbl><input type="number" value={dateToYear(edu.end_date)} onChange={e => upd(i,'end_date',e.target.value)} className={inp()} placeholder="Ex: 2022" min="1950" max="2030" /></div>}
             <div><Lbl>{t.grade}</Lbl><input value={edu.grade} onChange={e => upd(i,'grade',e.target.value)} className={inp()} placeholder={t.gradePh} /></div>
             <div className="col-span-2"><Lbl>{t.descSpec}</Lbl>
@@ -2567,6 +2600,19 @@ function JobDetailModal({ job, match, isApplied, documents, candidateId, onAppli
     setApplying(true);
     setApplyError('');
 
+    // Check global application limit (max 5 active applications)
+    const { count: globalCount } = await supabase
+      .from('candidate_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('candidate_id', candidateId)
+      .neq('status', 'withdrawn')
+      .neq('status', 'rejected');
+    if ((globalCount ?? 0) >= 5) {
+      setApplying(false);
+      setApplyError(t.appGlobalLimitTitle + ' — ' + t.appGlobalLimitMsg);
+      return;
+    }
+
     // Count all previous attempts for this candidate+job (including withdrawn)
     const { count } = await supabase
       .from('candidate_applications')
@@ -2830,10 +2876,10 @@ function getJobIcon(title: string, contractType?: string): { Icon: React.FC<any>
   return { Icon: Briefcase, color: SNH_GREEN, bg: `${SNH_GREEN}15` };
 }
 
-function JobsSection({ openJobs, matches, candidateId, onApplied, applications, documents, lang }: {
+function JobsSection({ openJobs, matches, candidateId, onApplied, applications, documents, educations, lang }: {
   openJobs: JobOpening[]; matches: JobMatch[]; candidateId: string;
   onApplied: (app: Application) => void; applications: Application[];
-  documents: CandidateDoc[]; lang: Lang;
+  documents: CandidateDoc[]; educations: Education[]; lang: Lang;
 }) {
   const t = TR[lang];
   const [search, setSearch] = useState('');
@@ -2842,9 +2888,33 @@ function JobsSection({ openJobs, matches, candidateId, onApplied, applications, 
   // Only count non-withdrawn applications as "already applied" (so re-apply button can appear)
   const applied = new Set(applications.filter(a => a.status !== 'withdrawn').map(a => a.job_opening_id || '').filter(Boolean));
 
+  // Diploma-level rank for filtering — higher index = higher level
+  const EDU_RANK: Record<string, number> = {
+    'CEP': 0, 'FSLC': 0,
+    'BEPC': 1, 'GCE O-Level': 1,
+    'BAC': 2, 'GCE A-Level': 2,
+    'BAC+2 (BTS/DUT)': 3, 'GCE+2 / HND': 3,
+    'BAC+3 (Licence)': 4, "Bachelor's Degree": 4,
+    'BAC+4': 5, 'GCE+4': 5,
+    'BAC+5 (Master)': 6, "Master's Degree": 6,
+    'Doctorat': 7, 'Doctorate / PhD': 7,
+    'Autre': -1, 'Other': -1,
+  };
+  const candidateRank = educations.reduce((max, e) => {
+    const r = EDU_RANK[e.education_level ?? ''] ?? -1;
+    return r > max ? r : max;
+  }, -1);
+
   const filtered = openJobs.filter(j => {
     const txt = `${j.title} ${j.location} ${j.description}`.toLowerCase();
-    return (!search || txt.includes(search.toLowerCase())) && (filterType === 'all' || j.contract_type === filterType);
+    if (search && !txt.includes(search.toLowerCase())) return false;
+    if (filterType !== 'all' && j.contract_type !== filterType) return false;
+    // Diploma-level compatibility filter (only when candidate has a known level)
+    if (candidateRank >= 0 && j.education_level) {
+      const jobRank = EDU_RANK[j.education_level] ?? -1;
+      if (jobRank >= 0 && Math.abs(jobRank - candidateRank) > 1) return false;
+    }
+    return true;
   });
 
   return (

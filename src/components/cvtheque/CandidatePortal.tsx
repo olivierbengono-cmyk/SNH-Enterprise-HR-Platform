@@ -1172,12 +1172,19 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       {/* ── Header / Hero ── */}
-      <header className="relative" style={{ background: `linear-gradient(145deg, #004d2e 0%, ${SNH_GREEN} 50%, #005c37 100%)` }}>
+      <header className="relative overflow-hidden"
+        style={{
+          backgroundImage: 'url(https://images.pexels.com/photos/2226776/pexels-photo-2226776.jpeg?auto=compress&cs=tinysrgb&w=1920&q=80)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 40%',
+        }}>
+        {/* Dark gradient overlay for readability */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, rgba(0,30,15,0.92) 0%, rgba(0,60,30,0.82) 45%, rgba(0,20,10,0.90) 100%)' }} />
         {/* Tricolor accent line at top */}
-        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
+        <div className="absolute top-0 left-0 right-0 h-1 z-10" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
 
         {/* Navbar */}
-        <div className="relative max-w-5xl mx-auto px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/10">
+        <div className="relative z-10 max-w-5xl mx-auto px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/10">
           <div className="flex items-center">
             <img src="/logoSNHFINAL.png" alt="SNH" className="h-14 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
           </div>
@@ -1200,7 +1207,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
         </div>
 
         {/* Hero content */}
-        <div className="max-w-5xl mx-auto px-6 py-14 text-center">
+        <div className="relative z-10 max-w-5xl mx-auto px-6 py-16 text-center">
           <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border"
             style={{ background: 'rgba(252,209,22,0.15)', borderColor: 'rgba(252,209,22,0.4)', color: SNH_GOLD }}>
             <Sparkles size={12} /> {openJobs.length} {TR[lang].available}
@@ -1389,9 +1396,15 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
       </main>
 
       {/* Footer */}
-      <footer className="mt-8" style={{ background: `linear-gradient(145deg, #004d2e 0%, ${SNH_GREEN} 60%, #005c37 100%)` }}>
-        <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
-        <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
+      <footer className="mt-8 relative overflow-hidden"
+        style={{
+          backgroundImage: 'url(https://images.pexels.com/photos/2226776/pexels-photo-2226776.jpeg?auto=compress&cs=tinysrgb&w=1920&q=80)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 70%',
+        }}>
+        <div className="absolute inset-0" style={{ background: 'rgba(0,25,12,0.92)' }} />
+        <div className="relative z-10 h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
+        <div className="relative z-10 max-w-5xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
             <div>

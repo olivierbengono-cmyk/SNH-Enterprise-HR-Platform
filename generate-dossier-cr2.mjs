@@ -4,7 +4,7 @@ import {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
   Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType,
   ImageRun, PageBreak, HorizontalPositionAlign, VerticalPositionAlign,
-  Footer, Header, PageNumberElement, NumberFormat, Tab, TabStopType,
+  Footer, Header, PageNumber, NumberFormat, Tab, TabStopType,
   convertInchesToTwip, convertMillimetersToTwip,
   UnderlineType,
 } from 'docx';
@@ -1018,7 +1018,7 @@ async function main() {
                 new TextRun({ text: '© 2026 SNH – DAD-RH', size: pt(8.5), color: SUBTXT, font: 'Calibri' }),
                 new TextRun({ text: '\t', size: pt(8.5) }),
                 new TextRun({ text: 'Page ', size: pt(8.5), color: SUBTXT, font: 'Calibri' }),
-                new PageNumberElement({ size: pt(8.5), color: GREEN, font: 'Calibri' }),
+                new TextRun({ children: [PageNumber.CURRENT], size: pt(8.5), color: GREEN, font: 'Calibri' }),
               ],
               tabStops: [{ type: TabStopType.RIGHT, position: cm(16) }],
             }),

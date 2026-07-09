@@ -1169,129 +1169,81 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
 
   const contracts = [...new Set(openJobs.map(j => j.contract_type).filter(Boolean))];
 
-  const features = lang === 'fr'
-    ? [
-        { icon: <Briefcase size={22} />, title: 'Opportunités variées', desc: 'Des postes adaptés à tous les profils' },
-        { icon: <TrendingUp size={22} />, title: 'Carrière & développement', desc: 'Évoluez dans un environnement stimulant et innovant' },
-        { icon: <Shield size={22} />, title: 'Impact national', desc: 'Contribuez à l\'avenir énergétique du Cameroun' },
-        { icon: <Star size={22} />, title: 'Valeurs fortes', desc: 'Intégrité, excellence et responsabilité' },
-      ]
-    : [
-        { icon: <Briefcase size={22} />, title: 'Diverse Opportunities', desc: 'Positions adapted for all profiles' },
-        { icon: <TrendingUp size={22} />, title: 'Career & Growth', desc: 'Thrive in a stimulating and innovative environment' },
-        { icon: <Shield size={22} />, title: 'National Impact', desc: 'Contribute to Cameroon\'s energy future' },
-        { icon: <Star size={22} />, title: 'Strong Values', desc: 'Integrity, excellence and responsibility' },
-      ];
-
   return (
-    <div className="min-h-screen font-sans" style={{ background: '#f5f6f7' }}>
-      {/* ── Sticky Navbar ── */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo + title */}
-          <div className="flex items-center gap-3">
-            <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
-            <div className="hidden sm:block border-l border-gray-300 pl-3">
-              <p className="text-xs font-extrabold tracking-widest uppercase leading-none" style={{ color: SNH_GREEN }}>Portail de Recrutement</p>
-              <p className="text-xs text-gray-500 leading-none mt-0.5">Société Nationale des Hydrocarbures</p>
-            </div>
+    <div className="min-h-screen bg-gray-50 font-sans">
+      {/* ── Header / Hero ── */}
+      <header className="relative overflow-hidden"
+        style={{
+          backgroundImage: 'url(https://images.pexels.com/photos/2226776/pexels-photo-2226776.jpeg?auto=compress&cs=tinysrgb&w=1920&q=80)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 40%',
+        }}>
+        {/* Dark gradient overlay for readability */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, rgba(0,30,15,0.92) 0%, rgba(0,60,30,0.82) 45%, rgba(0,20,10,0.90) 100%)' }} />
+        {/* Tricolor accent line at top */}
+        <div className="absolute top-0 left-0 right-0 h-1 z-10" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
+
+        {/* Navbar */}
+        <div className="relative z-10 max-w-5xl mx-auto px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/10">
+          <div className="flex items-center">
+            <img src="/logoSNHFINAL.png" alt="SNH" className="h-14 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
           </div>
-          {/* Actions */}
           <div className="flex items-center gap-2">
+            {/* Language toggle */}
             <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 transition">
-              <Globe size={12} /> {lang === 'fr' ? 'EN' : 'FR'}
+              className="flex items-center gap-1.5 px-3 py-2 border border-white/30 rounded-lg text-sm font-bold text-white hover:bg-white/10 transition">
+              <Globe size={14} /> {lang === 'fr' ? 'EN' : 'FR'}
             </button>
             <button onClick={onLogin}
-              className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition">
-              <LogIn size={13} /> {TR[lang].login}
+              className="flex items-center gap-2 px-4 py-2 border border-white/40 rounded-lg text-sm font-medium text-white transition hover:bg-white/10">
+              <LogIn size={15} /> {TR[lang].login}
             </button>
             <button onClick={onRegister}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white transition hover:opacity-90 shadow-sm"
-              style={{ background: SNH_GREEN }}>
-              <UserPlus size={13} /> {TR[lang].signup}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition hover:opacity-90"
+              style={{ background: SNH_GOLD, color: '#1a1a1a' }}>
+              <UserPlus size={15} /> {TR[lang].signup}
             </button>
           </div>
         </div>
-      </nav>
 
-      {/* ── Hero Banner ── */}
-      <section className="relative overflow-hidden" style={{ background: SNH_GREEN }}>
-        {/* Banner image fills the right portion */}
-        <div className="absolute inset-0 overflow-hidden">
-          <img
-            src="/assets/images/ChatGPT_Image_Jul_9,_2026,_10_40_29_AM.png"
-            alt="SNH Banner"
-            className="w-full h-full object-cover object-center"
-            style={{ opacity: 0.18 }}
-          />
-        </div>
-        {/* Tricolor bottom accent */}
-        <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
-
-        <div className="relative z-10 max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 min-h-[460px] items-center">
-            {/* Left: text */}
-            <div className="py-14 pr-8">
-              <div className="inline-flex items-center gap-2 rounded-full px-3.5 py-1 text-xs font-bold mb-6 border"
-                style={{ background: 'rgba(252,209,22,0.18)', borderColor: 'rgba(252,209,22,0.5)', color: SNH_GOLD }}>
-                <Sparkles size={11} /> {openJobs.length} {TR[lang].available}
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight text-white mb-2 tracking-tight">
-                {lang === 'fr' ? 'Rejoignez la SNH' : 'Join the SNH'}
-              </h1>
-              <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-5" style={{ color: SNH_GOLD }}>
-                {lang === 'fr'
-                  ? "et construisez l'avenir\nénergétique du Cameroun"
-                  : "and build Cameroon's\nenergy future"}
-              </h2>
-              {/* Tricolor underline */}
-              <div className="w-16 h-1 rounded-full mb-5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 0%, ${SNH_RED} 50%, ${SNH_GOLD} 100%)`, filter: 'brightness(1.8)' }} />
-              <p className="text-white/80 text-sm leading-relaxed mb-8 max-w-lg">
-                {lang === 'fr'
-                  ? <>Découvrez nos <span className="font-semibold" style={{ color: SNH_GOLD }}>opportunités</span> d'emploi et de stage et déposez votre candidature en quelques étapes simples.</>
-                  : <>Discover our <span className="font-semibold" style={{ color: SNH_GOLD }}>opportunities</span> and submit your application in a few simple steps.</>
-                }
-              </p>
-              {/* Feature icons row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-                {features.map(f => (
-                  <div key={f.title} className="flex flex-col items-center text-center gap-2">
-                    <div className="w-12 h-12 rounded-full border-2 border-white/20 flex items-center justify-center" style={{ color: SNH_GOLD }}>
-                      {f.icon}
-                    </div>
-                    <p className="text-white font-semibold text-xs leading-tight">{f.title}</p>
-                    <p className="text-white/55 text-xs leading-tight hidden sm:block">{f.desc}</p>
-                  </div>
-                ))}
-              </div>
-              {/* CTA buttons */}
-              <div className="flex flex-wrap items-center gap-3">
-                <a href="#offres"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold border-2 border-white/80 text-white hover:bg-white/10 transition">
-                  <Send size={14} /> {lang === 'fr' ? 'Voir les offres disponibles' : 'View open positions'} <ChevronRight size={14} />
-                </a>
-                <span className="text-white/40 text-xs hidden sm:block">|</span>
-                <span className="text-xs font-medium" style={{ color: SNH_GOLD }}>recrutement.snh.cm</span>
-              </div>
-            </div>
-
-            {/* Right: real banner image */}
-            <div className="hidden lg:flex items-end justify-end h-full">
-              <img
-                src="/assets/images/ChatGPT_Image_Jul_9,_2026,_10_40_29_AM.png"
-                alt="SNH Recruitment"
-                className="h-[440px] w-auto object-contain object-bottom"
-                style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.35))' }}
+        {/* Hero content */}
+        <div className="relative z-10 max-w-5xl mx-auto px-6 py-16 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border"
+            style={{ background: 'rgba(252,209,22,0.15)', borderColor: 'rgba(252,209,22,0.4)', color: SNH_GOLD }}>
+            <Sparkles size={12} /> {openJobs.length} {TR[lang].available}
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-4 tracking-tight text-white">
+            {TR[lang].heroTitle}<br />
+            <span className="font-light text-2xl" style={{ color: SNH_GOLD }}>{TR[lang].heroSub}</span>
+          </h1>
+          <p className="text-white/70 text-base max-w-2xl mx-auto mb-8">
+            {lang === 'fr'
+              ? <>Découvrez nos <span style={{ color: SNH_GOLD }} className="font-semibold">opportunités d'emploi</span>, de stage et déposez votre <span style={{ color: SNH_GOLD }} className="font-semibold">candidature</span> en quelques étapes.</>
+              : <>Discover our <span style={{ color: SNH_GOLD }} className="font-semibold">employment opportunities</span>, internships and submit your <span style={{ color: SNH_GOLD }} className="font-semibold">application</span> in a few steps.</>
+            }
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-xl mx-auto">
+            <div className="flex-1 relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={search} onChange={e => setSearch(e.target.value)}
+                placeholder={TR[lang].searchPlaceholder}
+                className="w-full pl-9 pr-4 py-3 rounded-xl text-gray-900 text-sm outline-none border-0 focus:ring-2 shadow-md"
+                style={{ '--tw-ring-color': SNH_GOLD } as any}
               />
             </div>
+            <select value={filterContract} onChange={e => setFilterContract(e.target.value)}
+              className="px-4 py-3 rounded-xl text-gray-700 text-sm outline-none bg-white border-0 shadow-md min-w-[160px]">
+              <option value="">{TR[lang].allContracts}</option>
+              {contracts.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
         </div>
-      </section>
+      </header>
 
       {/* ── Stats bar ── */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center gap-8 flex-wrap">
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-8 flex-wrap">
           {[
             { label: lang === 'fr' ? TR.fr.statsPublished : TR.en.statsPublished, value: openJobs.length },
             { label: lang === 'fr' ? TR.fr.statsContracts : TR.en.statsContracts, value: contracts.length },
@@ -1299,7 +1251,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
           ].map(s => (
             <div key={s.label} className="flex items-center gap-2 text-sm text-gray-600">
               <CheckCircle size={14} style={{ color: SNH_GREEN }} />
-              <span><strong style={{ color: SNH_GREEN }}>{s.value}</strong> <span className="text-gray-500">{s.label}</span></span>
+              <span><strong style={{ color: SNH_GREEN }}>{s.value}</strong> <span style={{ color: SNH_GREEN }}>{s.label}</span></span>
             </div>
           ))}
           <div className="ml-auto flex items-center gap-2 text-sm text-gray-500">
@@ -1311,29 +1263,10 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
         </div>
       </div>
 
-      {/* ── Search bar ── */}
-      <div id="offres" className="max-w-6xl mx-auto px-6 pt-8 pb-2">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder={TR[lang].searchPlaceholder}
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl text-gray-900 text-sm outline-none border border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-200 transition"
-            />
-          </div>
-          <select value={filterContract} onChange={e => setFilterContract(e.target.value)}
-            className="px-4 py-2.5 rounded-xl text-gray-700 text-sm outline-none bg-white border border-gray-200 focus:border-green-500 min-w-[180px]">
-            <option value="">{TR[lang].allContracts}</option>
-            {contracts.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-      </div>
-
       {/* ── Job list ── */}
-      <main className="max-w-6xl mx-auto px-6 py-6">
+      <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-bold text-gray-800">
+          <h2 className="text-lg font-bold text-gray-900">
             {search || filterContract ? `${filtered.length} ${filtered.length !== 1 ? TR[lang].resultsPlural : TR[lang].results}` : TR[lang].allPositions}
           </h2>
         </div>
@@ -1351,21 +1284,21 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {filtered.map(job => (
-              <div key={job.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md hover:border-green-200 transition-all">
+              <div key={job.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                 <div className="p-5">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${SNH_GREEN}14` }}>
-                      <Briefcase size={17} style={{ color: SNH_GREEN }} />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${SNH_GREEN}18` }}>
+                      <Briefcase size={18} style={{ color: SNH_GREEN }} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div>
-                          <h3 className="font-bold text-gray-900 text-sm leading-tight">{(lang === 'en' && job.title_en) ? job.title_en : job.title}</h3>
+                          <h3 className="font-bold text-gray-900 text-base leading-tight">{(lang === 'en' && job.title_en) ? job.title_en : job.title}</h3>
                           <div className="flex items-center gap-3 mt-1 flex-wrap">
-                            <span className="text-xs text-gray-500 flex items-center gap-1"><MapPin size={10} />{job.location}</span>
-                            <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={10} />{TR[lang].closing} {fmtDate(job.closing_date)}</span>
+                            <span className="text-xs text-gray-500 flex items-center gap-1"><MapPin size={11} />{job.location}</span>
+                            <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={11} />{TR[lang].closing} {fmtDate(job.closing_date)}</span>
                             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: `${SNH_RED}12`, color: SNH_RED }}>{job.contract_type}</span>
                           </div>
                         </div>
@@ -1379,7 +1312,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
                           <button onClick={() => onApply(job.id)}
                             className="flex items-center gap-1.5 px-4 py-1.5 text-white rounded-lg text-xs font-bold transition hover:opacity-90"
                             style={{ background: SNH_GREEN }}>
-                            <Send size={12} /> {TR[lang].apply}
+                            <Send size={13} /> {TR[lang].apply}
                           </button>
                         </div>
                       </div>
@@ -1448,7 +1381,7 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
         <div className="mt-8 rounded-2xl overflow-hidden border border-green-200 bg-white">
           <div className="h-1" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
           <div className="p-8 text-center">
-            <div className="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center" style={{ background: `${SNH_GREEN}14` }}>
+            <div className="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center" style={{ background: `${SNH_GREEN}18` }}>
               <Send size={22} style={{ color: SNH_GREEN }} />
             </div>
             <h3 className="font-bold text-gray-900 mb-1">{TR[lang].spontTitle}</h3>
@@ -1463,9 +1396,15 @@ function PublicLanding({ openJobs, onLogin, onRegister, onApply, loadingJobs, la
       </main>
 
       {/* Footer */}
-      <footer className="mt-8" style={{ background: SNH_GREEN }}>
-        <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)`, filter: 'brightness(1.6)' }} />
-        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
+      <footer className="mt-8 relative overflow-hidden"
+        style={{
+          backgroundImage: 'url(https://images.pexels.com/photos/2226776/pexels-photo-2226776.jpeg?auto=compress&cs=tinysrgb&w=1920&q=80)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 70%',
+        }}>
+        <div className="absolute inset-0" style={{ background: 'rgba(0,25,12,0.92)' }} />
+        <div className="relative z-10 h-0.5" style={{ background: `linear-gradient(90deg, ${SNH_GREEN} 33%, ${SNH_RED} 50%, ${SNH_GOLD} 67%)` }} />
+        <div className="relative z-10 max-w-5xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <img src="/logoSNHFINAL.png" alt="SNH" className="h-10 w-auto object-contain" onError={e => { (e.target as HTMLImageElement).src='/logoSNH.png'; }} />
             <div>
